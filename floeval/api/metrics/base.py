@@ -21,7 +21,7 @@ class BaseMetric(ABC):
     Abstract base class for all metrics.
     """
     
-    def __init__(self, name: str):
+    def __init__(self, name: str, *args, **kwargs):
         self.name = name
     
     @abstractmethod
