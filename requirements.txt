@@ -1,7 +1,0 @@
-# Core dependencies
-pydantic>=2.0.0
-
-# Optional dependencies (uncomment as needed)
-# ragas>=0.1.0
-# deepeval>=0.1.0
-
