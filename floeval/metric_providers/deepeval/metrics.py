@@ -7,7 +7,7 @@ from dataclasses import asdict
 from api.metrics.base import BaseMetric, MetricResult
 from .adapter import DeepEvalAdapter
 from deepeval.metrics import FaithfulnessMetric
-from deepeval import evaluate
+from deepeval.evaluate import evaluate
 
 __VALID_DEEPEVAL_METRICS__ = {
     "faithfulness": FaithfulnessMetric,
@@ -51,6 +51,9 @@ class FaithfulnessDeepEvalMetric(DeepEvalMetric):
         """
         metric_instance = FaithfulnessMetric(**asdict(self.config))
         result = evaluate(metrics=[metric_instance], test_cases=self.test_cases).test_results[0]
+        
+        assert result.metrics_data is not None, "Expected metrics_data in the result."
+        assert len(result.metrics_data) >= 1, "Expected at least one metric data entry in the result."
         
         # TODO: We need to decide how to validate multiple metrics_data entries
         return MetricResult(score=result.metrics_data[0].score)
