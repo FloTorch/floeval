@@ -34,3 +34,6 @@ class BaseMetric(ABC):
         """
         pass
 
+    def evaluate(self, *args, **kwargs) -> MetricResult:
+        return self.compute(*args, **kwargs)
+
