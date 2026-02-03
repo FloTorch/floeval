@@ -1,18 +1,19 @@
-"""Evaluation orchestrator.
-"""
+"""Evaluation orchestrator."""
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union, Mapping
+from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
 from pydantic import BaseModel, Field
+
+from floeval.metric_providers.deepeval.adapter import DeepEvalGatewayConfig, DeepEvalLLMAdapter
 
 from .dataset import Dataset
 from .metrics.base import BaseMetric, MetricResult
 from .metrics.registry import MetricRegistry
 
-
 MetricSpec = Union[BaseMetric, str, Dict[str, Any]]
+SUPPORTED_METRIC_PROVIDERS = ["deepeval", "ragas"]
 
 
 class EvaluationResult(BaseModel):
@@ -44,8 +45,7 @@ class Evaluation:
         gateway_config: Optional[Any] = None,
         metric_params: Optional[Mapping[str, Dict[str, Any]]] = None,
     ):
-        
-        import floeval.metric_providers  
+        import floeval.metric_providers
 
         self.dataset = dataset
         self.default_provider = default_provider
@@ -54,7 +54,36 @@ class Evaluation:
         self._registry = MetricRegistry()
         self.metrics = self._resolve_metrics(metrics)
 
-    def _merge_params(self, provider: str, metric_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        # TODO: Add support for per-provider LLM adapters
+        self._provider_llm_adapters_mapping: Dict[str, Dict[str, None | DeepEvalLLMAdapter]] = {
+            "deepeval": {"llm_model": None, "embeddings_model": None},
+            "ragas": {"llm_model": None, "embeddings_model": None},
+        }
+
+    # TODO: Generalize to other providers
+    def _get_deepeval_adapter(
+        self, gateway_config: DeepEvalGatewayConfig, model_type: Literal["llm", "embedding"]
+    ) -> DeepEvalLLMAdapter:
+        """Create DeepEval LLM adapter."""
+        if self._provider_llm_adapters_mapping["deepeval"][f"{model_type}_model"] is not None:
+            _adapter = self._provider_llm_adapters_mapping["deepeval"][f"{model_type}_model"]
+            assert _adapter is not None, (
+                "Provider LLM/Embedding model Adapter should not be None here."
+            )
+            return _adapter
+
+        deepeval_llm_adapter = DeepEvalLLMAdapter(
+            model_name=gateway_config.llm_model, config=gateway_config
+        )
+        if gateway_config.llm_model:
+            self._provider_llm_adapters_mapping["deepeval"]["llm_model"] = deepeval_llm_adapter
+        if gateway_config.embedding_model:
+            raise NotImplementedError("DeepEval embedding adapter not implemented yet.")
+        return deepeval_llm_adapter
+
+    def _merge_params(
+        self, provider: str, metric_id: str, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Merge user-provided params with Evaluation-level defaults.
 
@@ -77,7 +106,9 @@ class Evaluation:
         merged.update(params)
         return merged
 
-    def _create_metric_instance(self, provider: str, metric_id: str, params: Dict[str, Any]) -> BaseMetric:
+    def _create_metric_instance(
+        self, provider: str, metric_id: str, params: Dict[str, Any]
+    ) -> BaseMetric:
         """
         Instantiate a metric robustly.
 
@@ -148,7 +179,12 @@ class Evaluation:
 
             for metric in self.metrics:
                 # PRD calls `evaluate()`. In this repo, evaluate() is an alias to compute().
-                result: MetricResult = metric.evaluate(sample)
+                if metric.provider == "deepeval":
+                    llm_adapter = self._get_deepeval_adapter(self.gateway_config, "llm")
+                    result: MetricResult = metric.evaluate(sample, llm_adapter=llm_adapter)
+                else:
+                    # TODO: Implement other provider-specific adapter retrievals
+                    result: MetricResult = metric.evaluate(sample)
 
                 provider = getattr(metric, "provider", "unknown")
                 metric_name = getattr(metric, "name", metric.__class__.__name__)
@@ -210,4 +246,3 @@ class Evaluation:
             "pass_rates": {k: (v / total if total else 0.0) for k, v in passes.items()},
             "aggregate_scores": agg,
         }
-

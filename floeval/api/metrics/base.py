@@ -10,7 +10,7 @@ class MetricResult:
     """
     Result container for metric evaluation.
     """
-    
+
     def __init__(self, score: float, metadata: Dict[str, Any] = None):
         self.score = score
         self.metadata = metadata or {}
@@ -20,15 +20,16 @@ class BaseMetric(ABC):
     """
     Abstract base class for all metrics.
     """
-    
+
     def __init__(self, name: str, *args, **kwargs):
-        self.name = name
-    
+        self.name: str = name
+        self.provider: str | None = None
+
     @abstractmethod
     def compute(self, *args, **kwargs) -> MetricResult:
         """
         Compute the metric score.
-        
+
         Returns:
             MetricResult: The result of the metric computation
         """
@@ -36,4 +37,3 @@ class BaseMetric(ABC):
 
     def evaluate(self, *args, **kwargs) -> MetricResult:
         return self.compute(*args, **kwargs)
-

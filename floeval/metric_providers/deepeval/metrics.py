@@ -9,7 +9,7 @@ from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
 
 from floeval.api.dataset import Sample
 from floeval.api.metrics.base import BaseMetric, MetricResult
-from floeval.metric_providers.deepeval.adapter import DeepEvalAdapter
+from floeval.metric_providers.deepeval.adapter import DeepEvalAdapter, DeepEvalLLMAdapter
 
 __VALID_DEEPEVAL_METRICS__ = {
     "faithfulness": FaithfulnessMetric,
@@ -23,10 +23,8 @@ class DeepEvalMetric(BaseMetric):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.provider = "deepeval"
         self.adapter = DeepEvalAdapter(config=kwargs.get("params", {}))
-        self.llm_adapter = kwargs.get("llm_adapter", None)
-        # TODO: find a way to not do it when not needed.
-        assert self.llm_adapter is not None, "LLM adapter must be provided for DeepEval metrics."
 
     @property
     def config(self):
@@ -48,14 +46,14 @@ class FaithfulnessDeepEvalMetric(DeepEvalMetric):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, name="faithfulness", **kwargs)
 
-    def compute(self, sample: Sample) -> MetricResult:
+    def compute(self, sample: Sample, llm_adapter: DeepEvalLLMAdapter) -> MetricResult:
         """
         Compute faithfulness metric score using DeepEval.
 
         Returns:
             MetricResult: The result of the faithfulness metric computation
         """
-        metric_instance = FaithfulnessMetric(model=self.llm_adapter, **self.config)
+        metric_instance = FaithfulnessMetric(model=llm_adapter, **self.config)
         # TODO: Can we change the structure of ground truth/expected_answer to be a simple str?
         test_case = self.adapter.transform_test_case(
             metric_name="faithfulness",
@@ -112,14 +110,14 @@ class AnswerRelevancyDeepEvalMetric(DeepEvalMetric):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, name="answer_relevancy", **kwargs)
 
-    def compute(self, sample: Sample) -> MetricResult:
+    def compute(self, sample: Sample, llm_adapter: DeepEvalLLMAdapter) -> MetricResult:
         """
         Compute answer relevancy metric score using DeepEval.
 
         Returns:
             MetricResult: The result of the answer relevancy metric computation
         """
-        metric_instances = AnswerRelevancyMetric(model=self.llm_adapter, **self.config)
+        metric_instances = AnswerRelevancyMetric(model=llm_adapter, **self.config)
         test_case = self.adapter.transform_test_case(
             metric_name="answer_relevancy",
             test_case_dict=sample.inputs,
