@@ -11,10 +11,11 @@ from langchain_core.language_models import LanguageModelInput
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-from floeval.config.schemas.deepeval import FaithfulnessTestCase
+from floeval.config.schemas.deepeval import AnswerRelevancyTestCase, FaithfulnessTestCase
 
 __VALID_TEST_CASE_SCHEMAS__ = {
     "faithfulness": FaithfulnessTestCase,
+    "answer_relevancy": AnswerRelevancyTestCase,
 }
 
 
@@ -49,7 +50,9 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
     def __init__(self, model_name: str, config: DeepEvalGatewayConfig):
         self._model_name = model_name
         self.config = config
-        self._llm_instance = self.init_model()
+        self._llm_instance = None
+        _llm_instance = self.init_model()
+        self._llm_instance = _llm_instance
 
     def init_model(self):
         """Load and cache ChatOpenAI instance with gateway config."""
@@ -115,10 +118,23 @@ class DeepEvalAdapter:
             LLMTestCase: Adapted test case instance
         """
         metric_test_case_schema = __VALID_TEST_CASE_SCHEMAS__[metric_name]
-        faithfulness_test_case = metric_test_case_schema.model_validate(test_case_dict)
+        if metric_name == "faithfulness":
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            assert isinstance(test_case, FaithfulnessTestCase)
+            return LLMTestCase(
+                input=test_case.user_input,
+                expected_output=test_case.expected_output,
+                retrieval_context=test_case.contexts,
+                actual_output=test_case.actual_output,
+            )
+        elif metric_name == "answer_relevancy":
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            assert isinstance(test_case, AnswerRelevancyTestCase)
 
-        return LLMTestCase(
-            input=faithfulness_test_case.question,
-            actual_output=faithfulness_test_case.answer,
-            retrieval_context=faithfulness_test_case.contexts,
-        )
+            return LLMTestCase(
+                input=test_case.user_input,
+                actual_output=test_case.actual_output,
+            )
+
+        else:
+            raise ValueError(f"Unsupported metric for test case transformation: {metric_name}")
