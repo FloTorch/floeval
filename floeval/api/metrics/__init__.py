@@ -2,8 +2,8 @@
 Metrics module - Base metric interface and registry
 """
 
-from .base import BaseMetric, MetricResult
-from .registry import MetricRegistry
+from floeval.api.metrics.base import BaseMetric, MetricResult
+from floeval.api.metrics.registry import MetricRegistry
 
 __all__ = ["BaseMetric", "MetricResult", "MetricRegistry"]
 

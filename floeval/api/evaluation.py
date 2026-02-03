@@ -6,14 +6,15 @@ from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
 from pydantic import BaseModel, Field
 
-from floeval.metric_providers.deepeval.adapter import DeepEvalGatewayConfig, DeepEvalLLMAdapter
+from floeval.config import GatewayConfig
+from floeval.metric_providers.ragas.adapter import RAGASAdapter
 
-from .dataset import Dataset
-from .metrics.base import BaseMetric, MetricResult
-from .metrics.registry import MetricRegistry
+from floeval.api.dataset import Dataset
+from floeval.api.metrics.base import BaseMetric, MetricResult
+from floeval.api.metrics.registry import MetricRegistry
 
 MetricSpec = Union[BaseMetric, str, Dict[str, Any]]
-SUPPORTED_METRIC_PROVIDERS = ["deepeval", "ragas"]
+SUPPORTED_METRIC_PROVIDERS = ["deepeval", "ragas", "builtin"]
 
 
 class EvaluationResult(BaseModel):
@@ -52,34 +53,21 @@ class Evaluation:
         self.gateway_config = gateway_config
         self.metric_params = dict(metric_params or {})
         self._registry = MetricRegistry()
+        
+        # Cache adapters per provider to avoid duplicate initialization
+        # Note: DeepEval adapters are now initialized internally by metrics
+        # Initialize BEFORE resolving metrics (which may use adapters)
+        self._provider_adapters: Dict[str, Any] = {
+            "ragas": {"adapter": None},
+        }
+        
         self.metrics = self._resolve_metrics(metrics)
 
-        # TODO: Add support for per-provider LLM adapters
-        self._provider_llm_adapters_mapping: Dict[str, Dict[str, None | DeepEvalLLMAdapter]] = {
-            "deepeval": {"llm_model": None, "embeddings_model": None},
-            "ragas": {"llm_model": None, "embeddings_model": None},
-        }
-
-    # TODO: Generalize to other providers
-    def _get_deepeval_adapter(
-        self, gateway_config: DeepEvalGatewayConfig, model_type: Literal["llm", "embedding"]
-    ) -> DeepEvalLLMAdapter:
-        """Create DeepEval LLM adapter."""
-        if self._provider_llm_adapters_mapping["deepeval"][f"{model_type}_model"] is not None:
-            _adapter = self._provider_llm_adapters_mapping["deepeval"][f"{model_type}_model"]
-            assert _adapter is not None, (
-                "Provider LLM/Embedding model Adapter should not be None here."
-            )
-            return _adapter
-
-        deepeval_llm_adapter = DeepEvalLLMAdapter(
-            model_name=gateway_config.llm_model, config=gateway_config
-        )
-        if gateway_config.llm_model:
-            self._provider_llm_adapters_mapping["deepeval"]["llm_model"] = deepeval_llm_adapter
-        if gateway_config.embedding_model:
-            raise NotImplementedError("DeepEval embedding adapter not implemented yet.")
-        return deepeval_llm_adapter
+    def _get_ragas_adapter(self, gateway_config: Optional[GatewayConfig]) -> RAGASAdapter:
+        """Get or create RAGAS adapter (cached per gateway config)."""
+        if self._provider_adapters["ragas"]["adapter"] is None:
+            self._provider_adapters["ragas"]["adapter"] = RAGASAdapter(config=gateway_config)
+        return self._provider_adapters["ragas"]["adapter"]
 
     def _merge_params(
         self, provider: str, metric_id: str, params: Dict[str, Any]
@@ -112,15 +100,28 @@ class Evaluation:
         """
         Instantiate a metric robustly.
 
-        If a metric does not accept `gateway_config`, we retry without it.
+        Injects cached adapters for providers that support reuse (RAGAS, DeepEval).
         """
         merged = self._merge_params(provider, metric_id, params)
+        
+        # Inject cached adapters for providers that support reuse
+        gateway_config = merged.get("gateway_config")
+        
+        if provider == "ragas" and "adapter" not in merged:
+            # RAGAS: Inject cached adapter if not provided
+            merged["adapter"] = self._get_ragas_adapter(gateway_config)
+        elif provider == "deepeval" and "gateway_config" not in merged and self.gateway_config:
+            # DeepEval: Ensure gateway_config is available for adapter initialization
+            merged["gateway_config"] = self.gateway_config
+        
         try:
             return self._registry.create(provider, metric_id, **merged)
         except TypeError as e:
-            if "gateway_config" in merged:
+            # If metric doesn't accept gateway_config or adapter, retry without them
+            if "gateway_config" in merged or "adapter" in merged:
                 merged2 = dict(merged)
                 merged2.pop("gateway_config", None)
+                merged2.pop("adapter", None)
                 return self._registry.create(provider, metric_id, **merged2)
             raise e
 
@@ -178,28 +179,44 @@ class Evaluation:
             metric_results: Dict[str, Any] = {}
 
             for metric in self.metrics:
-                # PRD calls `evaluate()`. In this repo, evaluate() is an alias to compute().
-                if metric.provider == "deepeval":
-                    llm_adapter = self._get_deepeval_adapter(self.gateway_config, "llm")
-                    result: MetricResult = metric.evaluate(sample, llm_adapter=llm_adapter)
-                else:
-                    # TODO: Implement other provider-specific adapter retrievals
-                    result: MetricResult = metric.evaluate(sample)
-
                 provider = getattr(metric, "provider", "unknown")
                 metric_name = getattr(metric, "name", metric.__class__.__name__)
                 key = f"{provider}:{metric_name}"
 
-                passed = bool(result.metadata.get("passed", False))
-                reason = result.metadata.get("reason") or result.metadata.get("error")
+                # Wrap each metric evaluation in try/except for fault isolation
+                try:
+                    # PRD calls `evaluate()`. In this repo, evaluate() is an alias to compute().
+                    # All metrics handle their own adapters internally - no provider-specific logic needed
+                    result: MetricResult = metric.evaluate(sample)
 
-                metric_results[key] = {
-                    "score": result.score,
-                    "passed": passed,
-                    "reason": reason,
-                    "provider": provider,
-                    "metadata": result.metadata,
-                }
+                    # passed may be None if threshold wasn't provided
+                    passed = result.metadata.get("passed")
+                    if passed is not None:
+                        passed = bool(passed)
+                    reason = result.metadata.get("reason") or result.metadata.get("error")
+
+                    metric_results[key] = {
+                        "score": result.score,
+                        "passed": passed,
+                        "reason": reason,
+                        "provider": provider,
+                        "metadata": result.metadata,
+                    }
+                except Exception as e:
+                    # Isolate metric failures - continue evaluation for other metrics
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(
+                        f"Metric {key} failed for sample: {e}",
+                        exc_info=True
+                    )
+                    metric_results[key] = {
+                        "score": None,
+                        "passed": False,
+                        "reason": str(e),
+                        "provider": provider,
+                        "metadata": {"error": str(e), "metric_name": metric_name},
+                    }
 
             # Samples are Pydantic models; include the raw inputs/ground_truth for readability.
             sample_results.append(
@@ -220,11 +237,14 @@ class Evaluation:
         )
 
     def _aggregate(self, results: List[Dict[str, Any]]) -> Dict[str, float]:
-        """Aggregate scores across samples."""
+        """Aggregate scores across samples. Skips None scores (failed evaluations)."""
         scores: Dict[str, List[float]] = {}
         for result in results:
             for key, data in result["metrics"].items():
-                scores.setdefault(key, []).append(float(data["score"]))
+                score = data["score"]
+                # Only aggregate non-None scores (None indicates evaluation failure)
+                if score is not None:
+                    scores.setdefault(key, []).append(float(score))
         return {key: (sum(vals) / len(vals)) for key, vals in scores.items() if vals}
 
     def _summarize(self, results: List[Dict[str, Any]], agg: Dict[str, float]) -> Dict[str, Any]:
@@ -236,7 +256,8 @@ class Evaluation:
         for result in results:
             for key, data in result["metrics"].items():
                 passes.setdefault(key, 0)
-                if data.get("passed"):
+                # Only count passes if threshold was provided (passed is not None)
+                if data.get("passed") is True:
                     passes[key] += 1
                 providers.add(data.get("provider", "unknown"))
 

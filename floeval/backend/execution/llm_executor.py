@@ -2,7 +2,7 @@
 LLM executor for future LLM-based execution
 """
 
-from .executor import BaseExecutor
+from floeval.backend.execution.executor import BaseExecutor
 
 
 class LLMExecutor(BaseExecutor):

@@ -3,15 +3,17 @@ Base metric abstract class and result model
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 class MetricResult:
     """
     Result container for metric evaluation.
+    
+    score=None indicates evaluation failed (differentiates from actual 0.0 scores).
     """
 
-    def __init__(self, score: float, metadata: Dict[str, Any] = None):
+    def __init__(self, score: Optional[float], metadata: Dict[str, Any] = None):
         self.score = score
         self.metadata = metadata or {}
 

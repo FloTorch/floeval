@@ -3,15 +3,16 @@ DeepEval client wrapper/adapter
 """
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Optional
 
 from deepeval.models.base_model import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 from langchain_core.language_models import LanguageModelInput
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel, Field
 
+from floeval.config import GatewayConfig
 from floeval.config.schemas.deepeval import AnswerRelevancyTestCase, FaithfulnessTestCase
+from floeval.metric_providers.ragas.adapter import normalize_openai_api_base
 
 __VALID_TEST_CASE_SCHEMAS__ = {
     "faithfulness": FaithfulnessTestCase,
@@ -19,35 +20,9 @@ __VALID_TEST_CASE_SCHEMAS__ = {
 }
 
 
-class DeepEvalGatewayConfig(BaseModel):
-    """
-    Configuration for RAGAS custom gateway integration.
-
-    Attributes:
-        gateway_base_url: Base URL for the custom API gateway
-        api_key: API key for authentication
-        llm_model: Model identifier for LLM calls
-        embedding_model: Model identifier for embedding calls
-        headers: Additional headers to include in requests
-    """
-
-    # All fields are optional so we can support:
-    # - explicit custom gateway configuration (provide base_url/api_key/models)
-    # - environment-driven defaults (OPENAI_API_KEY, etc.) when fields are omitted
-    gateway_base_url: str | None = Field(
-        default=None, description="Base URL for custom gateway (OpenAI-compatible)"
-    )
-    api_key: str | None = Field(default=None, description="API key for authentication")
-    llm_model: str | None = Field(default=None, description="LLM model identifier")
-    embedding_model: str | None = Field(default=None, description="Embedding model identifier")
-
-    temperature: float = Field(default=0.7, description="Temperature for LLM generation")
-    max_tokens: int = Field(default=1024, description="Max tokens for LLM generation")
-
-
 # custom llm implementation for DeepEval
 class DeepEvalLLMAdapter(DeepEvalBaseLLM):
-    def __init__(self, model_name: str, config: DeepEvalGatewayConfig):
+    def __init__(self, model_name: str, config: Optional[GatewayConfig] = None):
         self._model_name = model_name
         self.config = config
         self._llm_instance = None
@@ -59,17 +34,23 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
         if self._llm_instance is not None:
             return self._llm_instance
 
-        kwargs = {
-            "model": self.config.llm_model,
-            "temperature": self.config.temperature,
-            "max_tokens": self.config.max_tokens,
-        }
+        kwargs: dict[str, Any] = {}
 
-        if self.config.api_key:
-            kwargs["api_key"] = self.config.api_key
+        if self.config:
+            if self.config.llm_model:
+                kwargs["model"] = self.config.llm_model
+            # Only set temperature/max_tokens if explicitly provided (let provider use defaults otherwise)
+            if self.config.temperature is not None:
+                kwargs["temperature"] = self.config.temperature
+            if self.config.max_tokens is not None:
+                kwargs["max_tokens"] = self.config.max_tokens
 
-        if self.config.gateway_base_url:
-            kwargs["base_url"] = self.config.gateway_base_url
+            if self.config.api_key:
+                kwargs["api_key"] = self.config.api_key
+
+            if self.config.gateway_base_url:
+                # Normalize gateway URL to OpenAI-compatible format (same as RAGAS)
+                kwargs["base_url"] = normalize_openai_api_base(self.config.gateway_base_url)
 
         self._llm_instance = ChatOpenAI(**kwargs)
         return self._llm_instance
@@ -111,16 +92,42 @@ class DeepEvalAdapter:
         """
         Convert a test case dictionary to DeepEval LLMTestCase format.
 
+        Supports canonical Floeval keys (question, answer, contexts, expected_answer)
+        and maps them to DeepEval's expected keys (user_input, actual_output, etc.).
+
         Args:
-            test_case_dict: Input test case mapping
+            metric_name: Name of the metric (faithfulness, answer_relevancy)
+            test_case_dict: Input test case mapping (may use canonical or DeepEval keys)
 
         Returns:
             LLMTestCase: Adapted test case instance
         """
+        # Normalize canonical Floeval keys to DeepEval keys
+        normalized = dict(test_case_dict)
+        
+        # Map question -> user_input
+        if "question" in normalized and "user_input" not in normalized:
+            normalized["user_input"] = normalized.pop("question")
+        
+        # Map answer -> actual_output
+        if "answer" in normalized and "actual_output" not in normalized:
+            normalized["actual_output"] = normalized.pop("answer")
+        
+        # Map expected_answer -> expected_output
+        if "expected_answer" in normalized and "expected_output" not in normalized:
+            normalized["expected_output"] = normalized.pop("expected_answer")
+        
+        # contexts is already the correct name, but ensure it's a list if present
+        if "contexts" in normalized and not isinstance(normalized["contexts"], list):
+            normalized["contexts"] = [normalized["contexts"]] if normalized["contexts"] else []
+
         metric_test_case_schema = __VALID_TEST_CASE_SCHEMAS__[metric_name]
         if metric_name == "faithfulness":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
-            assert isinstance(test_case, FaithfulnessTestCase)
+            test_case = metric_test_case_schema.model_validate(normalized)
+            if not isinstance(test_case, FaithfulnessTestCase):
+                raise TypeError(
+                    f"Expected FaithfulnessTestCase after validation, got {type(test_case)}"
+                )
             return LLMTestCase(
                 input=test_case.user_input,
                 expected_output=test_case.expected_output,
@@ -128,8 +135,11 @@ class DeepEvalAdapter:
                 actual_output=test_case.actual_output,
             )
         elif metric_name == "answer_relevancy":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
-            assert isinstance(test_case, AnswerRelevancyTestCase)
+            test_case = metric_test_case_schema.model_validate(normalized)
+            if not isinstance(test_case, AnswerRelevancyTestCase):
+                raise TypeError(
+                    f"Expected AnswerRelevancyTestCase after validation, got {type(test_case)}"
+                )
 
             return LLMTestCase(
                 input=test_case.user_input,

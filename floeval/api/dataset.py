@@ -50,10 +50,34 @@ class Dataset(BaseModel):
 
     @classmethod
     def from_samples(cls, samples: Sequence[Union[Sample, Dict[str, Any]]]) -> "Dataset":
-        """Convenience helper: build dataset from Sample objects or dicts."""
+        """
+        Convenience helper: build dataset from Sample objects or flat dicts.
+        
+        Accepts flat format: {"question": "...", "answer": "...", "contexts": [...], "expected_answer": "..."}
+        Normalizes to Sample structure internally.
+        """
         parsed: List[Sample] = []
         for s in samples:
-            parsed.append(s if isinstance(s, Sample) else Sample(**s))
+            if isinstance(s, Sample):
+                parsed.append(s)
+            elif isinstance(s, dict):
+                # Flat format: normalize to nested structure
+                flat = s
+                inputs = {
+                    "question": flat.get("question", ""),
+                    "answer": flat.get("answer", ""),
+                }
+                if "contexts" in flat:
+                    contexts = flat["contexts"]
+                    inputs["contexts"] = contexts if isinstance(contexts, list) else [contexts]
+                
+                ground_truth = None
+                if "expected_answer" in flat and flat["expected_answer"] is not None:
+                    ground_truth = {"expected_answer": flat["expected_answer"]}
+                
+                parsed.append(Sample(inputs=inputs, ground_truth=ground_truth, metadata=flat.get("metadata", {})))
+            else:
+                raise TypeError(f"Sample must be Sample instance or dict, got {type(s)}")
         return cls(samples=parsed)
 
     def __len__(self) -> int:

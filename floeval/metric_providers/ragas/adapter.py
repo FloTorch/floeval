@@ -2,11 +2,12 @@
 RAGAS adapter for custom gateway integration.
 
 Key points:
-- Users provide a single `gateway_base_url` + `api_key` + model ids.
+- Uses unified GatewayConfig for consistency across providers.
+- Provides RAGASAdapter class similar to DeepEvalAdapter for consistency.
 """
 
+from collections.abc import Mapping
 from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field
 
 try:
     from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -19,28 +20,7 @@ except ImportError as e:
         f"ragas>=0.4.3, langchain-openai. Original error: {e}"
     )
 
-
-class RAGASGatewayConfig(BaseModel):
-    """
-    Configuration for RAGAS custom gateway integration.
-    
-    Attributes:
-        gateway_base_url: Base URL for the custom API gateway
-        api_key: API key for authentication
-        llm_model: Model identifier for LLM calls
-        embedding_model: Model identifier for embedding calls
-        headers: Additional headers to include in requests
-    """
-    
-    # All fields are optional so we can support:
-    # - explicit custom gateway configuration (provide base_url/api_key/models)
-    # - environment-driven defaults (OPENAI_API_KEY, etc.) when fields are omitted
-    gateway_base_url: Optional[str] = Field(
-        default=None, description="Base URL for custom gateway (OpenAI-compatible)"
-    )
-    api_key: Optional[str] = Field(default=None, description="API key for authentication")
-    llm_model: Optional[str] = Field(default=None, description="LLM model identifier")
-    embedding_model: Optional[str] = Field(default=None, description="Embedding model identifier")
+from floeval.config import GatewayConfig
 
 
 def normalize_openai_api_base(url: str) -> str:
@@ -71,33 +51,33 @@ def normalize_openai_api_base(url: str) -> str:
     return f"{raw}/openai/v1"
 
 
-def create_ragas_llm(config: RAGASGatewayConfig) -> LangchainLLMWrapper:
+def create_ragas_llm(config: Optional[GatewayConfig] = None) -> LangchainLLMWrapper:
     """
     Create RAGAS LLM wrapper configured with custom gateway.
     
     Args:
-        config: Gateway configuration
+        config: Gateway configuration (optional, uses env defaults if None)
         
     Returns:
         LangchainLLMWrapper instance configured with custom gateway
     """
     llm_args: Dict[str, Any] = {}
-    if config.gateway_base_url:
+    if config and config.gateway_base_url:
         llm_args["openai_api_base"] = normalize_openai_api_base(config.gateway_base_url)
-    if config.api_key:
+    if config and config.api_key:
         llm_args["openai_api_key"] = config.api_key
-    if config.llm_model:
+    if config and config.llm_model:
         llm_args["model"] = config.llm_model
     llm = ChatOpenAI(**llm_args)
     return LangchainLLMWrapper(llm)
 
 
-def create_ragas_embeddings(config: RAGASGatewayConfig) -> LangchainEmbeddingsWrapper:
+def create_ragas_embeddings(config: Optional[GatewayConfig] = None) -> LangchainEmbeddingsWrapper:
     """
     Create RAGAS embeddings wrapper configured with custom gateway.
     
     Args:
-        config: Gateway configuration
+        config: Gateway configuration (optional, uses env defaults if None)
         
     Returns:
         LangchainEmbeddingsWrapper instance configured with custom gateway
@@ -105,14 +85,64 @@ def create_ragas_embeddings(config: RAGASGatewayConfig) -> LangchainEmbeddingsWr
     embedding_args: Dict[str, Any] = {
         "check_embedding_ctx_length": False,
     }
-    if config.gateway_base_url:
+    if config and config.gateway_base_url:
         embedding_args["openai_api_base"] = normalize_openai_api_base(config.gateway_base_url)
-    if config.api_key:
+    if config and config.api_key:
         embedding_args["openai_api_key"] = config.api_key
-    if config.embedding_model:
+    if config and config.embedding_model:
         embedding_args["model"] = config.embedding_model
     embeddings = OpenAIEmbeddings(**embedding_args)
     return LangchainEmbeddingsWrapper(embeddings=embeddings)
+
+
+class RAGASAdapter:
+    """
+    Adapter for RAGAS client integration.
+    Adapts input and output formats as needed by RAGAS library.
+    Similar to DeepEvalAdapter for consistency across providers.
+    """
+
+    def __init__(self, config: Optional[GatewayConfig] = None):
+        """
+        Initialize RAGAS adapter with gateway configuration.
+        
+        Args:
+            config: Optional gateway configuration. If None, uses environment defaults.
+        """
+        self.config = config
+        self._llm: Optional[LangchainLLMWrapper] = None
+        self._embeddings: Optional[LangchainEmbeddingsWrapper] = None
+
+    @property
+    def llm(self) -> LangchainLLMWrapper:
+        """Get or create RAGAS LLM wrapper (cached)."""
+        if self._llm is None:
+            self._llm = create_ragas_llm(self.config)
+        return self._llm
+
+    @property
+    def embeddings(self) -> LangchainEmbeddingsWrapper:
+        """Get or create RAGAS embeddings wrapper (cached)."""
+        if self._embeddings is None:
+            self._embeddings = create_ragas_embeddings(self.config)
+        return self._embeddings
+
+    def transform_sample(self, sample: Any) -> SingleTurnSample:
+        """
+        Convert Floeval Sample to RAGAS SingleTurnSample format.
+        
+        Supports both Pydantic Sample models and dict-like objects.
+        
+        Args:
+            sample: Floeval Sample object with inputs and ground_truth
+            
+        Returns:
+            SingleTurnSample for RAGAS evaluation
+            
+        Raises:
+            ValueError: If sample doesn't have required fields
+        """
+        return sample_to_ragas(sample)
 
 
 def sample_to_ragas(sample: Any) -> SingleTurnSample:

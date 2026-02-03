@@ -2,7 +2,7 @@
 Built-in/core metrics: ExactMatch, SemanticSim, etc.
 """
 
-from ...api.metrics.base import BaseMetric, MetricResult
+from floeval.api.metrics.base import BaseMetric, MetricResult
 
 
 class ExactMatch(BaseMetric):

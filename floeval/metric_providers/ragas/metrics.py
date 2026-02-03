@@ -11,63 +11,122 @@ import copy
 from typing import Optional, Dict, Any
 
 try:
+    import nest_asyncio
+    nest_asyncio.apply()
+except ImportError:
+    pass
+
+try:
     from ragas.metrics import answer_relevancy, faithfulness
 except ImportError as e:
     raise ImportError(
         f"RAGAS not installed. Please install ragas>=0.4.3. Original error: {e}"
     )
 
-from ...api.metrics.base import BaseMetric, MetricResult
-from .adapter import (
-    RAGASGatewayConfig,
-    create_ragas_llm,
-    create_ragas_embeddings,
-    sample_to_ragas,
-)
+from floeval.api.metrics.base import BaseMetric, MetricResult
+from floeval.config import GatewayConfig
+from floeval.metric_providers.ragas.adapter import RAGASAdapter
 
 logger = logging.getLogger(__name__)
 
-_EVAL_LOOP: Optional[asyncio.AbstractEventLoop] = None
-
-
 def _run_async(coro: Any) -> Any:
-    """
-    Run an async coroutine from sync code without repeatedly closing event loops.
-
-    Why:
-    - `asyncio.run()` creates and closes a loop each call.
-    - Some HTTP clients (httpx/anyio) can log `RuntimeError: Event loop is closed`
-      during connection cleanup when loops are closed aggressively.
-
-    Strategy:
-    - If we're already inside a running loop (notebooks), use nest_asyncio if available.
-    - Otherwise, create/reuse a module-level event loop and do NOT close it.
-    """
     try:
         running = asyncio.get_running_loop()
         if running.is_running():
             try:
-                import nest_asyncio  # type: ignore
-
+                import nest_asyncio
                 nest_asyncio.apply()
-            except Exception as e:  # pragma: no cover
+                return running.run_until_complete(coro)
+            except ImportError:
                 raise RuntimeError(
                     "RAGAS metric called inside a running event loop. "
                     "Install `nest_asyncio` or use an async execution path."
-                ) from e
-            return running.run_until_complete(coro)
+                )
     except RuntimeError:
-        # No running loop in this thread.
         pass
 
-    global _EVAL_LOOP
-    if _EVAL_LOOP is None or _EVAL_LOOP.is_closed():
-        _EVAL_LOOP = asyncio.new_event_loop()
-        asyncio.set_event_loop(_EVAL_LOOP)
-    return _EVAL_LOOP.run_until_complete(coro)
+    try:
+        return asyncio.run(coro)
+    except RuntimeError as e:
+        error_msg = str(e).lower()
+        if "event loop is closed" in error_msg or "bound to a different event loop" in error_msg:
+            logger.debug(f"Suppressed event loop cleanup error: {e}")
+            raise RuntimeError(
+                "Event loop cleanup error occurred. "
+                "This is usually harmless - the evaluation may have completed successfully."
+            ) from e
+        raise
 
 
-class RAGASAnswerRelevancy(BaseMetric):
+class RAGASMetric(BaseMetric):
+    """
+    Base class for RAGAS metrics.
+    Handles common initialization and computation patterns.
+    """
+
+    def __init__(
+        self,
+        ragas_metric_instance: Any,
+        gateway_config: Optional[GatewayConfig] = None,
+        adapter: Optional[RAGASAdapter] = None,
+        threshold: Optional[float] = None,
+        name: str = "ragas_metric",
+        **kwargs: Any
+    ):
+        super().__init__(name=name)
+        self.provider = "ragas"
+        self.gateway_config = gateway_config
+        
+        if threshold is not None:
+            self.threshold = threshold
+        elif "threshold" in kwargs:
+            self.threshold = kwargs.get("threshold")
+        else:
+            params = kwargs.get("params", {})
+            self.threshold = params.get("threshold") if isinstance(params, dict) else None
+        
+        # Use provided adapter or create new one
+        self.adapter = adapter or RAGASAdapter(config=gateway_config)
+        
+        # NOTE: RAGAS exports metric instances; deepcopy to avoid shared-state mutations
+        self.ragas_metric = copy.deepcopy(ragas_metric_instance)
+
+        # RAGAS 0.4.x expects llm/embeddings to be set on the metric object itself.
+        try:
+            self.ragas_metric.llm = self.adapter.llm
+            if hasattr(self.ragas_metric, "embeddings"):
+                self.ragas_metric.embeddings = self.adapter.embeddings
+            logger.debug(
+                "Initialized RAGAS metric %s (gateway_used=%s, base_url=%s)",
+                self.name,
+                bool(gateway_config),
+                gateway_config.gateway_base_url if gateway_config else None,
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize RAGAS LLM/embeddings: {e}")
+            raise
+
+    def _build_metadata(self, score_float: float, error: Optional[str] = None) -> Dict[str, Any]:
+        """Build metadata dict with consistent structure."""
+        metadata = {
+            "provider": self.provider,
+            "metric_name": self.name,
+            "gateway_used": self.gateway_config is not None,
+        }
+        
+        if error:
+            metadata["error"] = error
+            metadata["passed"] = False
+        else:
+            # Only compute pass/fail if threshold is provided
+            if self.threshold is not None:
+                metadata["threshold"] = self.threshold
+                metadata["passed"] = score_float >= self.threshold
+        
+        return metadata
+
+
+class RAGASAnswerRelevancy(RAGASMetric):
     """
     RAGAS Answer Relevancy metric with custom gateway support.
     
@@ -77,44 +136,28 @@ class RAGASAnswerRelevancy(BaseMetric):
     Args:
         gateway_config: Optional gateway configuration for custom API endpoint.
             If None, uses default RAGAS configuration (environment variables).
-        threshold: Threshold for pass/fail determination (default: 0.7)
+        adapter: Optional RAGASAdapter instance (for reuse across metrics).
+        threshold: Optional threshold for pass/fail determination.
+            If None, only score is returned (no pass/fail).
         name: Metric name (default: "answer_relevancy")
     """
     
     def __init__(
         self,
-        gateway_config: Optional[RAGASGatewayConfig] = None,
-        threshold: float = 0.7,
+        gateway_config: Optional[GatewayConfig] = None,
+        adapter: Optional[RAGASAdapter] = None,
+        threshold: Optional[float] = None,
         name: str = "answer_relevancy",
         **kwargs: Any
     ):
-        super().__init__(name=name)
-        self.provider = "ragas"
-        self.threshold = threshold
-        self.gateway_config = gateway_config
-        # NOTE: RAGAS exports metric instances; deepcopy to avoid shared-state mutations
-        self.ragas_metric = copy.deepcopy(answer_relevancy)
-
-        # Always initialize LLM/embeddings:
-        # - if gateway_config is provided -> use it
-        # - else -> rely on environment-driven defaults (e.g. OPENAI_API_KEY)
-        try:
-            cfg = gateway_config or RAGASGatewayConfig()
-            self.llm = create_ragas_llm(cfg)
-            self.embeddings = create_ragas_embeddings(cfg)
-            # RAGAS 0.4.x expects llm/embeddings to be set on the metric object itself.
-            # Do NOT pass llm/embeddings as kwargs to `single_turn_ascore`.
-            self.ragas_metric.llm = self.llm
-            if hasattr(self.ragas_metric, "embeddings"):
-                self.ragas_metric.embeddings = self.embeddings
-            logger.debug(
-                "Initialized RAGAS Answer Relevancy (gateway_used=%s, base_url=%s)",
-                bool(gateway_config),
-                getattr(cfg, "gateway_base_url", None),
-            )
-        except Exception as e:
-            logger.error(f"Failed to initialize RAGAS LLM/embeddings: {e}")
-            raise
+        super().__init__(
+            ragas_metric_instance=answer_relevancy,
+            gateway_config=gateway_config,
+            adapter=adapter,
+            threshold=threshold,
+            name=name,
+            **kwargs
+        )
     
     def compute(self, sample: Any, **kwargs: Any) -> MetricResult:
         """
@@ -128,40 +171,23 @@ class RAGASAnswerRelevancy(BaseMetric):
             MetricResult with score and metadata
         """
         try:
-            ragas_sample = sample_to_ragas(sample)
-
+            ragas_sample = self.adapter.transform_sample(sample)
             score = _run_async(self.ragas_metric.single_turn_ascore(ragas_sample))
-            
             score_float = float(score)
-            passed = score_float >= self.threshold
             
             return MetricResult(
                 score=score_float,
-                metadata={
-                    "threshold": self.threshold,
-                    "passed": passed,
-                    "provider": self.provider,
-                    "metric_name": self.name,
-                    "gateway_used": self.gateway_config is not None,
-                },
+                metadata=self._build_metadata(score_float),
             )
         except Exception as e:
             logger.error(f"Error computing answer relevancy: {e}", exc_info=True)
-            # Return a failed result rather than raising
             return MetricResult(
-                score=0.0,
-                metadata={
-                    "threshold": self.threshold,
-                    "passed": False,
-                    "provider": self.provider,
-                    "metric_name": self.name,
-                    "error": str(e),
-                    "gateway_used": self.gateway_config is not None,
-                },
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
             )
 
 
-class RAGASFaithfulness(BaseMetric):
+class RAGASFaithfulness(RAGASMetric):
     """
     RAGAS Faithfulness metric with custom gateway support.
     
@@ -171,43 +197,28 @@ class RAGASFaithfulness(BaseMetric):
     Args:
         gateway_config: Optional gateway configuration for custom API endpoint.
             If None, uses default RAGAS configuration (environment variables).
-        threshold: Threshold for pass/fail determination (default: 0.7)
+        adapter: Optional RAGASAdapter instance (for reuse across metrics).
+        threshold: Optional threshold for pass/fail determination.
+            If None, only score is returned (no pass/fail).
         name: Metric name (default: "faithfulness")
     """
     
     def __init__(
         self,
-        gateway_config: Optional[RAGASGatewayConfig] = None,
-        threshold: float = 0.7,
+        gateway_config: Optional[GatewayConfig] = None,
+        adapter: Optional[RAGASAdapter] = None,
+        threshold: Optional[float] = None,
         name: str = "faithfulness",
         **kwargs: Any
     ):
-        super().__init__(name=name)
-        self.provider = "ragas"
-        self.threshold = threshold
-        self.gateway_config = gateway_config
-        # NOTE: RAGAS exports metric instances; deepcopy to avoid shared-state mutations
-        self.ragas_metric = copy.deepcopy(faithfulness)
-
-        # Always initialize LLM/embeddings:
-        # - if gateway_config is provided -> use it
-        # - else -> rely on environment-driven defaults (e.g. OPENAI_API_KEY)
-        try:
-            cfg = gateway_config or RAGASGatewayConfig()
-            self.llm = create_ragas_llm(cfg)
-            self.embeddings = create_ragas_embeddings(cfg)
-            # RAGAS 0.4.x expects llm/embeddings to be set on the metric object itself.
-            self.ragas_metric.llm = self.llm
-            if hasattr(self.ragas_metric, "embeddings"):
-                self.ragas_metric.embeddings = self.embeddings
-            logger.debug(
-                "Initialized RAGAS Faithfulness (gateway_used=%s, base_url=%s)",
-                bool(gateway_config),
-                getattr(cfg, "gateway_base_url", None),
-            )
-        except Exception as e:
-            logger.error(f"Failed to initialize RAGAS LLM/embeddings: {e}")
-            raise
+        super().__init__(
+            ragas_metric_instance=faithfulness,
+            gateway_config=gateway_config,
+            adapter=adapter,
+            threshold=threshold,
+            name=name,
+            **kwargs
+        )
     
     def compute(self, sample: Any, **kwargs: Any) -> MetricResult:
         """
@@ -221,34 +232,17 @@ class RAGASFaithfulness(BaseMetric):
             MetricResult with score and metadata
         """
         try:
-            ragas_sample = sample_to_ragas(sample)
-
+            ragas_sample = self.adapter.transform_sample(sample)
             score = _run_async(self.ragas_metric.single_turn_ascore(ragas_sample))
-            
             score_float = float(score)
-            passed = score_float >= self.threshold
             
             return MetricResult(
                 score=score_float,
-                metadata={
-                    "threshold": self.threshold,
-                    "passed": passed,
-                    "provider": self.provider,
-                    "metric_name": self.name,
-                    "gateway_used": self.gateway_config is not None,
-                },
+                metadata=self._build_metadata(score_float),
             )
         except Exception as e:
             logger.error(f"Error computing faithfulness: {e}", exc_info=True)
-            # Return a failed result rather than raising
             return MetricResult(
-                score=0.0,
-                metadata={
-                    "threshold": self.threshold,
-                    "passed": False,
-                    "provider": self.provider,
-                    "metric_name": self.name,
-                    "error": str(e),
-                    "gateway_used": self.gateway_config is not None,
-                },
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
             )
