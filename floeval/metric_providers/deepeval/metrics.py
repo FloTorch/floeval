@@ -5,11 +5,10 @@ DeepEval metric implementations
 import asyncio
 import logging
 from abc import abstractmethod
+from typing import Any, Dict, Optional
 
 from deepeval.evaluate import evaluate
 from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
-
-from typing import Optional, Dict, Any
 
 from floeval.api.dataset import Sample
 from floeval.api.metrics.base import BaseMetric, MetricResult
@@ -20,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import nest_asyncio
+
     nest_asyncio.apply()
 except ImportError:
     pass
@@ -38,44 +38,56 @@ class DeepEvalMetric(BaseMetric):
         super().__init__(*args, **kwargs)
         self.provider = "deepeval"
         self.gateway_config = gateway_config
-        
+
         params = kwargs.get("params", {})
         if not isinstance(params, dict):
             params = {}
-        
+
         self.adapter = DeepEvalAdapter(config=params)
-        
+
         self._metric_params = self._extract_metric_params(params, kwargs)
-        
+
         # Initialize LLM adapter internally (like RAGAS does)
         self._llm_adapter = self._create_llm_adapter(gateway_config)
-    
-    def _extract_metric_params(self, params: Dict[str, Any], kwargs: Dict[str, Any]) -> Dict[str, Any]:
+
+    def _extract_metric_params(
+        self, params: Dict[str, Any], kwargs: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Extract parameters that should be passed to DeepEval metric constructor.
-        
+
         Excludes gateway_config and other Floeval-specific params.
         Includes threshold, include_reason, async_mode, strict_mode, verbose_mode, etc.
         """
         metric_params = {}
-        
+
         if isinstance(params, dict):
             metric_params.update(params)
-        
-        for key in ["threshold", "include_reason", "async_mode", "strict_mode", "verbose_mode", 
-                    "evaluation_template", "truths_extraction_limit", "penalize_ambiguous_claims"]:
+
+        for key in [
+            "threshold",
+            "include_reason",
+            "async_mode",
+            "strict_mode",
+            "verbose_mode",
+            "evaluation_template",
+            "truths_extraction_limit",
+            "penalize_ambiguous_claims",
+        ]:
             if key in kwargs and key not in metric_params:
                 metric_params[key] = kwargs[key]
-        
+
         return metric_params
-    
-    def _create_llm_adapter(self, gateway_config: Optional[GatewayConfig]) -> Optional[DeepEvalLLMAdapter]:
+
+    def _create_llm_adapter(
+        self, gateway_config: Optional[GatewayConfig]
+    ) -> Optional[DeepEvalLLMAdapter]:
         """
         Create and cache LLM adapter internally.
-        
+
         Args:
             gateway_config: Gateway configuration (optional)
-            
+
         Returns:
             DeepEvalLLMAdapter instance or None if no config provided
         """
@@ -97,21 +109,28 @@ class DeepEvalMetric(BaseMetric):
         try:
             try:
                 import nest_asyncio
+
                 nest_asyncio.apply()
             except ImportError:
                 pass
-            
+
             return evaluate(metrics=metrics, test_cases=test_cases).test_results[0]
         except RuntimeError as e:
             error_msg = str(e).lower()
-            if "bound to a different event loop" in error_msg or "event loop is closed" in error_msg:
+            if (
+                "bound to a different event loop" in error_msg
+                or "event loop is closed" in error_msg
+            ):
                 logger.debug(f"Event loop error in DeepEval evaluate: {e}")
                 try:
                     import nest_asyncio
+
                     nest_asyncio.apply()
                     return evaluate(metrics=metrics, test_cases=test_cases).test_results[0]
                 except Exception as retry_error:
-                    logger.error(f"Failed to retry DeepEval evaluate after event loop error: {retry_error}")
+                    logger.error(
+                        f"Failed to retry DeepEval evaluate after event loop error: {retry_error}"
+                    )
                     raise RuntimeError(
                         "Event loop conflict in DeepEval evaluation. "
                         "Install `nest_asyncio` to resolve this issue."
@@ -133,7 +152,7 @@ class DeepEvalMetric(BaseMetric):
                     "error": "Expected metrics_data in the result, but got None.",
                 },
             )
-        
+
         if len(result.metrics_data) == 0:
             return MetricResult(
                 score=None,
@@ -176,14 +195,14 @@ class DeepEvalMetric(BaseMetric):
                 "provider": "deepeval",
                 "metric_name": metric_name,
             }
-            
+
             threshold = self._metric_params.get("threshold")
             if threshold is not None:
                 metadata["threshold"] = threshold
                 passed = score >= threshold
             else:
                 metadata["threshold"] = None
-            
+
             metadata["passed"] = passed
 
             return MetricResult(
@@ -201,12 +220,6 @@ class DeepEvalMetric(BaseMetric):
                 },
             )
 
-    @abstractmethod
-    def compute(self, *args, **kwargs) -> MetricResult:
-        """
-        Compute DeepEval metric score.
-        """
-
 
 class FaithfulnessDeepEvalMetric(DeepEvalMetric):
     """
@@ -215,10 +228,8 @@ class FaithfulnessDeepEvalMetric(DeepEvalMetric):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, name="faithfulness", **kwargs)
-        # Cache metric instance to avoid recreating on each compute() call
-        self._metric_class = FaithfulnessMetric
 
-    def compute(self, sample: Sample, **kwargs) -> MetricResult:
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
         """
         Compute faithfulness metric score using DeepEval.
 
@@ -235,9 +246,8 @@ class FaithfulnessDeepEvalMetric(DeepEvalMetric):
                 "LLM adapter not initialized. Provide gateway_config when creating metric."
             )
         # Create metric instance with internal adapter and all metric params
-        metric_kwargs = {"model": self._llm_adapter}
-        metric_kwargs.update(self._metric_params)
-        metric_instance = self._metric_class(**metric_kwargs)
+        metric_kwargs = self._metric_params | {"model": self._llm_adapter}
+        metric_instance = FaithfulnessMetric(**metric_kwargs)
         test_case = self.adapter.transform_test_case(
             metric_name="faithfulness",
             test_case_dict=sample.inputs
@@ -254,10 +264,8 @@ class AnswerRelevancyDeepEvalMetric(DeepEvalMetric):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, name="answer_relevancy", **kwargs)
-        # Cache metric class to avoid recreating on each compute() call
-        self._metric_class = AnswerRelevancyMetric
 
-    def compute(self, sample: Sample, **kwargs) -> MetricResult:
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
         """
         Compute answer relevancy metric score using DeepEval.
 
@@ -274,9 +282,8 @@ class AnswerRelevancyDeepEvalMetric(DeepEvalMetric):
                 "LLM adapter not initialized. Provide gateway_config when creating metric."
             )
         # Create metric instance with internal adapter and all metric params
-        metric_kwargs = {"model": self._llm_adapter}
-        metric_kwargs.update(self._metric_params)
-        metric_instance = self._metric_class(**metric_kwargs)
+        metric_kwargs = self._metric_params | {"model": self._llm_adapter}
+        metric_instance = AnswerRelevancyMetric(**metric_kwargs)
         test_case = self.adapter.transform_test_case(
             metric_name="answer_relevancy",
             test_case_dict=sample.inputs,

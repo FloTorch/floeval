@@ -3,7 +3,7 @@ Base metric abstract class and result model
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Mapping
 
 
 class MetricResult:
@@ -13,7 +13,7 @@ class MetricResult:
     score=None indicates evaluation failed (differentiates from actual 0.0 scores).
     """
 
-    def __init__(self, score: Optional[float], metadata: Dict[str, Any] = None):
+    def __init__(self, score: float | None, metadata: Mapping[str, Any] | None = None):
         self.score = score
         self.metadata = metadata or {}
 
@@ -28,7 +28,7 @@ class BaseMetric(ABC):
         self.provider: str | None = None
 
     @abstractmethod
-    def compute(self, *args, **kwargs) -> MetricResult:
+    def evaluate(self, *args, **kwargs) -> MetricResult:
         """
         Compute the metric score.
 
@@ -36,6 +36,3 @@ class BaseMetric(ABC):
             MetricResult: The result of the metric computation
         """
         pass
-
-    def evaluate(self, *args, **kwargs) -> MetricResult:
-        return self.compute(*args, **kwargs)

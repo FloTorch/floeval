@@ -2,19 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Mapping, Optional, Union
+from typing import Any, Dict, List, Mapping, Optional
 
 from pydantic import BaseModel, Field
-
-from floeval.config import GatewayConfig
-from floeval.metric_providers.ragas.adapter import RAGASAdapter
 
 from floeval.api.dataset import Dataset
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.registry import MetricRegistry
+from floeval.config import GatewayConfig
+from floeval.metric_providers.ragas.adapter import RAGASAdapter
 
-MetricSpec = Union[BaseMetric, str, Dict[str, Any]]
-SUPPORTED_METRIC_PROVIDERS = ["deepeval", "ragas", "builtin"]
+MetricSpec = BaseMetric | str | Dict[str, Any]
 
 
 class EvaluationResult(BaseModel):
@@ -185,7 +183,6 @@ class Evaluation:
 
                 # Wrap each metric evaluation in try/except for fault isolation
                 try:
-                    # PRD calls `evaluate()`. In this repo, evaluate() is an alias to compute().
                     # All metrics handle their own adapters internally - no provider-specific logic needed
                     result: MetricResult = metric.evaluate(sample)
 
