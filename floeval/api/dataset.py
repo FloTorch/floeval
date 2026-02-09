@@ -4,9 +4,9 @@ The RAGAS adapter supports Pydantic models via `model_dump()`.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Union
-import json
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -14,8 +14,15 @@ from pydantic import BaseModel, Field, field_validator
 class Sample(BaseModel):
     """Single evaluation sample."""
 
-    inputs: Dict[str, Any] = Field(..., description="Model inputs (question/contexts/answer etc.)")
-    ground_truth: Optional[Dict[str, Any]] = Field(
+    user_input: str = Field(..., description="The input/question/prompt for the LLM")
+    contexts: list[str] | None = Field(
+        default=None,
+        description="Optional retrieved contexts or supporting information",
+    )
+    llm_response: str = Field(
+        ..., description="The actual output/response from the LLM"
+    )
+    ground_truth: str | None = Field(
         default=None, description="Optional ground truth/reference information"
     )
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Optional sample metadata")
@@ -52,8 +59,8 @@ class Dataset(BaseModel):
     def from_samples(cls, samples: Sequence[Union[Sample, Dict[str, Any]]]) -> "Dataset":
         """
         Convenience helper: build dataset from Sample objects or flat dicts.
-        
-        Accepts flat format: {"question": "...", "answer": "...", "contexts": [...], "expected_answer": "..."}
+
+        Accepts flat format: {"user_input": "...", "llm_response": "...", "contexts": [...], "ground_truth": "..."}
         Normalizes to Sample structure internally.
         """
         parsed: List[Sample] = []
@@ -64,18 +71,13 @@ class Dataset(BaseModel):
                 # Flat format: normalize to nested structure
                 flat = s
                 inputs = {
-                    "question": flat.get("question", ""),
-                    "answer": flat.get("answer", ""),
+                    "user_input": flat.get("user_input", ""),
+                    "llm_response": flat.get("llm_response", ""),
+                    "contexts": flat.get("contexts", []),
+                    "ground_truth": flat.get("ground_truth", None),
                 }
-                if "contexts" in flat:
-                    contexts = flat["contexts"]
-                    inputs["contexts"] = contexts if isinstance(contexts, list) else [contexts]
-                
-                ground_truth = None
-                if "expected_answer" in flat and flat["expected_answer"] is not None:
-                    ground_truth = {"expected_answer": flat["expected_answer"]}
-                
-                parsed.append(Sample(inputs=inputs, ground_truth=ground_truth, metadata=flat.get("metadata", {})))
+                _sample = Sample.model_validate(inputs)
+                parsed.append(_sample)
             else:
                 raise TypeError(f"Sample must be Sample instance or dict, got {type(s)}")
         return cls(samples=parsed)
@@ -85,4 +87,3 @@ class Dataset(BaseModel):
 
     def __iter__(self) -> Iterator[Sample]:
         return iter(self.samples)
-

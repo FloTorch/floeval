@@ -102,40 +102,22 @@ class DeepEvalAdapter:
         Returns:
             LLMTestCase: Adapted test case instance
         """
-        # Normalize canonical Floeval keys to DeepEval keys
-        normalized = dict(test_case_dict)
-        
-        # Map question -> user_input
-        if "question" in normalized and "user_input" not in normalized:
-            normalized["user_input"] = normalized.pop("question")
-        
-        # Map answer -> actual_output
-        if "answer" in normalized and "actual_output" not in normalized:
-            normalized["actual_output"] = normalized.pop("answer")
-        
-        # Map expected_answer -> expected_output
-        if "expected_answer" in normalized and "expected_output" not in normalized:
-            normalized["expected_output"] = normalized.pop("expected_answer")
-        
-        # contexts is already the correct name, but ensure it's a list if present
-        if "contexts" in normalized and not isinstance(normalized["contexts"], list):
-            normalized["contexts"] = [normalized["contexts"]] if normalized["contexts"] else []
-
         metric_test_case_schema = __VALID_TEST_CASE_SCHEMAS__[metric_name]
+
         if metric_name == "faithfulness":
-            test_case = metric_test_case_schema.model_validate(normalized)
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
             if not isinstance(test_case, FaithfulnessTestCase):
                 raise TypeError(
                     f"Expected FaithfulnessTestCase after validation, got {type(test_case)}"
                 )
             return LLMTestCase(
                 input=test_case.user_input,
-                expected_output=test_case.expected_output,
+                expected_output=test_case.ground_truth,
                 retrieval_context=test_case.contexts,
-                actual_output=test_case.actual_output,
+                actual_output=test_case.llm_response,
             )
         elif metric_name == "answer_relevancy":
-            test_case = metric_test_case_schema.model_validate(normalized)
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
             if not isinstance(test_case, AnswerRelevancyTestCase):
                 raise TypeError(
                     f"Expected AnswerRelevancyTestCase after validation, got {type(test_case)}"
@@ -143,7 +125,7 @@ class DeepEvalAdapter:
 
             return LLMTestCase(
                 input=test_case.user_input,
-                actual_output=test_case.actual_output,
+                actual_output=test_case.llm_response,
             )
 
         else:

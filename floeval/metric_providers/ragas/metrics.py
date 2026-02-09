@@ -6,9 +6,9 @@ that can be configured with custom API gateways.
 """
 
 import asyncio
-import logging
 import copy
-from typing import Optional, Dict, Any
+import logging
+from typing import Any, Dict, Optional
 
 try:
     import nest_asyncio
@@ -158,8 +158,8 @@ class RAGASAnswerRelevancy(RAGASMetric):
             name=name,
             **kwargs
         )
-    
-    def compute(self, sample: Any, **kwargs: Any) -> MetricResult:
+
+    def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
         """
         Compute answer relevancy score for a sample.
         
@@ -219,8 +219,8 @@ class RAGASFaithfulness(RAGASMetric):
             name=name,
             **kwargs
         )
-    
-    def compute(self, sample: Any, **kwargs: Any) -> MetricResult:
+
+    def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
         """
         Compute faithfulness score for a sample.
         
