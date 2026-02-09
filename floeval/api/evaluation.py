@@ -132,6 +132,13 @@ class Evaluation:
         for spec in specs:
             # Case 1: Already an instance
             if isinstance(spec, BaseMetric):
+                # Inject gateway_config if not already set
+                if self.gateway_config:
+                    if not hasattr(spec, 'gateway_config') or spec.gateway_config is None:
+                        spec.gateway_config = self.gateway_config
+                        # Sync LLM helper config (e.g., criteria-based metrics use llm_helper)
+                        if hasattr(spec, 'llm_helper') and getattr(spec, 'llm_helper', None) is not None:
+                            spec.llm_helper.gateway_config = self.gateway_config
                 resolved.append(spec)
                 continue
 
@@ -185,8 +192,8 @@ class Evaluation:
 
                 # Wrap each metric evaluation in try/except for fault isolation
                 try:
-                    # PRD calls `evaluate()`. In this repo, evaluate() is an alias to compute().
-                    # All metrics handle their own adapters internally - no provider-specific logic needed
+                    # evaluate() -> compute(). Works for both sync and async metrics
+                    # (async metrics run via ThreadPoolExecutor internally)
                     result: MetricResult = metric.evaluate(sample)
 
                     # passed may be None if threshold wasn't provided
@@ -230,6 +237,64 @@ class Evaluation:
         aggregate_scores = self._aggregate(sample_results)
         summary = self._summarize(sample_results, aggregate_scores)
 
+        return EvaluationResult(
+            sample_results=sample_results,
+            aggregate_scores=aggregate_scores,
+            summary=summary,
+        )
+
+    async def arun(self) -> EvaluationResult:
+        """
+        Run evaluation asynchronously (concurrent metric execution per sample).
+        
+        Uses metric.aevaluate() so metrics can run concurrently per sample.
+        Optional for users who want true async concurrency; most users use run().
+        """
+        import asyncio
+
+        sample_results: List[Dict[str, Any]] = []
+        for sample in self.dataset:
+            metric_results: Dict[str, Any] = {}
+            tasks = []
+            metric_list = list(self.metrics)
+            for metric in metric_list:
+                tasks.append(metric.aevaluate(sample))
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for metric, res in zip(metric_list, results):
+                provider = getattr(metric, "provider", "unknown")
+                metric_name = getattr(metric, "name", metric.__class__.__name__)
+                key = f"{provider}:{metric_name}"
+                if isinstance(res, Exception):
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Metric {key} failed for sample: {res}", exc_info=True)
+                    metric_results[key] = {
+                        "score": None,
+                        "passed": False,
+                        "reason": str(res),
+                        "provider": provider,
+                        "metadata": {"error": str(res), "metric_name": metric_name},
+                    }
+                else:
+                    result = res
+                    passed = result.metadata.get("passed")
+                    if passed is not None:
+                        passed = bool(passed)
+                    reason = result.metadata.get("reason") or result.metadata.get("error")
+                    metric_results[key] = {
+                        "score": result.score,
+                        "passed": passed,
+                        "reason": reason,
+                        "provider": provider,
+                        "metadata": result.metadata,
+                    }
+            sample_results.append({
+                "inputs": sample.inputs,
+                "ground_truth": sample.ground_truth,
+                "metrics": metric_results,
+            })
+        aggregate_scores = self._aggregate(sample_results)
+        summary = self._summarize(sample_results, aggregate_scores)
         return EvaluationResult(
             sample_results=sample_results,
             aggregate_scores=aggregate_scores,

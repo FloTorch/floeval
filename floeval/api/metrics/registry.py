@@ -30,20 +30,51 @@ class MetricRegistry:
         if not hasattr(self, "_initialized"):
             self._initialized = True
     
-    def register(self, provider: str, metric_name: str, metric_class: type):
+    def register(self, provider: str, metric_name: str, metric_class: type, allow_override: bool = False):
         """
         Register a metric class under a provider and metric name.
         
         Args:
-            provider: The provider name (e.g., 'builtin', 'ragas', 'deepeval')
+            provider: The provider name (e.g., 'builtin', 'ragas', 'deepeval', 'custom')
             metric_name: The name of the metric
             metric_class: The metric class to register
+            allow_override: If True, allow overriding existing metrics (for custom metrics)
+        
+        Raises:
+            ValueError: If metric exists and allow_override=False (except for custom provider)
         """
         if provider not in MetricRegistry._registry:
             MetricRegistry._registry[provider] = {}
-        # Overwrite protection helps avoid accidental duplicate registration.
+        
+        # Check for duplicates
         if metric_name in MetricRegistry._registry[provider]:
-            raise ValueError(f"Metric already registered: {provider}:{metric_name}")
+            existing_class = MetricRegistry._registry[provider][metric_name]
+            
+            # If same class, ignore (re-import scenario)
+            if existing_class is metric_class:
+                return
+            
+            # Different class - handle based on provider
+            if provider == "custom":
+                # Allow override for custom metrics with warning
+                import warnings
+                warnings.warn(
+                    f"Metric '{metric_name}' already registered in 'custom' namespace. "
+                    f"Overriding with new definition. "
+                    f"To avoid this, use unique metric names.",
+                    UserWarning
+                )
+                # Allow override
+            elif allow_override:
+                # Explicitly allowed override
+                pass
+            else:
+                # For provider metrics, raise error
+                raise ValueError(
+                    f"Metric '{provider}:{metric_name}' is already registered. "
+                    f"Cannot override provider metrics."
+                )
+        
         MetricRegistry._registry[provider][metric_name] = metric_class
     
     def get_class(self, provider: str, metric_name: str) -> Optional[Type[Any]]:
