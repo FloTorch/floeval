@@ -20,8 +20,8 @@ except ImportError as e:
         f"ragas>=0.4.3, langchain-openai. Original error: {e}"
     )
 
-from floeval.api.dataset import Sample
 from floeval.config import GatewayConfig
+from floeval.config.schemas.io.dataset import Sample
 
 
 def normalize_openai_api_base(url: str) -> str:

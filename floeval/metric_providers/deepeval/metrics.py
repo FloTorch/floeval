@@ -8,9 +8,9 @@ from typing import Any, Dict, Optional
 from deepeval.evaluate import evaluate
 from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
 
-from floeval.api.dataset import Sample
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.config import GatewayConfig
+from floeval.config.schemas.io.dataset import Sample
 from floeval.metric_providers.deepeval.adapter import DeepEvalAdapter, DeepEvalLLMAdapter
 
 logger = logging.getLogger(__name__)
