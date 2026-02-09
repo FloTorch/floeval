@@ -7,7 +7,7 @@ Key points:
 """
 
 from collections.abc import Mapping
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 
 try:
     from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -128,7 +128,9 @@ class RAGASAdapter:
             self._embeddings = create_ragas_embeddings(self.config)
         return self._embeddings
 
-    def transform_sample(self, sample: Sample) -> SingleTurnSample:
+    def transform_sample(
+        self, sample: Sample | dict[str, str | Sequence[Any]]
+    ) -> SingleTurnSample:
         """
         Convert Floeval Sample to RAGAS SingleTurnSample format.
 
@@ -145,32 +147,19 @@ class RAGASAdapter:
         """
 
         # Handle Pydantic models
-        if hasattr(sample, "model_dump"):
+        if isinstance(sample, Sample):
             sample_data = sample.model_dump()
-        elif hasattr(sample, "dict"):
-            sample_data = sample.dict()
         # Handle dict-like objects
         elif isinstance(sample, dict):
             sample_data = sample
-        # Handle objects with attributes
-        elif hasattr(sample, "inputs") and hasattr(sample, "ground_truth"):
-            sample_data = {
-                "inputs": getattr(sample, "inputs", {}),
-                "ground_truth": getattr(sample, "ground_truth", ""),
-            }
-        else:
-            raise ValueError(
-                f"Sample must be a dict, Pydantic model, or object with "
-                f"'inputs' and 'ground_truth' attributes. Got: {type(sample)}"
-            )
-
-        inputs = sample_data.get("inputs", {})
 
         # Extract fields with defaults
-        user_input = inputs.get("user_input", "")
-        contexts = inputs.get("contexts", [])
-        llm_response = inputs.get("llm_response", "")
+        user_input = sample_data.get("user_input", "")
+        contexts = sample_data.get("contexts", [])
+        llm_response = sample_data.get("llm_response", "")
         ground_truth = sample_data.get("ground_truth", "")
+
+        # TODO: Use model attributes instead of hardcoded keys? (.model_validate() for the validation and transformation logic)
 
         return SingleTurnSample(
             user_input=user_input,

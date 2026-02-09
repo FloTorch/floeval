@@ -2,9 +2,7 @@
 DeepEval metric implementations
 """
 
-import asyncio
 import logging
-from abc import abstractmethod
 from typing import Any, Dict, Optional
 
 from deepeval.evaluate import evaluate
@@ -249,9 +247,7 @@ class FaithfulnessDeepEvalMetric(DeepEvalMetric):
         metric_kwargs = self._metric_params | {"model": self._llm_adapter}
         metric_instance = FaithfulnessMetric(**metric_kwargs)
         test_case = self.adapter.transform_test_case(
-            metric_name="faithfulness",
-            test_case_dict=sample.inputs
-            | {"expected_output": (sample.ground_truth or {}).get("expected_answer", "")},
+            metric_name="faithfulness", test_case_dict=sample.model_dump()
         )
         result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
         return self._extract_metric_result(result, "faithfulness")
@@ -286,7 +282,7 @@ class AnswerRelevancyDeepEvalMetric(DeepEvalMetric):
         metric_instance = AnswerRelevancyMetric(**metric_kwargs)
         test_case = self.adapter.transform_test_case(
             metric_name="answer_relevancy",
-            test_case_dict=sample.inputs,
+            test_case_dict=sample.model_dump(),
         )
         result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
         return self._extract_metric_result(result, "answer_relevancy")

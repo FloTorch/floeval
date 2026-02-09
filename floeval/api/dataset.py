@@ -22,7 +22,7 @@ class Sample(BaseModel):
     llm_response: str = Field(
         ..., description="The actual output/response from the LLM"
     )
-    ground_truth: Optional[Dict[str, Any]] = Field(
+    ground_truth: str | None = Field(
         default=None, description="Optional ground truth/reference information"
     )
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Optional sample metadata")
@@ -74,13 +74,9 @@ class Dataset(BaseModel):
                     "user_input": flat.get("user_input", ""),
                     "llm_response": flat.get("llm_response", ""),
                     "contexts": flat.get("contexts", []),
+                    "ground_truth": flat.get("ground_truth", None),
                 }
-                ground_truth = None
-                if "ground_truth" in flat and flat["ground_truth"] is not None:
-                    ground_truth = {"ground_truth": flat["ground_truth"]}
-
-                _sample_dict = inputs | (ground_truth if ground_truth else {})
-                _sample = Sample.model_validate(_sample_dict)
+                _sample = Sample.model_validate(inputs)
                 parsed.append(_sample)
             else:
                 raise TypeError(f"Sample must be Sample instance or dict, got {type(s)}")

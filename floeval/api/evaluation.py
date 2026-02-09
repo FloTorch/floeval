@@ -51,14 +51,14 @@ class Evaluation:
         self.gateway_config = gateway_config
         self.metric_params = dict(metric_params or {})
         self._registry = MetricRegistry()
-        
+
         # Cache adapters per provider to avoid duplicate initialization
         # Note: DeepEval adapters are now initialized internally by metrics
         # Initialize BEFORE resolving metrics (which may use adapters)
         self._provider_adapters: Dict[str, Any] = {
             "ragas": {"adapter": None},
         }
-        
+
         self.metrics = self._resolve_metrics(metrics)
 
     def _get_ragas_adapter(self, gateway_config: Optional[GatewayConfig]) -> RAGASAdapter:
@@ -101,17 +101,17 @@ class Evaluation:
         Injects cached adapters for providers that support reuse (RAGAS, DeepEval).
         """
         merged = self._merge_params(provider, metric_id, params)
-        
+
         # Inject cached adapters for providers that support reuse
         gateway_config = merged.get("gateway_config")
-        
+
         if provider == "ragas" and "adapter" not in merged:
             # RAGAS: Inject cached adapter if not provided
             merged["adapter"] = self._get_ragas_adapter(gateway_config)
         elif provider == "deepeval" and "gateway_config" not in merged and self.gateway_config:
             # DeepEval: Ensure gateway_config is available for adapter initialization
             merged["gateway_config"] = self.gateway_config
-        
+
         try:
             return self._registry.create(provider, metric_id, **merged)
         except TypeError as e:
@@ -216,13 +216,7 @@ class Evaluation:
                     }
 
             # Samples are Pydantic models; include the raw inputs/ground_truth for readability.
-            sample_results.append(
-                {
-                    "inputs": sample.inputs,
-                    "ground_truth": sample.ground_truth,
-                    "metrics": metric_results,
-                }
-            )
+            sample_results.append(sample.model_dump() | {"metrics": metric_results})
 
         aggregate_scores = self._aggregate(sample_results)
         summary = self._summarize(sample_results, aggregate_scores)
