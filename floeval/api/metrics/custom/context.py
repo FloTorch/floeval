@@ -32,36 +32,46 @@ class MetricContext:
     
     @property
     def inputs(self) -> dict[str, Any]:
-        """Shortcut to sample.inputs."""
-        return self.sample.inputs
+        """Shortcut to sample fields as dict."""
+        return {
+            "user_input": self.sample.user_input,
+            "llm_response": self.sample.llm_response,
+            "contexts": self.sample.contexts or [],
+        }
     
     @property
-    def ground_truth(self) -> dict[str, Any]:
+    def ground_truth(self) -> str | None:
         """Shortcut to sample.ground_truth."""
-        return self.sample.ground_truth or {}
+        return self.sample.ground_truth
     
     def get_input(self, key: str, default: Any = None) -> Any:
         """
         Get input value with default.
         
         Args:
-            key: Input key to retrieve from sample.inputs
+            key: Input key to retrieve (user_input, llm_response, contexts)
             default: Default value if key not found
         
         Returns:
-            Value from sample.inputs or default
+            Value from sample or default
         """
-        return self.sample.inputs.get(key, default)
+        if key == "user_input":
+            return getattr(self.sample, "user_input", default)
+        elif key == "llm_response":
+            return getattr(self.sample, "llm_response", default)
+        elif key == "contexts":
+            return getattr(self.sample, "contexts", default) or []
+        return default
     
     def get_ground_truth(self, key: str, default: Any = None) -> Any:
         """
         Get ground truth value with default.
         
         Args:
-            key: Ground truth key to retrieve from sample.ground_truth
-            default: Default value if key not found
+            key: Ground truth key (ignored, ground_truth is a string)
+            default: Default value if ground_truth not found
         
         Returns:
             Value from sample.ground_truth or default
         """
-        return (self.sample.ground_truth or {}).get(key, default)
+        return self.sample.ground_truth if self.sample.ground_truth else default

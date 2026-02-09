@@ -3,8 +3,7 @@ Base metric abstract class and result model
 """
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
-from typing import Any
+from typing import Any, Mapping
 
 
 class MetricResult:
@@ -32,7 +31,7 @@ class BaseMetric(ABC):
         self.provider: str | None = None
 
     @abstractmethod
-    def compute(self, *args, **kwargs) -> MetricResult:
+    def evaluate(self, *args, **kwargs) -> MetricResult:
         """
         Synchronous evaluation method.
         

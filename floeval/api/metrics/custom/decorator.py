@@ -234,9 +234,9 @@ def _generate_function_metric_class(
             - Extensible for new parameter types
             
             Mappings:
-            - response/answer/actual_output → sample.inputs["answer"]
-            - question/input/query → sample.inputs["question"]
-            - contexts → sample.inputs["contexts"]
+            - response/answer/actual_output → sample.llm_response
+            - question/input/query → sample.user_input
+            - contexts → sample.contexts
             - context → MetricContext(sample)
             - sample → sample (full object)
             - llm → LLMHelper instance (injected from gateway_config)
@@ -246,23 +246,15 @@ def _generate_function_metric_class(
             for param_name, param in self.sig.parameters.items():
                 # Response parameter
                 if param_name in ["response", "answer", "actual_output"]:
-                    args[param_name] = (
-                        sample.inputs.get("answer") or 
-                        sample.inputs.get("response") or
-                        sample.inputs.get("actual_output")
-                    )
+                    args[param_name] = getattr(sample, "llm_response", "") or ""
                 
                 # Question parameter
                 elif param_name in ["question", "input", "query"]:
-                    args[param_name] = (
-                        sample.inputs.get("question") or
-                        sample.inputs.get("input") or
-                        sample.inputs.get("query")
-                    )
+                    args[param_name] = getattr(sample, "user_input", "") or ""
                 
                 # Contexts parameter
                 elif param_name == "contexts":
-                    args[param_name] = sample.inputs.get("contexts", [])
+                    args[param_name] = getattr(sample, "contexts", []) or []
                 
                 # Context object parameter
                 elif param_name == "context":

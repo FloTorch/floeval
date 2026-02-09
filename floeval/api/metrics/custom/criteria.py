@@ -218,12 +218,7 @@ def criteria(
             Returns:
                 str: Response text or empty string.
             """
-            return (
-                sample.inputs.get("answer") or 
-                sample.inputs.get("response") or
-                sample.inputs.get("actual_output") or
-                ""
-            )
+            return getattr(sample, "llm_response", "") or ""
         
         def _extract_question(self, sample: Any) -> str:
             """
@@ -238,12 +233,7 @@ def criteria(
             Returns:
                 str: Question text or empty string.
             """
-            return (
-                sample.inputs.get("question") or
-                sample.inputs.get("input") or
-                sample.inputs.get("query") or
-                ""
-            )
+            return getattr(sample, "user_input", "") or ""
         
         def _build_prompt(self, question: str, response: str) -> str:
             """
