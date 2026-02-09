@@ -156,7 +156,7 @@ class RAGASAdapter:
         elif hasattr(sample, "inputs") and hasattr(sample, "ground_truth"):
             sample_data = {
                 "inputs": getattr(sample, "inputs", {}),
-                "ground_truth": getattr(sample, "ground_truth", {}),
+                "ground_truth": getattr(sample, "ground_truth", ""),
             }
         else:
             raise ValueError(
@@ -165,17 +165,16 @@ class RAGASAdapter:
             )
 
         inputs = sample_data.get("inputs", {})
-        ground_truth = sample_data.get("ground_truth", {}) or {}
 
         # Extract fields with defaults
-        question = inputs.get("question", "")
+        user_input = inputs.get("user_input", "")
         contexts = inputs.get("contexts", [])
-        answer = inputs.get("answer", "")
-        expected_answer = ground_truth.get("expected_answer") if ground_truth else None
+        llm_response = inputs.get("llm_response", "")
+        ground_truth = sample_data.get("ground_truth", "")
 
         return SingleTurnSample(
-            user_input=question,
+            user_input=user_input,
             retrieved_contexts=contexts if isinstance(contexts, list) else [contexts],
-            response=answer,
-            reference=expected_answer,
+            response=llm_response,
+            reference=ground_truth,
         )
