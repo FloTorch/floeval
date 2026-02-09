@@ -1,8 +1,4 @@
-"""
-Criteria-based custom metrics using LLM-as-judge.
-
-Implements natural language evaluation criteria.
-"""
+"""Criteria-based custom metrics using LLM-as-judge."""
 
 import json
 import logging
@@ -32,67 +28,34 @@ def criteria(
     **kwargs
 ) -> BaseMetric:
     """
-    criteria-based custom metric using LLM-as-judge.
-    
-    Design Pattern: Builder Pattern
-    - Fluent interface for metric creation
-    - Sensible defaults
-    - Optional configuration
+    Create criteria-based metric using LLM-as-judge.
     
     Args:
-        name: Unique metric name (used for registration and identification).
-        description: Natural language evaluation criteria describing what to evaluate
-                   (e.g., "Rate empathy on scale 0-1", "Check if response is professional").
-        threshold: Pass/fail threshold (0.0-1.0). Score >= threshold passes.
-        evaluation_steps: Optional list of step-by-step evaluation instructions.
-                         Helps guide LLM evaluation process.
-        llm_model: LLM model identifier (e.g., "gpt-4", "flotorch/openai-gpt-4").
-                  Optional; overridden by gateway_config.llm_model if provided.
-        execute_via: Provider for execution ("ragas"/"deepeval"/None for standalone).
-                    Currently unused but reserved for future provider-specific execution.
-        **kwargs: Additional parameters passed to metric instance.
-                 gateway_config is injected here by Evaluation._resolve_metrics().
-    
-    Returns:
-        CriteriaBasedMetric: Metric instance (already registered in MetricRegistry).
-    
-    Raises:
-        ValueError: If gateway_config is not provided when metric is used.
-    
-    Example:
-        empathy = criteria(
-            name="empathy",
-            description="Rate empathy on scale 0-1",
-            threshold=0.7,
-            evaluation_steps=[
-                "Identify empathetic phrases",
-                "Assess emotional acknowledgment"
-            ]
-        )
+        name: Metric name
+        description: Evaluation criteria (e.g., "Rate empathy on scale 0-1")
+        threshold: Pass/fail threshold (0.0-1.0)
+        evaluation_steps: Optional evaluation instructions
+        llm_model: LLM model identifier (overridden by gateway_config if provided)
+        execute_via: Execution provider (ragas/deepeval/None)
+        **kwargs: Additional parameters (gateway_config injected by Evaluation)
     """
     
-    # Create metric class
     class CriteriaBasedMetric(BaseMetric):
-        """Generated criteria-based metric using LLM-as-judge."""
+        """Criteria-based metric using LLM-as-judge."""
         
         def __init__(self, **init_kwargs):
             super().__init__(name=name, **init_kwargs)
             self.description = description
             self.threshold = threshold
             self.evaluation_steps = evaluation_steps or []
-            # Get gateway_config from init_kwargs (injected by Evaluation)
             self.gateway_config = init_kwargs.get('gateway_config')
-            # Store the default llm_model parameter for fallback
             self._default_llm_model = llm_model
-            # Use model from gateway_config if available, otherwise use llm_model parameter
             self.llm_model = (
                 self.gateway_config.llm_model if self.gateway_config and self.gateway_config.llm_model
                 else llm_model
             )
             self.execute_via = execute_via
             self.provider = "custom"
-            
-            # Use SimpleLLMHelper for both sync (compute) and async (acompute) evaluation
             self.llm_helper = SimpleLLMHelper(
                 gateway_config=self.gateway_config,
                 llm_model=llm_model,
@@ -106,13 +69,8 @@ def criteria(
                 + prompt
             )
         
-        def compute(self, sample: Any, **kwargs: Any) -> MetricResult:
-            """
-            Synchronous evaluation using LLM-as-judge.
-            
-            Uses SimpleLLMHelper.generate() which runs async in an isolated thread
-            (production-safe). Both compute() and acompute() work.
-            """
+        def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+            """Evaluate using LLM-as-judge synchronously."""
             if not self.gateway_config:
                 error_msg = (
                     "gateway_config is required for criteria-based metrics. "
@@ -156,12 +114,8 @@ def criteria(
                     },
                 )
         
-        async def acompute(self, sample: Any, **kwargs: Any) -> MetricResult:
-            """
-            Async evaluation using LLM-as-judge.
-            
-            Uses SimpleLLMHelper.agenerate() directly (for Evaluation.arun() or async usage).
-            """
+        async def aevaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+            """Evaluate using LLM-as-judge asynchronously."""
             if not self.gateway_config:
                 error_msg = (
                     "gateway_config is required for criteria-based metrics. "
@@ -236,23 +190,7 @@ def criteria(
             return getattr(sample, "user_input", "") or ""
         
         def _build_prompt(self, question: str, response: str) -> str:
-            """
-            Build evaluation prompt for LLM-as-judge.
-            
-            Structure:
-            1. Evaluation criteria (from description)
-            2. Evaluation steps (if provided)
-            3. Question (if available)
-            4. Response to evaluate
-            5. Output format instructions (JSON with score and reasoning)
-            
-            Args:
-                question: Question/input text (may be empty).
-                response: Response text to evaluate.
-            
-            Returns:
-                str: Complete prompt string for LLM.
-            """
+            """Build evaluation prompt for LLM."""
             prompt = f"Evaluation Criteria:\n{self.description}\n\n"
             
             if self.evaluation_steps:
@@ -276,37 +214,19 @@ def criteria(
             return prompt
         
         def _parse_llm_response(self, content: str) -> tuple[float | None, str]:
-            """
-            Parse LLM response to extract score and reasoning.
-            
-            Handles multiple response formats:
-            - JSON format (preferred): {"score": 0.8, "reasoning": "..."}
-            - Plain number: Extracts first numeric value
-            - Scale normalization: If score > 1.0, assumes 1-5 scale and normalizes
-            
-            Args:
-                content: Raw LLM response text.
-            
-            Returns:
-                tuple[float | None, str]: (score normalized to 0-1, reasoning text).
-                                         score is None if parsing fails.
-            """
+            """Parse LLM response to extract score and reasoning."""
             try:
-                # Try to extract JSON
                 json_match = re.search(r'\{.*\}', content, re.DOTALL)
                 if json_match:
                     data = json.loads(json_match.group())
                     score = float(data.get("score", 0))
                     reason = data.get("reasoning", "")
-                    # Normalize to 0-1 range
                     score = max(0.0, min(1.0, score))
                     return score, reason
                 
-                # Fallback: extract number
                 numbers = re.findall(r'\d+\.?\d*', content)
                 if numbers:
                     score = float(numbers[0])
-                    # If score looks like 1-5 scale, normalize
                     if score > 1.0:
                         score = score / 5.0
                     return max(0.0, min(1.0, score)), content
@@ -316,12 +236,8 @@ def criteria(
             except Exception as e:
                 return None, f"Parse error: {str(e)}"
     
-    # Set class metadata
     CriteriaBasedMetric.__name__ = f"{name}_criteria_metric"
     CriteriaBasedMetric.__qualname__ = f"{name}_criteria_metric"
     
-    # Register in custom provider
     MetricRegistry().register("custom", name, CriteriaBasedMetric, allow_override=True)
-    
-    # Return instance (gateway_config comes from **kwargs via Evaluation)
     return CriteriaBasedMetric(**kwargs)

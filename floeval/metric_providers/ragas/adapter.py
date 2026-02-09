@@ -20,8 +20,8 @@ except ImportError as e:
         f"ragas>=0.4.3, langchain-openai. Original error: {e}"
     )
 
-from floeval.api.dataset import Sample
 from floeval.config import GatewayConfig
+from floeval.config.schemas.io.dataset import Sample
 
 
 def normalize_openai_api_base(url: str) -> str:
@@ -152,6 +152,8 @@ class RAGASAdapter:
         # Handle dict-like objects
         elif isinstance(sample, dict):
             sample_data = sample
+        else:
+            raise ValueError(f"Unsupported sample type: {type(sample)}. Expected Sample or dict.")
 
         # Extract fields with defaults
         user_input = sample_data.get("user_input", "")
