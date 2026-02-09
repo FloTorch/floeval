@@ -6,10 +6,10 @@ from typing import Any, Dict, List, Mapping, Optional
 
 from pydantic import BaseModel, Field
 
-from floeval.api.dataset import Dataset
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.registry import MetricRegistry
 from floeval.config import GatewayConfig
+from floeval.config.schemas.io.dataset import Dataset
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
 
 MetricSpec = BaseMetric | str | Dict[str, Any]
@@ -173,7 +173,7 @@ class Evaluation:
         """Run evaluation."""
         sample_results: List[Dict[str, Any]] = []
 
-        for sample in self.dataset:
+        for sample in self.dataset.samples:
             metric_results: Dict[str, Any] = {}
 
             for metric in self.metrics:
