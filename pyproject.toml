@@ -22,6 +22,9 @@ dev = [
     "ruff>=0.14.14",
 ]
 
+[project.scripts]
+floeval = "floeval.cli.main:main"
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

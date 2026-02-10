@@ -1,0 +1,52 @@
+import argparse
+
+from floeval.cli import parse_evaluate
+
+
+def handle_command(args: argparse.Namespace):
+    if args.command == "evaluate":
+        parse_evaluate.parse_args(args)
+    else:
+        raise ValueError(f"Unknown command: {args.command}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="floeval cli")
+    parser.add_argument("--version", action="version", version="floeval 0.1.0")
+
+    sub_parsers = parser.add_subparsers(
+        description="Run evaluations with floeval", dest="command"
+    )
+    # ---- subcommand for running evaluations ----
+    evaluate = sub_parsers.add_parser("evaluate", help="Run evaluations with floeval")
+    evaluate.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        required=True,
+        help="Path to the evaluation configuration file (supported formats: YAML or JSON)",
+    )
+    evaluate.add_argument(
+        "-d",
+        "--dataset",
+        type=str,
+        help="Path to the dataset file (supported formats: JSON, JSONL)",
+        required=True,
+    )
+    evaluate.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        help="Path to save evaluation results (optional)",
+        default=None,
+    )
+
+    # ------- set default function to handle commands -------
+    evaluate.set_defaults(func=handle_command)
+
+    args = parser.parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    SystemExit(main())
