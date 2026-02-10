@@ -1,12 +1,21 @@
+[build-system]
+requires = ["setuptools>=80.10", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "floeval"
 version = "0.1.0"
-description = "Evaluation framework for LLM and RAG systems"
+description = "Multi-backend evaluation framework for LLM and RAG systems"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Floeval Team"}
+]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
 ]
 dependencies = [
     "deepeval>=3.8.2",
@@ -24,6 +33,9 @@ dev = [
 
 [project.scripts]
 floeval = "floeval.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["floeval"]
 
 [tool.ruff]
 line-length = 100
