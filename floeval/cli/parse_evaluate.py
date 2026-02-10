@@ -75,7 +75,6 @@ def parse_args(args: argparse.Namespace):
         ) from e
 
     # ----- Load evaluation configuration (YAML or JSON) -----
-    # NOTE: Added YAML support for now, will add JSON support in the future if needed (but YAML is more user-friendly for configs)
     config_loader = EvalConfigLoader()
     config_data = config_loader.load(config_file)
     gateway_config_data = config_data.get("gateway_config", {})
