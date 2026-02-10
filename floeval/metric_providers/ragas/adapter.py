@@ -22,34 +22,7 @@ except ImportError as e:
 
 from floeval.config import GatewayConfig
 from floeval.config.schemas.io.dataset import Sample
-
-
-def normalize_openai_api_base(url: str) -> str:
-    """
-    Normalize a gateway URL into an OpenAI-compatible API base.
-    """
-    raw = url.strip()
-    if not raw:
-        raise ValueError("gateway_base_url cannot be empty.")
-
-    if not raw.startswith(("http://", "https://")):
-        raw = f"https://{raw}"
-
-    # remove trailing slash
-    raw = raw.rstrip("/")
-
-    # if a full endpoint is provided, strip it back to the base
-    for suffix in ("/chat/completions", "/embeddings"):
-        if raw.endswith(suffix):
-            raw = raw[: -len(suffix)]
-            raw = raw.rstrip("/")
-
-    # If caller already provided a base like /openai/v1 or /v1, keep it.
-    if raw.endswith("/openai/v1") or raw.endswith("/v1"):
-        return raw
-
-    # Default for FloTorch gateways
-    return f"{raw}/openai/v1"
+from floeval.utils.gateway import normalize_openai_api_base
 
 
 def create_ragas_llm(config: Optional[GatewayConfig] = None) -> LangchainLLMWrapper:
@@ -152,6 +125,8 @@ class RAGASAdapter:
         # Handle dict-like objects
         elif isinstance(sample, dict):
             sample_data = sample
+        else:
+            raise ValueError(f"Unsupported sample type: {type(sample)}. Expected Sample or dict.")
 
         # Extract fields with defaults
         user_input = sample_data.get("user_input", "")

@@ -12,7 +12,7 @@ from langchain_openai import ChatOpenAI
 
 from floeval.config import GatewayConfig
 from floeval.config.schemas.deepeval import AnswerRelevancyTestCase, FaithfulnessTestCase
-from floeval.metric_providers.ragas.adapter import normalize_openai_api_base
+from floeval.utils.gateway import normalize_openai_api_base
 
 __VALID_TEST_CASE_SCHEMAS__ = {
     "faithfulness": FaithfulnessTestCase,

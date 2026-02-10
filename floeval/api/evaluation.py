@@ -2,25 +2,32 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, Optional
+import logging
+from typing import Any, Mapping
 
 from pydantic import BaseModel, Field
 
+import floeval.metric_providers  
+
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.registry import MetricRegistry
+from floeval.api.metrics.custom.llm_helper import SimpleLLMHelper
 from floeval.config import GatewayConfig
 from floeval.config.schemas.io.dataset import Dataset
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
+from floeval.utils.ragas_results import extract_ragas_score
 
-MetricSpec = BaseMetric | str | Dict[str, Any]
+logger = logging.getLogger(__name__)
+
+MetricSpec = BaseMetric | str | dict[str, Any]
 
 
 class EvaluationResult(BaseModel):
     """Evaluation results."""
 
-    sample_results: List[Dict[str, Any]]
-    aggregate_scores: Dict[str, float]
-    summary: Dict[str, Any] = Field(default_factory=dict)
+    sample_results: list[dict[str, Any]]
+    aggregate_scores: dict[str, float]
+    summary: dict[str, Any] = Field(default_factory=dict)
 
 
 class Evaluation:
@@ -32,44 +39,38 @@ class Evaluation:
     2) String: "answer_relevancy" or "ragas:answer_relevancy"
     3) Dict: {"id": "answer_relevancy", "provider": "ragas", "params": {...}}
 
-    Note: For gateway config, pass it via dict params:
-      {"id": "answer_relevancy", "provider": "ragas", "params": {"gateway_config": ...}}
     """
 
     def __init__(
         self,
         dataset: Dataset,
-        metrics: List[MetricSpec],
-        default_provider: Optional[str] = None,
-        gateway_config: Optional[Any] = None,
-        metric_params: Optional[Mapping[str, Dict[str, Any]]] = None,
+        metrics: list[MetricSpec],
+        default_provider: str | None = None,
+        gateway_config: Any | None = None,
+        metric_params: Mapping[str, dict[str, Any]] | None = None,
     ):
-        import floeval.metric_providers
-
         self.dataset = dataset
         self.default_provider = default_provider
         self.gateway_config = gateway_config
         self.metric_params = dict(metric_params or {})
         self._registry = MetricRegistry()
 
-        # Cache adapters per provider to avoid duplicate initialization
-        # Note: DeepEval adapters are now initialized internally by metrics
-        # Initialize BEFORE resolving metrics (which may use adapters)
-        self._provider_adapters: Dict[str, Any] = {
+        # Cache adapters per provider 
+        self._provider_adapters: dict[str, Any] = {
             "ragas": {"adapter": None},
         }
 
         self.metrics = self._resolve_metrics(metrics)
 
-    def _get_ragas_adapter(self, gateway_config: Optional[GatewayConfig]) -> RAGASAdapter:
-        """Get or create RAGAS adapter (cached per gateway config)."""
+    def _get_ragas_adapter(self, gateway_config: GatewayConfig | None) -> RAGASAdapter:
+        """Return cached RAGAS adapter, creating it if needed."""
         if self._provider_adapters["ragas"]["adapter"] is None:
             self._provider_adapters["ragas"]["adapter"] = RAGASAdapter(config=gateway_config)
         return self._provider_adapters["ragas"]["adapter"]
 
     def _merge_params(
-        self, provider: str, metric_id: str, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, provider: str, metric_id: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Merge user-provided params with Evaluation-level defaults.
 
@@ -78,7 +79,7 @@ class Evaluation:
         2) metric_params mapping (keyed by "provider:metric" or "metric")
         3) Evaluation.gateway_config (injected as "gateway_config")
         """
-        merged: Dict[str, Any] = {}
+        merged: dict[str, Any] = {}
 
         # 2) metric_params mapping
         merged.update(self.metric_params.get(metric_id, {}))
@@ -93,23 +94,14 @@ class Evaluation:
         return merged
 
     def _create_metric_instance(
-        self, provider: str, metric_id: str, params: Dict[str, Any]
+        self, provider: str, metric_id: str, params: dict[str, Any]
     ) -> BaseMetric:
-        """
-        Instantiate a metric robustly.
-
-        Injects cached adapters for providers that support reuse (RAGAS, DeepEval).
-        """
+        """Build merged params, inject cached adapter for RAGAS, then create metric instance."""
         merged = self._merge_params(provider, metric_id, params)
-
-        # Inject cached adapters for providers that support reuse
         gateway_config = merged.get("gateway_config")
-
         if provider == "ragas" and "adapter" not in merged:
-            # RAGAS: Inject cached adapter if not provided
             merged["adapter"] = self._get_ragas_adapter(gateway_config)
         elif provider == "deepeval" and "gateway_config" not in merged and self.gateway_config:
-            # DeepEval: Ensure gateway_config is available for adapter initialization
             merged["gateway_config"] = self.gateway_config
 
         try:
@@ -123,13 +115,21 @@ class Evaluation:
                 return self._registry.create(provider, metric_id, **merged2)
             raise e
 
-    def _resolve_metrics(self, specs: List[MetricSpec]) -> List[BaseMetric]:
+    def _resolve_metrics(self, specs: list[MetricSpec]) -> list[BaseMetric]:
         """Resolve metric specs to instances."""
-        resolved: List[BaseMetric] = []
+        resolved: list[BaseMetric] = []
 
         for spec in specs:
             # Case 1: Already an instance
             if isinstance(spec, BaseMetric):
+                # Inject gateway_config when not set (user passes config to Evaluation)
+                if self.gateway_config:
+                    if not hasattr(spec, 'gateway_config') or spec.gateway_config is None:
+                        spec.gateway_config = self.gateway_config
+                        # Replace llm_helper with one initialized with config (no mutation of existing helper)
+                        if hasattr(spec, 'llm_helper') and getattr(spec, 'llm_helper', None) is not None:
+                            llm_model = getattr(spec, 'llm_model', None) or getattr(spec, '_default_llm_model', 'gpt-4')
+                            spec.llm_helper = SimpleLLMHelper(self.gateway_config, llm_model=llm_model)
                 resolved.append(spec)
                 continue
 
@@ -169,29 +169,46 @@ class Evaluation:
 
         return resolved
 
-    def run(self) -> EvaluationResult:
-        """Run evaluation."""
-        sample_results: List[Dict[str, Any]] = []
+    def _group_metrics_by_strategy(self) -> dict[str, list[BaseMetric]]:
+        """Group metrics by execution strategy (execute_via). Returns standalone, ragas, deepeval lists."""
+        grouped: dict[str, list[BaseMetric]] = {
+            "standalone": [],
+            "ragas": [],
+            "deepeval": [],
+        }
+        
+        for metric in self.metrics:
+            execute_via = getattr(metric, 'execute_via', None)
+            if execute_via == "ragas":
+                grouped["ragas"].append(metric)
+            elif execute_via == "deepeval":
+                grouped["deepeval"].append(metric)
+            else:
+                # Default to standalone (including None and any other values)
+                grouped["standalone"].append(metric)
+        
+        return grouped
+    
+    def _run_standalone(self, metrics: list[BaseMetric]) -> list[dict[str, Any]]:
+        """Execute standalone metrics."""
+        sample_results: list[dict[str, Any]] = []
 
         for sample in self.dataset.samples:
-            metric_results: Dict[str, Any] = {}
-
-            for metric in self.metrics:
-                provider = getattr(metric, "provider", "unknown")
+            metric_results: dict[str, Any] = {}
+            
+            for metric in metrics:
+                provider = getattr(metric, "provider", "custom")
                 metric_name = getattr(metric, "name", metric.__class__.__name__)
                 key = f"{provider}:{metric_name}"
-
-                # Wrap each metric evaluation in try/except for fault isolation
+                
                 try:
-                    # All metrics handle their own adapters internally - no provider-specific logic needed
                     result: MetricResult = metric.evaluate(sample)
-
-                    # passed may be None if threshold wasn't provided
+                    
                     passed = result.metadata.get("passed")
                     if passed is not None:
                         passed = bool(passed)
                     reason = result.metadata.get("reason") or result.metadata.get("error")
-
+                    
                     metric_results[key] = {
                         "score": result.score,
                         "passed": passed,
@@ -200,9 +217,6 @@ class Evaluation:
                         "metadata": result.metadata,
                     }
                 except Exception as e:
-                    # Isolate metric failures - continue evaluation for other metrics
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.error(
                         f"Metric {key} failed for sample: {e}",
                         exc_info=True
@@ -214,22 +228,308 @@ class Evaluation:
                         "provider": provider,
                         "metadata": {"error": str(e), "metric_name": metric_name},
                     }
-
-            # Samples are Pydantic models; include the raw inputs/ground_truth for readability.
+            
             sample_results.append(sample.model_dump() | {"metrics": metric_results})
+        
+        return sample_results
+    
+    def _run_via_ragas_sync(self, metrics: list[BaseMetric]) -> list[dict[str, Any]]:
+        """Run metrics via RAGAS evaluate(); map results back to sample dicts."""
+        from floeval.metric_providers.ragas.custom_adapter import RAGASCustomMetricAdapter
+        from ragas import evaluate as ragas_evaluate
 
+        ragas_adapter = self._get_ragas_adapter(self.gateway_config)
+        adapter = RAGASCustomMetricAdapter(self.gateway_config, ragas_adapter=ragas_adapter)
+        
+        ragas_metrics = []
+        metric_mapping = []
+        
+        for metric in metrics:
+            try:
+                ragas_class = adapter.transform_metric(metric)
+                ragas_metric_instance = ragas_class(llm=adapter.llm, name=metric.name)
+                ragas_metrics.append(ragas_metric_instance)
+                metric_mapping.append((ragas_metric_instance, metric))
+            except Exception as e:
+                logger.error(f"Failed to transform metric {metric.name} to RAGAS: {e}", exc_info=True)
+        
+        if not ragas_metrics:
+            return []
+        
+        ragas_dataset = adapter.transform_dataset(self.dataset)
+        
+        try:
+            ragas_eval_result = ragas_evaluate(
+                dataset=ragas_dataset,
+                metrics=ragas_metrics,
+                llm=adapter.llm,
+                embeddings=adapter.embeddings
+            )
+        except Exception as e:
+            logger.error(f"RAGAS evaluation failed: {e}", exc_info=True)
+            return []
+        
+        if hasattr(ragas_eval_result, 'to_pandas'):
+            ragas_results = ragas_eval_result.to_pandas()
+        elif hasattr(ragas_eval_result, 'columns'):
+            ragas_results = ragas_eval_result
+        else:
+            logger.error(f"RAGAS results cannot be converted to DataFrame. Type: {type(ragas_eval_result)}")
+            return []
+        
+        if not hasattr(ragas_results, 'columns'):
+            logger.error(f"RAGAS results is not a DataFrame after conversion. Type: {type(ragas_results)}")
+            return []
+        
+        available_columns = list(ragas_results.columns)
+        logger.debug(f"RAGAS results columns: {available_columns}")
+
+        sample_results: list[dict[str, Any]] = []
+
+        for i, sample in enumerate(self.dataset.samples):
+            metric_results: dict[str, Any] = {}
+            
+            for idx, (ragas_metric_instance, floeval_metric) in enumerate(metric_mapping):
+                provider = "ragas"
+                metric_name = floeval_metric.name
+                key = f"{provider}:{metric_name}"
+                try:
+                    score = extract_ragas_score(
+                        ragas_results,
+                        i,
+                        available_columns,
+                        ragas_metric_instance,
+                        metric_name,
+                        len(ragas_metrics),
+                        idx,
+                    )
+                    threshold = getattr(floeval_metric, "threshold", 0.5)
+                    
+                    metric_results[key] = {
+                        "score": score,
+                        "passed": score >= threshold if score is not None else False,
+                        "reason": None,
+                        "provider": provider,
+                        "metadata": {
+                            "threshold": threshold,
+                            "execution_provider": "ragas"
+                        },
+                    }
+                except Exception as e:
+                    logger.error(
+                        f"Failed to extract RAGAS result for {key}: {e}",
+                        exc_info=True
+                    )
+                    metric_results[key] = {
+                        "score": None,
+                        "passed": False,
+                        "reason": str(e),
+                        "provider": provider,
+                        "metadata": {"error": str(e), "metric_name": metric_name},
+                    }
+            
+            sample_results.append(sample.model_dump() | {"metrics": metric_results})
+        
+        return sample_results
+    
+    def run(self) -> EvaluationResult:
+        """Run evaluation with provider routing."""
+        grouped = self._group_metrics_by_strategy()
+        all_sample_results: list[dict[str, Any]] = []
+        
+        if grouped["standalone"]:
+            standalone_results = self._run_standalone(grouped["standalone"])
+            all_sample_results.extend(standalone_results)
+        
+        if grouped["ragas"]:
+            ragas_results = self._run_via_ragas_sync(grouped["ragas"])
+            if not all_sample_results:
+                all_sample_results.extend(ragas_results)
+            else:
+                self._merge_provider_results(all_sample_results, ragas_results)
+        
+        if grouped["deepeval"]:
+            deepeval_results = self._run_via_deepeval_sync(grouped["deepeval"])
+            if not all_sample_results:
+                all_sample_results.extend(deepeval_results)
+            else:
+                self._merge_provider_results(all_sample_results, deepeval_results)
+        
+        aggregate_scores = self._aggregate(all_sample_results)
+        summary = self._summarize(all_sample_results, aggregate_scores)
+        
+        return EvaluationResult(
+            sample_results=all_sample_results,
+            aggregate_scores=aggregate_scores,
+            summary=summary,
+        )
+    
+    def _merge_provider_results(
+        self,
+        existing_results: list[dict[str, Any]],
+        new_results: list[dict[str, Any]],
+    ) -> None:
+        """Merge new_results into existing_results by index (metrics dict per sample)."""
+        if len(existing_results) != len(new_results):
+            logger.warning(
+                f"Mismatch in result lengths: existing={len(existing_results)}, "
+                f"new={len(new_results)}. Results may not align correctly."
+            )
+        
+        for i, new_result in enumerate(new_results):
+            if i < len(existing_results):
+                # Merge metrics from new_result into existing_result
+                existing_metrics = existing_results[i].get("metrics", {})
+                new_metrics = new_result.get("metrics", {})
+                existing_metrics.update(new_metrics)
+                existing_results[i]["metrics"] = existing_metrics
+            else:
+                # Append new result if beyond existing length
+                existing_results.append(new_result)
+    
+    def _run_via_deepeval_sync(self, metrics: list[BaseMetric]) -> list[dict[str, Any]]:
+        """Run metrics via deepeval.evaluate() per sample; map results to sample dicts."""
+        from floeval.metric_providers.deepeval.custom_adapter import DeepEvalCustomMetricAdapter
+        from deepeval.evaluate import evaluate as deepeval_evaluate
+
+        adapter = DeepEvalCustomMetricAdapter(self.gateway_config)
+        
+        # Transform metrics to DeepEval classes
+        deepeval_metric_classes = []
+        for metric in metrics:
+            try:
+                deepeval_class = adapter.transform_metric(metric)
+                deepeval_metric_classes.append((deepeval_class, metric))
+            except Exception as e:
+                logger.error(
+                    f"Failed to transform metric {metric.name} to DeepEval: {e}",
+                    exc_info=True
+                )
+        
+        if not deepeval_metric_classes:
+            return []
+
+        sample_results: list[dict[str, Any]] = []
+        for sample in self.dataset.samples:
+            metric_results: dict[str, Any] = {}
+            test_case = adapter.transform_sample(sample)
+            for deepeval_class, floeval_metric in deepeval_metric_classes:
+                provider = "deepeval"
+                metric_name = floeval_metric.name
+                key = f"{provider}:{metric_name}"
+                
+                try:
+                    deepeval_metric_instance = deepeval_class()
+                    result = deepeval_evaluate(
+                        metrics=[deepeval_metric_instance],
+                        test_cases=[test_case]
+                    )
+                    if result.test_results and len(result.test_results) > 0:
+                        test_result = result.test_results[0]
+                        if test_result.metrics_data and len(test_result.metrics_data) > 0:
+                            metric_data = test_result.metrics_data[0]
+                            score = metric_data.score
+                            success = metric_data.success if hasattr(metric_data, 'success') else None
+                            threshold = getattr(floeval_metric, 'threshold', 0.5)
+                            if deepeval_metric_instance.score is not None:
+                                score = deepeval_metric_instance.score
+                            if deepeval_metric_instance.success is not None:
+                                success = deepeval_metric_instance.success
+                            
+                            if score is None:
+                                score = 0.0
+                            
+                            if success is None:
+                                success = score >= threshold
+                            
+                            metric_results[key] = {
+                                "score": score,
+                                "passed": success,
+                                "reason": getattr(deepeval_metric_instance, 'reason', None),
+                                "provider": provider,
+                                "metadata": {
+                                    "threshold": threshold,
+                                    "execution_provider": "deepeval"
+                                },
+                            }
+                        else:
+                            raise ValueError("No metric data in DeepEval result")
+                    else:
+                        raise ValueError("No test results from DeepEval evaluation")
+                
+                except Exception as e:
+                    logger.error(
+                        f"DeepEval metric {key} failed for sample: {e}",
+                        exc_info=True
+                    )
+                    metric_results[key] = {
+                        "score": None,
+                        "passed": False,
+                        "reason": str(e),
+                        "provider": provider,
+                        "metadata": {"error": str(e), "metric_name": metric_name},
+                    }
+            
+            sample_results.append(sample.model_dump() | {"metrics": metric_results})
+        
+        return sample_results
+
+    async def arun(self) -> EvaluationResult:
+        """
+        Run evaluation asynchronously (concurrent metric execution per sample).
+        
+        Uses metric.aevaluate() so metrics can run concurrently per sample.
+        Optional for users who want true async concurrency; most users use run().
+        """
+        import asyncio
+
+        sample_results: list[dict[str, Any]] = []
+        for sample in self.dataset.samples:
+            metric_results: dict[str, Any] = {}
+            tasks = []
+            metric_list = list(self.metrics)
+            for metric in metric_list:
+                tasks.append(metric.aevaluate(sample))
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for metric, res in zip(metric_list, results):
+                provider = getattr(metric, "provider", "unknown")
+                metric_name = getattr(metric, "name", metric.__class__.__name__)
+                key = f"{provider}:{metric_name}"
+                if isinstance(res, Exception):
+                    logger.error(f"Metric {key} failed for sample: {res}", exc_info=True)
+                    metric_results[key] = {
+                        "score": None,
+                        "passed": False,
+                        "reason": str(res),
+                        "provider": provider,
+                        "metadata": {"error": str(res), "metric_name": metric_name},
+                    }
+                else:
+                    result = res
+                    passed = result.metadata.get("passed")
+                    if passed is not None:
+                        passed = bool(passed)
+                    reason = result.metadata.get("reason") or result.metadata.get("error")
+                    metric_results[key] = {
+                        "score": result.score,
+                        "passed": passed,
+                        "reason": reason,
+                        "provider": provider,
+                        "metadata": result.metadata,
+                    }
+            # Use model_dump() to get all sample fields, consistent with run() method
+            sample_results.append(sample.model_dump() | {"metrics": metric_results})
         aggregate_scores = self._aggregate(sample_results)
         summary = self._summarize(sample_results, aggregate_scores)
-
         return EvaluationResult(
             sample_results=sample_results,
             aggregate_scores=aggregate_scores,
             summary=summary,
         )
 
-    def _aggregate(self, results: List[Dict[str, Any]]) -> Dict[str, float]:
+    def _aggregate(self, results: list[dict[str, Any]]) -> dict[str, float]:
         """Aggregate scores across samples. Skips None scores (failed evaluations)."""
-        scores: Dict[str, List[float]] = {}
+        scores: dict[str, list[float]] = {}
         for result in results:
             for key, data in result["metrics"].items():
                 score = data["score"]
@@ -238,10 +538,10 @@ class Evaluation:
                     scores.setdefault(key, []).append(float(score))
         return {key: (sum(vals) / len(vals)) for key, vals in scores.items() if vals}
 
-    def _summarize(self, results: List[Dict[str, Any]], agg: Dict[str, float]) -> Dict[str, Any]:
+    def _summarize(self, results: list[dict[str, Any]], agg: dict[str, float]) -> dict[str, Any]:
         """Compute summary (PRD-style)."""
         total = len(results)
-        passes: Dict[str, int] = {}
+        passes: dict[str, int] = {}
         providers = set()
 
         for result in results:
