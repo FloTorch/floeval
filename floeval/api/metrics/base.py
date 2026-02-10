@@ -2,6 +2,7 @@
 Base metric abstract class and result model
 """
 
+import asyncio
 from abc import ABC, abstractmethod
 from typing import Any, Mapping
 
@@ -27,12 +28,6 @@ class BaseMetric(ABC):
         pass
 
     async def aevaluate(self, *args, **kwargs) -> MetricResult:
-        """Evaluate metric asynchronously. Default runs evaluate() in executor."""
-        import asyncio
-        
-        if type(self).aevaluate is not BaseMetric.aevaluate:
-            return await type(self).aevaluate(self, *args, **kwargs)
-        
+        """Default: run evaluate() in executor. Override for async."""
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, self.evaluate, *args, **kwargs)
-        return result
+        return await loop.run_in_executor(None, lambda: self.evaluate(*args, **kwargs))

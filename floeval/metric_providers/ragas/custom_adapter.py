@@ -22,23 +22,27 @@ logger = logging.getLogger(__name__)
 class RAGASCustomMetricAdapter:
     """Transforms Floeval custom metrics to RAGAS native metrics."""
 
-    def __init__(self, gateway_config: GatewayConfig | None = None):
-        """Initialize adapter with gateway configuration."""
+    def __init__(
+        self,
+        gateway_config: GatewayConfig | None = None,
+        ragas_adapter: RAGASAdapter | None = None,
+    ):
+        """Use ragas_adapter if provided, else create from gateway_config."""
         self.gateway_config = gateway_config
-        self._ragas_adapter = RAGASAdapter(config=gateway_config)
+        self._ragas_adapter = ragas_adapter if ragas_adapter is not None else RAGASAdapter(config=gateway_config)
     
     @property
     def llm(self):
         """Get RAGAS LLM wrapper."""
         return self._ragas_adapter.llm
-    
+
     @property
     def embeddings(self):
         """Get RAGAS embeddings wrapper."""
         return self._ragas_adapter.embeddings
     
     def transform_metric(self, floeval_metric: BaseMetric) -> Type[MetricWithLLM]:
-        """Transform Floeval metric to RAGAS metric class."""
+        """Return RAGAS metric class for this Floeval metric."""
         if hasattr(floeval_metric, 'user_func'):
             return self._transform_function_metric(floeval_metric)
         
@@ -64,45 +68,18 @@ class RAGASCustomMetricAdapter:
                 super().__init__(_required_columns=_required_columns, llm=llm, name=name)
                 self._floeval_metric = floeval_metric_instance
                 self._threshold = threshold
-            
-            async def _single_turn_ascore(
-                self,
-                sample: SingleTurnSample,
-                callbacks=None
-            ) -> float:
-                """
-                RAGAS evaluation method.
-                
-                Flow:
-                1. Transform RAGAS sample → Floeval sample
-                2. Execute Floeval metric (async)
-                3. Extract score
-                4. Return float (0-1 range)
-                
-                Args:
-                    sample: RAGAS SingleTurnSample
-                    callbacks: RAGAS callbacks (unused)
-                
-                Returns:
-                    float: Score between 0 and 1
-                """
-                # Transform sample
+
+            async def _single_turn_ascore(self, sample: SingleTurnSample, callbacks=None) -> float:
                 floeval_sample = self._transform_sample(sample)
-                
-                # Execute Floeval metric (async)
                 result = await self._floeval_metric.aevaluate(floeval_sample)
-                
-                # Extract score
                 if isinstance(result, MetricResult):
                     score = result.score if result.score is not None else 0.0
                 elif isinstance(result, (int, float)):
                     score = float(result)
                 else:
                     score = 0.0
-                
-                # Ensure score is in 0-1 range
                 return max(0.0, min(1.0, score))
-            
+
             def _transform_sample(self, ragas_sample: SingleTurnSample) -> Sample:
                 """
                 Transform RAGAS sample to Floeval sample.
@@ -181,20 +158,15 @@ class RAGASCustomMetricAdapter:
                 
                 # Execute Floeval criteria metric (async)
                 result = await self._floeval_metric.aevaluate(floeval_sample)
-                
-                # Extract score
                 if isinstance(result, MetricResult):
                     score = result.score if result.score is not None else 0.0
                 elif isinstance(result, (int, float)):
                     score = float(result)
                 else:
                     score = 0.0
-                
-                # Ensure score is in 0-1 range
                 return max(0.0, min(1.0, score))
-            
+
             def _transform_sample(self, ragas_sample: SingleTurnSample) -> Sample:
-                """Transform RAGAS sample to Floeval sample."""
                 return Sample(
                     user_input=ragas_sample.user_input or "",
                     llm_response=ragas_sample.response or "",

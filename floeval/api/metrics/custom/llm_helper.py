@@ -10,7 +10,10 @@ import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
+import openai
+
 from floeval.config import GatewayConfig
+from floeval.utils.gateway import normalize_openai_api_base
 
 logger = logging.getLogger(__name__)
 
@@ -67,21 +70,11 @@ class SimpleLLMHelper:
         and creates AsyncOpenAI client with normalized gateway URL.
         
         Raises:
-            ImportError: If openai package is not installed.
             ValueError: If gateway_config is None or missing required fields.
         """
         if self.client is not None:
             return  # Already initialized
-        
-        # Lazy import: Optional backend; avoid import if LLM features not used
-        try:
-            import openai
-        except ImportError:
-            raise ImportError(
-                "openai package required for LLM-based custom metrics. "
-                "Install with: pip install openai"
-            )
-        
+
         if not self.gateway_config:
             raise ValueError(
                 "gateway_config is required for LLM-based custom metrics. "
@@ -93,9 +86,7 @@ class SimpleLLMHelper:
             self.model = self.gateway_config.llm_model
         elif self._llm_model_param:
             self.model = self._llm_model_param
-        
-        # Lazy import: From ragas adapter; lazy to avoid circular imports
-        from floeval.metric_providers.ragas.adapter import normalize_openai_api_base
+
         base_url = normalize_openai_api_base(self.gateway_config.gateway_base_url)
         
         self.client = openai.AsyncOpenAI(
@@ -205,7 +196,6 @@ class SimpleLLMHelper:
             ValueError: If gateway_config is not set.
             TimeoutError: If gateway times out (504 error).
             RuntimeError: If gateway returns server error (500 error).
-            ImportError: If openai package is not installed.
         
         Examples:
             # In async custom metric:

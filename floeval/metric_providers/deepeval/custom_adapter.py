@@ -319,7 +319,7 @@ class DeepEvalCustomMetricAdapter:
     def transform_dataset(self, dataset: Dataset) -> list[LLMTestCase]:
         """Transform Floeval dataset to list of DeepEval LLMTestCase."""
         test_cases = []
-        for sample in dataset:
+        for sample in dataset.samples:
             test_case = self.transform_sample(sample)
             test_cases.append(test_case)
         return test_cases
