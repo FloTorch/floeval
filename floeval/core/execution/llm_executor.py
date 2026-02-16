@@ -26,7 +26,7 @@ class OpenAIProvider(BaseLLMProvider):
         #     api_key=self.provider_config.api_key,
         # )
         return ChatOpenAI(
-            base_url=self.provider_config.provider_base_url,
+            base_url=self.provider_config.base_url,
             model=self.provider_config.chat_model,
             api_key=self.provider_config.api_key,
             **(self.provider_config.extra_kwargs or {}),

@@ -90,7 +90,7 @@ class DeepEvalMetric(BaseMetric):
             DeepEvalLLMAdapter instance or None if no config provided
         """
         if gateway_config:
-            model_name = gateway_config.llm_model or "default"
+            model_name = gateway_config.chat_model or "default"
             return DeepEvalLLMAdapter(model_name=model_name, config=gateway_config)
         return None  # Will use DeepEval defaults if available
 

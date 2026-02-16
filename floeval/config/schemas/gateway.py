@@ -20,12 +20,12 @@ class GatewayConfig(BaseModel):
     Providers use only the fields they need (e.g. RAGAS ignores temperature/max_tokens).
     """
 
-    gateway_base_url: Optional[str] = Field(
+    base_url: Optional[str] = Field(
         default=None,
         description="Base URL for custom API gateway (OpenAI-compatible)",
     )
     api_key: Optional[str] = Field(default=None, description="API key for authentication")
-    llm_model: Optional[str] = Field(default=None, description="LLM model identifier")
+    chat_model: Optional[str] = Field(default=None, description="LLM model identifier")
     embedding_model: Optional[str] = Field(
         default=None,
         description="Embedding model identifier",

@@ -81,10 +81,10 @@ def parse_args(args: argparse.Namespace):
             "Missing 'evaluation_config' section in the configuration file"
         )
     gateway_config = GatewayConfig(
-        gateway_base_url=gateway_config_data["floeval_gateway_base_url"],
-        api_key=gateway_config_data["llm_api_key"],
-        llm_model=gateway_config_data["llm_model_name"],
-        embedding_model=gateway_config_data["embedding_model_name"],
+        base_url=gateway_config_data["base_url"],
+        api_key=gateway_config_data["api_key"],
+        chat_model=gateway_config_data["chat_model"],
+        embedding_model=gateway_config_data["embedding_model"],
     )
 
     dataset = DatasetLoader.from_file(dataset_file, partial_dataset=False)

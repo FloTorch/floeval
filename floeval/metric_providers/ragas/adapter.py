@@ -36,12 +36,12 @@ def create_ragas_llm(config: Optional[GatewayConfig] = None) -> LangchainLLMWrap
         LangchainLLMWrapper instance configured with custom gateway
     """
     llm_args: Dict[str, Any] = {}
-    if config and config.gateway_base_url:
-        llm_args["openai_api_base"] = normalize_openai_api_base(config.gateway_base_url)
+    if config and config.base_url:
+        llm_args["openai_api_base"] = normalize_openai_api_base(config.base_url)
     if config and config.api_key:
         llm_args["openai_api_key"] = config.api_key
-    if config and config.llm_model:
-        llm_args["model"] = config.llm_model
+    if config and config.chat_model:
+        llm_args["model"] = config.chat_model
     llm = ChatOpenAI(**llm_args)
     return LangchainLLMWrapper(llm)
 
@@ -59,8 +59,8 @@ def create_ragas_embeddings(config: Optional[GatewayConfig] = None) -> Langchain
     embedding_args: Dict[str, Any] = {
         "check_embedding_ctx_length": False,
     }
-    if config and config.gateway_base_url:
-        embedding_args["openai_api_base"] = normalize_openai_api_base(config.gateway_base_url)
+    if config and config.base_url:
+        embedding_args["openai_api_base"] = normalize_openai_api_base(config.base_url)
     if config and config.api_key:
         embedding_args["openai_api_key"] = config.api_key
     if config and config.embedding_model:

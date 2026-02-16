@@ -4,9 +4,7 @@ from pydantic import BaseModel, Field
 class LLMProviderConfig(BaseModel):
     """Generic LLM provider configuration for LLM-based evaluation execution."""
 
-    provider_base_url: str = Field(
-        ..., description="Base URL for the LLM provider API."
-    )
+    base_url: str = Field(..., description="Base URL for the LLM provider API.")
     api_key: str = Field(
         ..., description="API key or token used to authenticate with the provider."
     )
@@ -33,7 +31,7 @@ class LLMProviderConfig(BaseModel):
 class OpenAIProviderConfig(BaseModel):
     """OpenAI-compatible provider configuration with sensible defaults."""
 
-    provider_base_url: str = Field(
+    base_url: str = Field(
         "https://api.openai.com/v1",
         description="Base URL for the OpenAI API.",
     )

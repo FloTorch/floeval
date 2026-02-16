@@ -29,7 +29,7 @@ class SimpleLLMHelper:
     
     Each thread has its own event loop (complete isolation, no main-thread event loop creation).
     """
-    
+
     def __init__(self, gateway_config: GatewayConfig | None = None, llm_model: str | None = None):
         """
         Initialize LLM helper from gateway configuration.
@@ -51,16 +51,18 @@ class SimpleLLMHelper:
         """
         self.gateway_config = gateway_config
         self._llm_model_param = llm_model
-        
+
         # Set model
-        self.model = llm_model or (gateway_config.llm_model if gateway_config else "gpt-4")
-        
+        self.model = llm_model or (
+            gateway_config.chat_model if gateway_config else "gpt-4"
+        )
+
         # Initialize client lazily (only when needed)
         self.client = None
-        
+
         # ThreadPoolExecutor for sync generate(): one worker, own event loop per call (isolation)
         self._executor = ThreadPoolExecutor(max_workers=1)
-    
+
     def _init_client(self):
         """
         Initialize OpenAI client from gateway config (lazy initialization).
@@ -79,22 +81,22 @@ class SimpleLLMHelper:
                 "gateway_config is required for LLM-based custom metrics. "
                 "Pass gateway_config to Evaluation when creating the evaluation instance."
             )
-        
+
         # Update model from gateway_config if available
-        if self.gateway_config.llm_model:
-            self.model = self.gateway_config.llm_model
+        if self.gateway_config.chat_model:
+            self.model = self.gateway_config.chat_model
         elif self._llm_model_param:
             self.model = self._llm_model_param
 
-        base_url = normalize_openai_api_base(self.gateway_config.gateway_base_url)
-        
+        base_url = normalize_openai_api_base(self.gateway_config.base_url)
+
         self.client = openai.AsyncOpenAI(
             base_url=base_url,
             api_key=self.gateway_config.api_key
         )
-        
+
         logger.debug(f"Initialized LLM client for model: {self.model}, base_url: {base_url}")
-    
+
     def generate(
         self,
         prompt: str,
@@ -134,7 +136,7 @@ class SimpleLLMHelper:
             max_tokens,
         )
         return future.result()
-    
+
     def _run_async_in_thread(
         self,
         prompt: str,
@@ -166,7 +168,7 @@ class SimpleLLMHelper:
                     logger.debug("LLM client close: %s", e)
             loop.close()
             self.client = None
-    
+
     async def agenerate(
         self,
         prompt: str,
@@ -215,7 +217,7 @@ class SimpleLLMHelper:
         """
         # Ensure client is initialized (lazy initialization)
         self._init_client()
-        
+
         try:
             # Build request parameters
             request_params = {
@@ -226,21 +228,21 @@ class SimpleLLMHelper:
             # Only include max_tokens if specified
             if max_tokens is not None:
                 request_params["max_tokens"] = max_tokens
-            
+
             logger.debug(f"Calling LLM with model={self.model}, temperature={temperature}, max_tokens={max_tokens}")
             response = await self.client.chat.completions.create(**request_params)
-            
+
             content = response.choices[0].message.content
             logger.debug(f"LLM response received, length={len(content)}")
             return content
-            
+
         except Exception as e:
             # Provide better error messages for common issues
             error_code = getattr(e, 'status_code', None) or getattr(e, 'code', None)
             error_msg = str(e)
-            
+
             logger.error(f"LLM call failed: {error_msg}", exc_info=True)
-            
+
             if error_code == 504 or '504' in error_msg or 'timeout' in error_msg.lower():
                 raise TimeoutError(
                     f"Gateway timeout (504) while calling LLM. "

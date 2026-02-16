@@ -76,7 +76,7 @@ class RAGASMetric(BaseMetric):
         super().__init__(name=name)
         self.provider = "ragas"
         self.gateway_config = gateway_config
-        
+
         if threshold is not None:
             self.threshold = threshold
         elif "threshold" in kwargs:
@@ -84,10 +84,10 @@ class RAGASMetric(BaseMetric):
         else:
             params = kwargs.get("params", {})
             self.threshold = params.get("threshold") if isinstance(params, dict) else None
-        
+
         # Use provided adapter or create new one
         self.adapter = adapter or RAGASAdapter(config=gateway_config)
-        
+
         # NOTE: RAGAS exports metric instances; deepcopy to avoid shared-state mutations
         self.ragas_metric = copy.deepcopy(ragas_metric_instance)
 
@@ -100,7 +100,7 @@ class RAGASMetric(BaseMetric):
                 "Initialized RAGAS metric %s (gateway_used=%s, base_url=%s)",
                 self.name,
                 bool(gateway_config),
-                gateway_config.gateway_base_url if gateway_config else None,
+                gateway_config.base_url if gateway_config else None,
             )
         except Exception as e:
             logger.error(f"Failed to initialize RAGAS LLM/embeddings: {e}")
@@ -113,7 +113,7 @@ class RAGASMetric(BaseMetric):
             "metric_name": self.name,
             "gateway_used": self.gateway_config is not None,
         }
-        
+
         if error:
             metadata["error"] = error
             metadata["passed"] = False
@@ -122,7 +122,7 @@ class RAGASMetric(BaseMetric):
             if self.threshold is not None:
                 metadata["threshold"] = self.threshold
                 metadata["passed"] = score_float >= self.threshold
-        
+
         return metadata
 
 
