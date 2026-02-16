@@ -46,22 +46,22 @@ class OpenAIProviderConfig(BaseModel):
         description="Default chat model for OpenAI requests.",
     )
     chat_endpoint: str = Field(
-        "chat/completions",
+        default="chat/completions",
         description="Endpoint path for chat/completion requests on OpenAI.",
     )
     embedding_model: str | None = Field(
-        "text-embedding-3-small",
+        default="text-embedding-3-small",
         description="Default embedding model for OpenAI embeddings.",
     )
     embedding_endpoint: str | None = Field(
-        "embeddings",
+        default="embeddings",
         description="Endpoint path for embedding requests on OpenAI.",
     )
     system_prompt: str | None = Field(
-        None,
+        default=None,
         description="Optional default system prompt to include in chat requests.",
     )
     extra_kwargs: dict | None = Field(
-        None,
+        default=None,
         description="Additional provider-specific keyword arguments passed to the OpenAI client.",
     )
