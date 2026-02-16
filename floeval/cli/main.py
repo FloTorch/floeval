@@ -1,11 +1,13 @@
 import argparse
 
-from floeval.cli import parse_evaluate
+from floeval.cli import parse_evaluate, parse_generate
 
 
 def handle_command(args: argparse.Namespace):
     if args.command == "evaluate":
         parse_evaluate.parse_args(args)
+    elif args.command == "generate":
+        parse_generate.parse_args(args)
     else:
         raise ValueError(f"Unknown command: {args.command}")
 
@@ -40,9 +42,35 @@ def main():
         help="Path to save evaluation results (optional)",
         default=None,
     )
+    # ----- subcommand for dataset generation from partial dataset -----
+    generate = sub_parsers.add_parser(
+        "generate", help="Generate complete dataset from partial dataset"
+    )
+    generate.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        required=True,
+        help="Path to the generation configuration file (supported formats: YAML or JSON)",
+    )
+    generate.add_argument(
+        "-d",
+        "--dataset",
+        type=str,
+        help="Path to the partial dataset file",
+        required=True,
+    )
+    generate.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        help="Path to save the complete dataset with generated LLM responses (optional)",
+        required=True,
+    )
 
     # ------- set default function to handle commands -------
     evaluate.set_defaults(func=handle_command)
+    generate.set_defaults(func=handle_command)
 
     args = parser.parse_args()
     return args.func(args)

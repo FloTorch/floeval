@@ -34,9 +34,19 @@ dev = [
 [project.scripts]
 floeval = "floeval.cli.main:main"
 
+[tool.setuptools.packages.find]
+include = ["floeval*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "D", "B"]
+ignore = ["D100", "D107"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

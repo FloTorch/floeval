@@ -4,16 +4,32 @@ from pathlib import Path
 
 from floeval.api.dataset import DatasetLoader
 from floeval.api.evaluation import Evaluation, EvaluationResult
-from floeval.cli import ConfigError
-from floeval.cli.utils import EvalConfigLoader
+from floeval.cli import CLIEvaluationConfig, ConfigError
+from floeval.cli.utils import CLIConfigLoader, check_if_file_exists
 from floeval.config import GatewayConfig
+from floeval.config.schemas.io.dataset import Dataset, PartialDataset
 
 
-def check_if_file_exists(file_path: str) -> Path:
-    path = Path(file_path)
-    if not path.is_file():
-        raise FileNotFoundError(f"File not found: {file_path}")
-    return path
+def _is_partial_dataset(file_path: Path) -> bool:
+    """Detect if the dataset file has samples missing llm_response (partial dataset)."""
+    ext = file_path.suffix[1:].lower()
+    if ext == "json":
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        samples = data.get("samples", [])
+    elif ext == "jsonl":
+        samples = []
+        with open(file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    samples.append(json.loads(line))
+    else:
+        return False
+    for s in samples:
+        if "llm_response" not in s or s.get("llm_response") is None or s.get("llm_response") == "":
+            return True
+    return False
 
 
 def _pretty_print_results(results: EvaluationResult):
@@ -40,12 +56,13 @@ def _pretty_print_results(results: EvaluationResult):
 
 
 def output_results(results: EvaluationResult, output_path: Path | None):
-    """Utility function to process evaluation results. Writes to a JSON file if output_path is provided and valid.
-    If output_path is not provided: writes summary of evaluation results to the console.
+    """Process evaluation results & output them.
+
+    Saves to JSON file if output_path is provided; otherwise prints to console.
 
     Args:
-        results (EvaluationResult): The evaluation results to be processed.
-        output_path (str | None): The path to save the results. If None, results will be printed to the console.
+        results: The evaluation results to process.
+        output_path: Path to save results, or None to print to console.
     """
     if output_path:
         try:
@@ -75,31 +92,54 @@ def parse_args(args: argparse.Namespace):
         ) from e
 
     # ----- Load evaluation configuration (YAML or JSON) -----
-    config_loader = EvalConfigLoader()
-    config_data = config_loader.load(config_file)
-    gateway_config_data = config_data.get("gateway_config", {})
+    config_loader = CLIConfigLoader(model_class=CLIEvaluationConfig)
+    evaluation_config = config_loader.load(config_file)
+    gateway_config_data = evaluation_config.llm_config
     if not gateway_config_data:
-        raise ConfigError("Missing 'gateway_config' section in the configuration file")
-    eval_config = config_data.get("evaluation_config", {})
+        raise ConfigError("Missing 'llm_config' section in the configuration file")
+    eval_config = evaluation_config.evaluation_config
     if not eval_config:
         raise ConfigError(
             "Missing 'evaluation_config' section in the configuration file"
         )
-    gateway_config = GatewayConfig(
-        gateway_base_url=gateway_config_data["floeval_gateway_base_url"],
-        api_key=gateway_config_data["llm_api_key"],
-        llm_model=gateway_config_data["llm_model_name"],
-        embedding_model=gateway_config_data["embedding_model_name"],
+    llm_config = GatewayConfig(
+        base_url=gateway_config_data["base_url"],
+        api_key=gateway_config_data["api_key"],
+        chat_model=gateway_config_data["chat_model"],
+        embedding_model=gateway_config_data["embedding_model"],
+        system_prompt=gateway_config_data.get("system_prompt"),
     )
 
-    dataset = DatasetLoader.from_file(dataset_file)
-    evaluation = Evaluation(
+    # Auto-detect partial dataset (samples missing llm_response)
+    partial_dataset = _is_partial_dataset(Path(dataset_file))
+    dataset = DatasetLoader.from_file(dataset_file, partial_dataset=partial_dataset)
+
+    # dataset_generator_model required when using partial dataset (LLM generates responses)
+    dataset_generator_model = None
+    if partial_dataset:
+        dg_config = evaluation_config.dataset_generation_config
+        if dg_config:
+            dataset_generator_model = dg_config.get("generator_model")
+        if not dataset_generator_model:
+            dataset_generator_model = eval_config.get("dataset_generator_model")
+        if not dataset_generator_model:
+            raise ConfigError(
+                "dataset_generator_model is required for partial datasets (samples without llm_response). "
+                "Add 'dataset_generation_config': {'generator_model': 'your-model'} or "
+                "'dataset_generator_model' in evaluation_config to your config file."
+            )
+
+    eval_kwargs = dict(
         dataset=dataset,
-        gateway_config=gateway_config,
+        llm_config=llm_config,
         default_provider=eval_config.get("default_provider"),
         metrics=eval_config["metrics"],
         metric_params=eval_config.get("metric_params", {}),
     )
+    if dataset_generator_model:
+        eval_kwargs["dataset_generator_model"] = dataset_generator_model
+
+    evaluation = Evaluation(**eval_kwargs)
     results = evaluation.run()
 
     output_results(results, output_file)

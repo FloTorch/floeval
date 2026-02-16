@@ -1,6 +1,5 @@
 """DeepEval custom metric adapter."""
 
-import logging
 from typing import Any, Type
 
 try:
@@ -10,6 +9,8 @@ except ImportError as e:
     raise ImportError(
         f"DeepEval dependencies not installed. Please install: deepeval. Original error: {e}"
     )
+
+import logging
 
 from floeval.api.dataset import Dataset, Sample
 from floeval.api.metrics.base import BaseMetric, MetricResult

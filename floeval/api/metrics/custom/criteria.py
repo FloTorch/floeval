@@ -7,11 +7,9 @@ from typing import Any
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.registry import MetricRegistry
-from floeval.config import GatewayConfig
 
 from .llm_helper import SimpleLLMHelper
 
-# Module-level logger
 logger = logging.getLogger(__name__)
 
 # Lazy imports (optional backend):

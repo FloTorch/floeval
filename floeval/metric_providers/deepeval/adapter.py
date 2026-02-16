@@ -37,20 +37,25 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
         kwargs: dict[str, Any] = {}
 
         if self.config:
-            if self.config.llm_model:
-                kwargs["model"] = self.config.llm_model
+            chat_model = getattr(self.config, "chat_model", None)
+            if chat_model:
+                kwargs["model"] = chat_model
             # Only set temperature/max_tokens if explicitly provided (let provider use defaults otherwise)
-            if self.config.temperature is not None:
-                kwargs["temperature"] = self.config.temperature
-            if self.config.max_tokens is not None:
-                kwargs["max_tokens"] = self.config.max_tokens
+            temperature = getattr(self.config, "temperature", None)
+            if temperature is not None:
+                kwargs["temperature"] = temperature
+            max_tokens = getattr(self.config, "max_tokens", None)
+            if max_tokens is not None:
+                kwargs["max_tokens"] = max_tokens
 
-            if self.config.api_key:
-                kwargs["api_key"] = self.config.api_key
+            api_key = getattr(self.config, "api_key", None)
+            if api_key:
+                kwargs["api_key"] = api_key
 
-            if self.config.gateway_base_url:
+            base_url = getattr(self.config, "base_url", None)
+            if base_url:
                 # Normalize gateway URL to OpenAI-compatible format (same as RAGAS)
-                kwargs["base_url"] = normalize_openai_api_base(self.config.gateway_base_url)
+                kwargs["base_url"] = normalize_openai_api_base(base_url)
 
         self._llm_instance = ChatOpenAI(**kwargs)
         return self._llm_instance
