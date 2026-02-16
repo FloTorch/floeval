@@ -52,9 +52,9 @@ class Evaluation:
         dataset_generator_model: str | None = None,
     ):
         self.dataset_generator_model = dataset_generator_model
+        self.gateway_config = gateway_config
         self.dataset = self._prepare_dataset(dataset)
         self.default_provider = default_provider
-        self.gateway_config = gateway_config
         self.metric_params = dict(metric_params or {})
         self._registry = MetricRegistry()
 
