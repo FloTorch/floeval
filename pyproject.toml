@@ -34,6 +34,9 @@ dev = [
 [project.scripts]
 floeval = "floeval.cli.main:main"
 
+[tool.setuptools.packages.find]
+include = ["floeval*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

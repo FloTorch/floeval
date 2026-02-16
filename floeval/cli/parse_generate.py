@@ -45,7 +45,7 @@ def parse_args(args: argparse.Namespace):
     config_loader = CLIConfigLoader(model_class=CLIGenerationConfig)
     generation_config = config_loader.load(config_file_path)
 
-    _model_config_name = generation_config.dataset_generation_config["generator_model"]
+    _model_config_name = generation_config.dataset_generation_config.generator_model
     llm_provider = OpenAIProvider(
         config_name=f"{_model_config_name}_generation",
         **generation_config.llm_config | {"chat_model": _model_config_name},

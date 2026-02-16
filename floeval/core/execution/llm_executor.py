@@ -1,6 +1,6 @@
 import logging
 
-# import openai
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
@@ -41,12 +41,24 @@ class OpenAIProvider(BaseLLMProvider):
 
         Args:
             prompt: The user prompt to send to the LLM.
-            kwargs: Additional keyword arguments
+            kwargs: Additional keyword arguments (e.g. system_prompt override).
 
         Returns:
             response: The generated response from the LLM.
         """
-        _output_text = self._llm_client.invoke(prompt).content
+        system_prompt = kwargs.get("system_prompt") or getattr(
+            self.provider_config, "system_prompt", None
+        )
+        if system_prompt:
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=prompt),
+            ]
+        else:
+            messages = [HumanMessage(content=prompt)]
+        print(f"---------messages-----------\n{messages}")
+        _output_text = self._llm_client.invoke(messages).content
+        print(f"---------generated llm response-----------\n{_output_text}")
         if not isinstance(_output_text, str):
             logger.warning(
                 f"Expected output_text to be a string, but got {type(_output_text)}"

@@ -38,3 +38,7 @@ class GatewayConfig(BaseModel):
         default=None,
         description="Max tokens for LLM generation (provider will use its default if not provided)",
     )
+    system_prompt: Optional[str] = Field(
+        default=None,
+        description="Optional system prompt for chat requests (used in messages format for response generation).",
+    )
