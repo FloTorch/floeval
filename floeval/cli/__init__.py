@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TypedDict
 
 from pydantic import BaseModel
 
@@ -9,6 +9,15 @@ class ConfigError(Exception):
     pass
 
 
-class CliConfig(BaseModel):
-    gateway_config: dict[str, Any]
+class CLIEvaluationConfig(BaseModel):
+    llm_config: dict[str, Any]
     evaluation_config: dict[str, Any]
+
+
+class DatasetGenConfig(TypedDict):
+    generator_model: str
+
+
+class CLIGenerationConfig(BaseModel):
+    llm_config: dict[str, Any]
+    dataset_generation_config: DatasetGenConfig

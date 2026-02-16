@@ -18,7 +18,6 @@ from floeval.utils.gateway import normalize_openai_api_base
 logger = logging.getLogger(__name__)
 
 
-
 class SimpleLLMHelper:
     """
     Simple LLM wrapper for custom metrics.

@@ -1,15 +1,17 @@
 """RAGAS custom metric adapter."""
 
-import logging
 from typing import Any, Type
 
 try:
     from ragas import EvaluationDataset, SingleTurnSample
-    from ragas.metrics.base import MetricWithLLM, SingleTurnMetric, MetricType
+    from ragas.metrics.base import MetricType, MetricWithLLM, SingleTurnMetric
 except ImportError as e:
     raise ImportError(
         f"RAGAS dependencies not installed. Please install: ragas>=0.4.3. Original error: {e}"
     )
+
+
+import logging
 
 from floeval.api.dataset import Dataset, Sample
 from floeval.api.metrics.base import BaseMetric, MetricResult

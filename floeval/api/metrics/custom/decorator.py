@@ -9,7 +9,6 @@ from typing import Any, Callable
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.registry import MetricRegistry
 
-# Module-level logger
 logger = logging.getLogger(__name__)
 
 # Lazy imports (avoid circular imports):
