@@ -11,12 +11,12 @@ import floeval.metric_providers
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.custom.llm_helper import SimpleLLMHelper
 from floeval.api.metrics.registry import MetricRegistry
-from floeval.config import GatewayConfig
 from floeval.config.schemas.io.dataset import Dataset, PartialDataset
 from floeval.core.execution import response_synthesizer
 from floeval.core.execution.llm_executor import OpenAIProvider
 from floeval.core.execution.response_synthesizer import populate_llm_responses
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
+from floeval.utils.gateway import normalize_openai_api_base
 from floeval.utils.ragas_results import extract_ragas_score
 
 logger = logging.getLogger(__name__)
@@ -47,14 +47,14 @@ class Evaluation:
         dataset: Dataset | PartialDataset,
         metrics: list[MetricSpec],
         default_provider: str | None = None,
-        gateway_config: Any | None = None,
+        llm_config: Any | None = None,
         metric_params: Mapping[str, dict[str, Any]] | None = None,
         dataset_generator_model: str | None = None,
     ):
         self.dataset_generator_model = dataset_generator_model
-        self.dataset = self._prepare_dataset(dataset)
         self.default_provider = default_provider
-        self.gateway_config = gateway_config
+        self.llm_config = llm_config
+        self.dataset = self._prepare_dataset(dataset)
         self.metric_params = dict(metric_params or {})
         self._registry = MetricRegistry()
 
@@ -70,21 +70,36 @@ class Evaluation:
         if isinstance(dataset, Dataset):
             return dataset
 
+        if not self.llm_config or not self.dataset_generator_model:
+            raise ValueError(
+                "llm_config and dataset_generator_model are required when "
+                "evaluating a PartialDataset (samples without llm_response)"
+            )
+
         _partial_dataset = dataset
+        config_dict = (
+            self.llm_config.model_dump()
+            if hasattr(self.llm_config, "model_dump")
+            else dict(self.llm_config)
+        )
+        if config_dict.get("base_url"):
+            config_dict["base_url"] = normalize_openai_api_base(
+                config_dict["base_url"]
+            )
 
         llm_provider = OpenAIProvider(
             config_name=self.dataset_generator_model,
-            **self.gateway_config,
+            **config_dict,
         )
         dataset = response_synthesizer.populate_llm_responses(
             partial_dataset=_partial_dataset, llm_provider=llm_provider
         )
         return dataset
 
-    def _get_ragas_adapter(self, gateway_config: GatewayConfig | None) -> RAGASAdapter:
+    def _get_ragas_adapter(self, llm_config: Any | None) -> RAGASAdapter:
         """Return cached RAGAS adapter, creating it if needed."""
         if self._provider_adapters["ragas"]["adapter"] is None:
-            self._provider_adapters["ragas"]["adapter"] = RAGASAdapter(config=gateway_config)
+            self._provider_adapters["ragas"]["adapter"] = RAGASAdapter(config=llm_config)
         return self._provider_adapters["ragas"]["adapter"]
 
     def _merge_params(
@@ -96,7 +111,7 @@ class Evaluation:
         Precedence (highest to lowest):
         1) Explicit params passed in the metric spec dict
         2) metric_params mapping (keyed by "provider:metric" or "metric")
-        3) Evaluation.gateway_config (injected as "gateway_config")
+        3) Evaluation.llm_config (injected as "gateway_config" for metrics)
         """
         merged: dict[str, Any] = {}
 
@@ -104,9 +119,9 @@ class Evaluation:
         merged.update(self.metric_params.get(metric_id, {}))
         merged.update(self.metric_params.get(f"{provider}:{metric_id}", {}))
 
-        # 3) Evaluation-level gateway config (if metric doesn't override it)
-        if self.gateway_config is not None and "gateway_config" not in merged:
-            merged["gateway_config"] = self.gateway_config
+        # 3) Evaluation-level llm config (metrics expect "gateway_config" key)
+        if self.llm_config is not None and "gateway_config" not in merged:
+            merged["gateway_config"] = self.llm_config
 
         # 1) Spec params override everything
         merged.update(params)
@@ -117,11 +132,11 @@ class Evaluation:
     ) -> BaseMetric:
         """Build merged params, inject cached adapter for RAGAS, then create metric instance."""
         merged = self._merge_params(provider, metric_id, params)
-        gateway_config = merged.get("gateway_config")
+        llm_config = merged.get("gateway_config")
         if provider == "ragas" and "adapter" not in merged:
-            merged["adapter"] = self._get_ragas_adapter(gateway_config)
-        elif provider == "deepeval" and "gateway_config" not in merged and self.gateway_config:
-            merged["gateway_config"] = self.gateway_config
+            merged["adapter"] = self._get_ragas_adapter(llm_config)
+        elif provider == "deepeval" and "gateway_config" not in merged and self.llm_config:
+            merged["gateway_config"] = self.llm_config
 
         try:
             return self._registry.create(provider, metric_id, **merged)
@@ -141,14 +156,14 @@ class Evaluation:
         for spec in specs:
             # Case 1: Already an instance
             if isinstance(spec, BaseMetric):
-                # Inject gateway_config when not set (user passes config to Evaluation)
-                if self.gateway_config:
+                # Inject llm_config when not set (user passes config to Evaluation)
+                if self.llm_config:
                     if not hasattr(spec, 'gateway_config') or spec.gateway_config is None:
-                        spec.gateway_config = self.gateway_config
+                        spec.gateway_config = self.llm_config
                         # Replace llm_helper with one initialized with config (no mutation of existing helper)
                         if hasattr(spec, 'llm_helper') and getattr(spec, 'llm_helper', None) is not None:
                             llm_model = getattr(spec, 'llm_model', None) or getattr(spec, '_default_llm_model', 'gpt-4')
-                            spec.llm_helper = SimpleLLMHelper(self.gateway_config, llm_model=llm_model)
+                            spec.llm_helper = SimpleLLMHelper(self.llm_config, llm_model=llm_model)
                 resolved.append(spec)
                 continue
 
@@ -260,8 +275,8 @@ class Evaluation:
             RAGASCustomMetricAdapter,
         )
 
-        ragas_adapter = self._get_ragas_adapter(self.gateway_config)
-        adapter = RAGASCustomMetricAdapter(self.gateway_config, ragas_adapter=ragas_adapter)
+        ragas_adapter = self._get_ragas_adapter(self.llm_config)
+        adapter = RAGASCustomMetricAdapter(self.llm_config, ragas_adapter=ragas_adapter)
 
         ragas_metrics = []
         metric_mapping = []
@@ -417,7 +432,7 @@ class Evaluation:
             DeepEvalCustomMetricAdapter,
         )
 
-        adapter = DeepEvalCustomMetricAdapter(self.gateway_config)
+        adapter = DeepEvalCustomMetricAdapter(self.llm_config)
 
         # Transform metrics to DeepEval classes
         deepeval_metric_classes = []

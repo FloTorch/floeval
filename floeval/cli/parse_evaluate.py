@@ -7,7 +7,29 @@ from floeval.api.evaluation import Evaluation, EvaluationResult
 from floeval.cli import CLIEvaluationConfig, ConfigError
 from floeval.cli.utils import CLIConfigLoader, check_if_file_exists
 from floeval.config import GatewayConfig
-from floeval.config.schemas.io.dataset import Dataset
+from floeval.config.schemas.io.dataset import Dataset, PartialDataset
+
+
+def _is_partial_dataset(file_path: Path) -> bool:
+    """Detect if the dataset file has samples missing llm_response (partial dataset)."""
+    ext = file_path.suffix[1:].lower()
+    if ext == "json":
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        samples = data.get("samples", [])
+    elif ext == "jsonl":
+        samples = []
+        with open(file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    samples.append(json.loads(line))
+    else:
+        return False
+    for s in samples:
+        if "llm_response" not in s or s.get("llm_response") is None or s.get("llm_response") == "":
+            return True
+    return False
 
 
 def _pretty_print_results(results: EvaluationResult):
@@ -74,32 +96,50 @@ def parse_args(args: argparse.Namespace):
     evaluation_config = config_loader.load(config_file)
     gateway_config_data = evaluation_config.llm_config
     if not gateway_config_data:
-        raise ConfigError("Missing 'gateway_config' section in the configuration file")
+        raise ConfigError("Missing 'llm_config' section in the configuration file")
     eval_config = evaluation_config.evaluation_config
     if not eval_config:
         raise ConfigError(
             "Missing 'evaluation_config' section in the configuration file"
         )
-    gateway_config = GatewayConfig(
+    llm_config = GatewayConfig(
         base_url=gateway_config_data["base_url"],
         api_key=gateway_config_data["api_key"],
         chat_model=gateway_config_data["chat_model"],
         embedding_model=gateway_config_data["embedding_model"],
+        system_prompt=gateway_config_data.get("system_prompt"),
     )
 
-    dataset = DatasetLoader.from_file(dataset_file, partial_dataset=False)
+    # Auto-detect partial dataset (samples missing llm_response)
+    partial_dataset = _is_partial_dataset(Path(dataset_file))
+    dataset = DatasetLoader.from_file(dataset_file, partial_dataset=partial_dataset)
 
-    assert isinstance(
-        dataset, Dataset
-    ), f"Expected a Dataset instance; got {type(dataset)}"
+    # dataset_generator_model required when using partial dataset (LLM generates responses)
+    dataset_generator_model = None
+    if partial_dataset:
+        dg_config = evaluation_config.dataset_generation_config
+        if dg_config:
+            dataset_generator_model = dg_config.get("generator_model")
+        if not dataset_generator_model:
+            dataset_generator_model = eval_config.get("dataset_generator_model")
+        if not dataset_generator_model:
+            raise ConfigError(
+                "dataset_generator_model is required for partial datasets (samples without llm_response). "
+                "Add 'dataset_generation_config': {'generator_model': 'your-model'} or "
+                "'dataset_generator_model' in evaluation_config to your config file."
+            )
 
-    evaluation = Evaluation(
+    eval_kwargs = dict(
         dataset=dataset,
-        gateway_config=gateway_config,
+        llm_config=llm_config,
         default_provider=eval_config.get("default_provider"),
         metrics=eval_config["metrics"],
         metric_params=eval_config.get("metric_params", {}),
     )
+    if dataset_generator_model:
+        eval_kwargs["dataset_generator_model"] = dataset_generator_model
+
+    evaluation = Evaluation(**eval_kwargs)
     results = evaluation.run()
 
     output_results(results, output_file)
