@@ -1,9 +1,7 @@
 import logging
-from typing import Literal
 
 # import openai
 from langchain_openai import ChatOpenAI
-from openai._types import Omit, SequenceNotStr
 
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
 from floeval.core.execution.base import BaseLLMProvider
@@ -48,14 +46,6 @@ class OpenAIProvider(BaseLLMProvider):
         Returns:
             response: The generated response from the LLM.
         """
-        # to explicitly omit the instructions field if no system prompt is provided,
-        # we can use the Omit type from the OpenAI _types
-        _instruction: str | Omit = Omit()
-
-        if self.provider_config.system_prompt and isinstance(
-            self.provider_config.system_prompt, str
-        ):
-            _instruction = self.provider_config.system_prompt + "\n\n"
         _output_text = self._llm_client.invoke(prompt).content
         if not isinstance(_output_text, str):
             logger.warning(
@@ -64,9 +54,7 @@ class OpenAIProvider(BaseLLMProvider):
             return _output_text
         return _output_text
 
-    def generate_embedding(
-        self, input: str | SequenceNotStr[str], **kwargs
-    ) -> list[float]:
+    def generate_embedding(self, input: str, **kwargs) -> list[float]:
         """Generate an embedding from the LLM based on the given input.
 
         Args:
@@ -76,23 +64,6 @@ class OpenAIProvider(BaseLLMProvider):
         Returns:
             The generated embedding(s) as a list of floats, or None if embedding generation failed.
         """
-        _encoding_format: Literal["float"] = "float"
-        if (
-            not self.provider_config.embedding_model
-            or not self.provider_config.embedding_endpoint
-        ):
-            raise ValueError(
-                "Embedding model and endpoint must be specified in the provider configuration"
-                " to generate embeddings."
-            )
-        try:
-            response = self._llm_client.embeddings.create(
-                model=self.provider_config.embedding_model,
-                input=input,
-                encoding_format=_encoding_format,
-                **kwargs,
-            )
-            return response.data[0].embedding
-        except Exception as e:
-            logger.error(f"Error generating embedding: {e}")
-            raise Exception(f"Error generating embedding: {e}") from e
+        raise NotImplementedError(
+            "Embedding generation is not implemented for OpenAIProvider yet."
+        )
