@@ -47,8 +47,8 @@ def parse_args(args: argparse.Namespace):
 
     _model_config_name = generation_config.dataset_generation_config["generator_model"]
     llm_provider = OpenAIProvider(
-        config_name=_model_config_name,
-        **generation_config.llm_config,
+        config_name=f"{_model_config_name}_generation",
+        **generation_config.llm_config | {"chat_model": _model_config_name},
     )
 
     dataset: Dataset = populate_llm_responses(
