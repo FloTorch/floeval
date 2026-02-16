@@ -73,8 +73,8 @@ class Evaluation:
         _partial_dataset = dataset
 
         llm_provider = OpenAIProvider(
-            config_name=self.dataset_generator_model,
-            **self.gateway_config,
+            config_name=f"{self.dataset_generator_model}_generation",
+            **self.gateway_config | {"chat_model": self.dataset_generator_model},
         )
         dataset = response_synthesizer.populate_llm_responses(
             partial_dataset=_partial_dataset, llm_provider=llm_provider
