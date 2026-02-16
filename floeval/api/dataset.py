@@ -94,6 +94,8 @@ def dataset_from_samples(
         for s in samples:
             if isinstance(s, Sample):
                 normalized_samples.append(PartialSample(**s.model_dump()))
+            elif isinstance(s, PartialSample):
+                normalized_samples.append(s)
             elif isinstance(s, dict):
                 normalized_samples.append(PartialSample(**s))
             else:
