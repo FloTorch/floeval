@@ -67,6 +67,9 @@ class Evaluation:
 
     def _prepare_dataset(self, dataset: Dataset | PartialDataset) -> Dataset:
         """Prepare dataset for evaluation (e.g., populate LLM responses if needed)."""
+        assert (
+            self.llm_config is not None
+        ), "llm_config must be provided to prepare dataset with LLM responses"
         if isinstance(dataset, Dataset):
             return dataset
 
@@ -88,8 +91,12 @@ class Evaluation:
             )
 
         llm_provider = OpenAIProvider(
-            config_name=self.dataset_generator_model,
-            **config_dict,
+
+            config_name=f"{self.dataset_generator_model}_generation",
+            **(
+                self.llm_config.model_dump()
+                | {"chat_model": self.dataset_generator_model}
+            )
         )
         dataset = response_synthesizer.populate_llm_responses(
             partial_dataset=_partial_dataset, llm_provider=llm_provider
