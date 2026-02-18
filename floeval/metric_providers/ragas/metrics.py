@@ -1,8 +1,7 @@
-"""
-RAGAS metric implementations with custom gateway support.
+"""RAGAS metric implementations with custom llm providers support.
 
 This module provides RAGAS metrics (answer_relevancy, faithfulness)
-that can be configured with custom API gateways.
+that can be configured with custom LLM providers.
 """
 
 import asyncio
@@ -10,21 +9,17 @@ import copy
 import logging
 from typing import Any, Dict, Optional
 
+from floeval.config.schemas.io.llm import LLMProviderConfig
+
 try:
     import nest_asyncio
     nest_asyncio.apply()
 except ImportError:
     pass
 
-try:
-    from ragas.metrics import answer_relevancy, faithfulness
-except ImportError as e:
-    raise ImportError(
-        f"RAGAS not installed. Please install ragas>=0.4.3. Original error: {e}"
-    )
+from ragas.metrics import answer_relevancy, faithfulness
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
-from floeval.config import GatewayConfig
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
 
 logger = logging.getLogger(__name__)
@@ -59,23 +54,23 @@ def _run_async(coro: Any) -> Any:
 
 
 class RAGASMetric(BaseMetric):
-    """
-    Base class for RAGAS metrics.
+    """Base class for RAGAS metrics.
+
     Handles common initialization and computation patterns.
     """
 
     def __init__(
         self,
         ragas_metric_instance: Any,
-        gateway_config: Optional[GatewayConfig] = None,
-        adapter: Optional[RAGASAdapter] = None,
-        threshold: Optional[float] = None,
+        llm_config: LLMProviderConfig | None = None,
+        adapter: RAGASAdapter | None = None,
+        threshold: float | None = None,
         name: str = "ragas_metric",
-        **kwargs: Any
+        **kwargs: Any,
     ):
         super().__init__(name=name)
         self.provider = "ragas"
-        self.gateway_config = gateway_config
+        self.llm_config = llm_config
 
         if threshold is not None:
             self.threshold = threshold
@@ -86,7 +81,7 @@ class RAGASMetric(BaseMetric):
             self.threshold = params.get("threshold") if isinstance(params, dict) else None
 
         # Use provided adapter or create new one
-        self.adapter = adapter or RAGASAdapter(config=gateway_config)
+        self.adapter = adapter or RAGASAdapter(config=llm_config)
 
         # NOTE: RAGAS exports metric instances; deepcopy to avoid shared-state mutations
         self.ragas_metric = copy.deepcopy(ragas_metric_instance)
@@ -97,10 +92,10 @@ class RAGASMetric(BaseMetric):
             if hasattr(self.ragas_metric, "embeddings"):
                 self.ragas_metric.embeddings = self.adapter.embeddings
             logger.debug(
-                "Initialized RAGAS metric %s (gateway_used=%s, base_url=%s)",
+                "Initialized RAGAS metric %s (llm_config=%s, base_url=%s)",
                 self.name,
-                bool(gateway_config),
-                gateway_config.base_url if gateway_config else None,
+                bool(self.llm_config),
+                self.llm_config.base_url if self.llm_config else None,
             )
         except Exception as e:
             logger.error(f"Failed to initialize RAGAS LLM/embeddings: {e}")
@@ -111,7 +106,7 @@ class RAGASMetric(BaseMetric):
         metadata = {
             "provider": self.provider,
             "metric_name": self.name,
-            "gateway_used": self.gateway_config is not None,
+            "llm_config": self.llm_config is not None,
         }
 
         if error:
@@ -127,46 +122,44 @@ class RAGASMetric(BaseMetric):
 
 
 class RAGASAnswerRelevancy(RAGASMetric):
-    """
-    RAGAS Answer Relevancy metric with custom gateway support.
-    
+    """RAGAS Answer Relevancy metric with custom gateway support.
+
     Measures how relevant the generated answer is to the given question.
     Higher scores indicate more relevant answers.
-    
+
     Args:
-        gateway_config: Optional gateway configuration for custom API endpoint.
+        llm_config: Optional LLM configuration for custom API endpoint.
             If None, uses default RAGAS configuration (environment variables).
         adapter: Optional RAGASAdapter instance (for reuse across metrics).
         threshold: Optional threshold for pass/fail determination.
             If None, only score is returned (no pass/fail).
         name: Metric name (default: "answer_relevancy")
     """
-    
+
     def __init__(
         self,
-        gateway_config: Optional[GatewayConfig] = None,
-        adapter: Optional[RAGASAdapter] = None,
-        threshold: Optional[float] = None,
+        llm_config: LLMProviderConfig | None = None,
+        adapter: RAGASAdapter | None = None,
+        threshold: float | None = None,
         name: str = "answer_relevancy",
-        **kwargs: Any
+        **kwargs: Any,
     ):
         super().__init__(
             ragas_metric_instance=answer_relevancy,
-            gateway_config=gateway_config,
+            llm_config=llm_config,
             adapter=adapter,
             threshold=threshold,
             name=name,
-            **kwargs
+            **kwargs,
         )
 
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
-        """
-        Compute answer relevancy score for a sample.
-        
+        """Compute answer relevancy score for a sample.
+
         Args:
             sample: Floeval Sample object with inputs and ground_truth
             **kwargs: Additional arguments (unused)
-            
+
         Returns:
             MetricResult with score and metadata
         """
@@ -174,7 +167,7 @@ class RAGASAnswerRelevancy(RAGASMetric):
             ragas_sample = self.adapter.transform_sample(sample)
             score = _run_async(self.ragas_metric.single_turn_ascore(ragas_sample))
             score_float = float(score)
-            
+
             return MetricResult(
                 score=score_float,
                 metadata=self._build_metadata(score_float),
@@ -188,46 +181,44 @@ class RAGASAnswerRelevancy(RAGASMetric):
 
 
 class RAGASFaithfulness(RAGASMetric):
-    """
-    RAGAS Faithfulness metric with custom gateway support.
-    
+    """RAGAS Faithfulness metric with custom gateway support.
+
     Measures how grounded the generated answer is in the provided context.
     Higher scores indicate answers that are more faithful to the context.
-    
+
     Args:
-        gateway_config: Optional gateway configuration for custom API endpoint.
+        llm_config: Optional LLM configuration for custom API endpoint.
             If None, uses default RAGAS configuration (environment variables).
         adapter: Optional RAGASAdapter instance (for reuse across metrics).
         threshold: Optional threshold for pass/fail determination.
             If None, only score is returned (no pass/fail).
         name: Metric name (default: "faithfulness")
     """
-    
+
     def __init__(
         self,
-        gateway_config: Optional[GatewayConfig] = None,
-        adapter: Optional[RAGASAdapter] = None,
-        threshold: Optional[float] = None,
+        llm_config: LLMProviderConfig | None = None,
+        adapter: RAGASAdapter | None = None,
+        threshold: float | None = None,
         name: str = "faithfulness",
-        **kwargs: Any
+        **kwargs: Any,
     ):
         super().__init__(
             ragas_metric_instance=faithfulness,
-            gateway_config=gateway_config,
+            llm_config=llm_config,
             adapter=adapter,
             threshold=threshold,
             name=name,
-            **kwargs
+            **kwargs,
         )
 
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
-        """
-        Compute faithfulness score for a sample.
-        
+        """Compute faithfulness score for a sample.
+
         Args:
             sample: Floeval Sample object with inputs and ground_truth
             **kwargs: Additional arguments (unused)
-            
+
         Returns:
             MetricResult with score and metadata
         """
@@ -235,7 +226,7 @@ class RAGASFaithfulness(RAGASMetric):
             ragas_sample = self.adapter.transform_sample(sample)
             score = _run_async(self.ragas_metric.single_turn_ascore(ragas_sample))
             score_float = float(score)
-            
+
             return MetricResult(
                 score=score_float,
                 metadata=self._build_metadata(score_float),

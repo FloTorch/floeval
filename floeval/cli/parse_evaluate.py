@@ -6,8 +6,7 @@ from floeval.api.dataset import DatasetLoader
 from floeval.api.evaluation import Evaluation, EvaluationResult
 from floeval.cli import CLIEvaluationConfig, ConfigError
 from floeval.cli.utils import CLIConfigLoader, check_if_file_exists
-from floeval.config import GatewayConfig
-from floeval.config.schemas.io.dataset import Dataset, PartialDataset
+from floeval.config.schemas.io.llm import LLMProviderConfig
 
 
 def _is_partial_dataset(file_path: Path) -> bool:
@@ -94,20 +93,22 @@ def parse_args(args: argparse.Namespace):
     # ----- Load evaluation configuration (YAML or JSON) -----
     config_loader = CLIConfigLoader(model_class=CLIEvaluationConfig)
     evaluation_config = config_loader.load(config_file)
-    gateway_config_data = evaluation_config.llm_config
-    if not gateway_config_data:
+    llm_config = evaluation_config.llm_config
+    if not llm_config:
         raise ConfigError("Missing 'llm_config' section in the configuration file")
     eval_config = evaluation_config.evaluation_config
     if not eval_config:
         raise ConfigError(
             "Missing 'evaluation_config' section in the configuration file"
         )
-    llm_config = GatewayConfig(
-        base_url=gateway_config_data["base_url"],
-        api_key=gateway_config_data["api_key"],
-        chat_model=gateway_config_data["chat_model"],
-        embedding_model=gateway_config_data["embedding_model"],
-        system_prompt=gateway_config_data.get("system_prompt"),
+    llm_config = LLMProviderConfig(
+        base_url=llm_config["base_url"],
+        api_key=llm_config["api_key"],
+        chat_model=llm_config["chat_model"],
+        embedding_model=llm_config["embedding_model"],
+        system_prompt=llm_config.get("system_prompt"),
+        chat_endpoint=llm_config.get("chat_endpoint", "chat/completions"),
+        embedding_endpoint=llm_config.get("embedding_endpoint", "embeddings"),
     )
 
     # Auto-detect partial dataset (samples missing llm_response)
@@ -129,17 +130,15 @@ def parse_args(args: argparse.Namespace):
                 "'dataset_generator_model' in evaluation_config to your config file."
             )
 
-    eval_kwargs = dict(
+    evaluation = Evaluation(
         dataset=dataset,
         llm_config=llm_config,
         default_provider=eval_config.get("default_provider"),
         metrics=eval_config["metrics"],
         metric_params=eval_config.get("metric_params", {}),
+        dataset_generator_model=dataset_generator_model,
     )
-    if dataset_generator_model:
-        eval_kwargs["dataset_generator_model"] = dataset_generator_model
 
-    evaluation = Evaluation(**eval_kwargs)
     results = evaluation.run()
 
     output_results(results, output_file)
