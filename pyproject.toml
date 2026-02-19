@@ -24,6 +24,12 @@ dependencies = [
     "pydantic>=2.0.0",
 ]
 
+[project.optional-dependencies]
+flotorch = [
+    "google-adk>=1.5.0",
+    "httpx>=0.24",
+]
+
 [dependency-groups]
 dev = [
     "mypy>=1.19.1",
