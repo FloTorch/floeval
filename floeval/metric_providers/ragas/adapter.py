@@ -1,39 +1,31 @@
 """
-RAGAS adapter for custom gateway integration.
+RAGAS adapter for custom LLM integration.
 
 Key points:
-- Uses unified GatewayConfig for consistency across providers.
+- Uses unified LLMProviderConfig for consistency across providers.
 - Provides RAGASAdapter class similar to DeepEvalAdapter for consistency.
 """
 
-from collections.abc import Mapping
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Sequence
 
-try:
-    from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-    from ragas import SingleTurnSample
-    from ragas.embeddings import LangchainEmbeddingsWrapper
-    from ragas.llms import LangchainLLMWrapper
-except ImportError as e:
-    raise ImportError(
-        f"RAGAS dependencies not installed. Please install: "
-        f"ragas>=0.4.3, langchain-openai. Original error: {e}"
-    )
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from ragas import SingleTurnSample
+from ragas.embeddings import LangchainEmbeddingsWrapper
+from ragas.llms import LangchainLLMWrapper
 
-from floeval.config import GatewayConfig
 from floeval.config.schemas.io.dataset import Sample
+from floeval.config.schemas.io.llm import LLMProviderConfig
 from floeval.utils.gateway import normalize_openai_api_base
 
 
-def create_ragas_llm(config: Optional[GatewayConfig] = None) -> LangchainLLMWrapper:
-    """
-    Create RAGAS LLM wrapper configured with custom gateway.
-    
+def create_ragas_llm(config: LLMProviderConfig | None = None) -> LangchainLLMWrapper:
+    """Create RAGAS LLM wrapper configured with custom llm configuration.
+
     Args:
-        config: Gateway configuration (optional, uses env defaults if None)
-        
+        config: LLMProviderConfig configuration (optional, uses env defaults if None)
+
     Returns:
-        LangchainLLMWrapper instance configured with custom gateway
+        LangchainLLMWrapper instance configured with custom llm configuration
     """
     llm_args: Dict[str, Any] = {}
     if config and config.base_url:
@@ -46,15 +38,16 @@ def create_ragas_llm(config: Optional[GatewayConfig] = None) -> LangchainLLMWrap
     return LangchainLLMWrapper(llm)
 
 
-def create_ragas_embeddings(config: Optional[GatewayConfig] = None) -> LangchainEmbeddingsWrapper:
-    """
-    Create RAGAS embeddings wrapper configured with custom gateway.
-    
+def create_ragas_embeddings(
+    config: LLMProviderConfig | None = None,
+) -> LangchainEmbeddingsWrapper:
+    """Create RAGAS embeddings wrapper configured with custom llm configuration.
+
     Args:
-        config: Gateway configuration (optional, uses env defaults if None)
-        
+        config: LLMProviderConfig configuration (optional, uses env defaults if None)
+
     Returns:
-        LangchainEmbeddingsWrapper instance configured with custom gateway
+        LangchainEmbeddingsWrapper instance configured with custom llm configuration
     """
     embedding_args: Dict[str, Any] = {
         "check_embedding_ctx_length": False,
@@ -70,22 +63,21 @@ def create_ragas_embeddings(config: Optional[GatewayConfig] = None) -> Langchain
 
 
 class RAGASAdapter:
-    """
-    Adapter for RAGAS client integration.
+    """Adapter for RAGAS client integration.
+
     Adapts input and output formats as needed by RAGAS library.
     Similar to DeepEvalAdapter for consistency across providers.
     """
 
-    def __init__(self, config: Optional[GatewayConfig] = None):
-        """
-        Initialize RAGAS adapter with gateway configuration.
-        
+    def __init__(self, config: LLMProviderConfig | None = None):
+        """Initialize RAGAS adapter with llm configuration.
+
         Args:
-            config: Optional gateway configuration. If None, uses environment defaults.
+            config: Optional LLMProviderConfig configuration. If None, uses environment defaults.
         """
         self.config = config
-        self._llm: Optional[LangchainLLMWrapper] = None
-        self._embeddings: Optional[LangchainEmbeddingsWrapper] = None
+        self._llm: LangchainLLMWrapper | None = None
+        self._embeddings: LangchainEmbeddingsWrapper | None = None
 
     @property
     def llm(self) -> LangchainLLMWrapper:

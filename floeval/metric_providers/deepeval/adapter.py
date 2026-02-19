@@ -1,17 +1,15 @@
-"""
-DeepEval client wrapper/adapter
-"""
+"""DeepEval client wrapper/adapter"""
 
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any
 
 from deepeval.models.base_model import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 from langchain_core.language_models import LanguageModelInput
 from langchain_openai import ChatOpenAI
 
-from floeval.config import GatewayConfig
 from floeval.config.schemas.deepeval import AnswerRelevancyTestCase, FaithfulnessTestCase
+from floeval.config.schemas.io.llm import LLMProviderConfig
 from floeval.utils.gateway import normalize_openai_api_base
 
 __VALID_TEST_CASE_SCHEMAS__ = {
@@ -22,7 +20,8 @@ __VALID_TEST_CASE_SCHEMAS__ = {
 
 # custom llm implementation for DeepEval
 class DeepEvalLLMAdapter(DeepEvalBaseLLM):
-    def __init__(self, model_name: str, config: Optional[GatewayConfig] = None):
+
+    def __init__(self, model_name: str, config: LLMProviderConfig):
         self._model_name = model_name
         self.config = config
         self._llm_instance = None
@@ -30,7 +29,7 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
         self._llm_instance = _llm_instance
 
     def init_model(self):
-        """Load and cache ChatOpenAI instance with gateway config."""
+        """Load and cache ChatOpenAI instance with llm config."""
         if self._llm_instance is not None:
             return self._llm_instance
 
@@ -54,7 +53,7 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
 
             base_url = getattr(self.config, "base_url", None)
             if base_url:
-                # Normalize gateway URL to OpenAI-compatible format (same as RAGAS)
+                # Normalize llm URL to OpenAI-compatible format (same as RAGAS)
                 kwargs["base_url"] = normalize_openai_api_base(base_url)
 
         self._llm_instance = ChatOpenAI(**kwargs)
@@ -80,8 +79,8 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
 
 
 class DeepEvalAdapter:
-    """
-    Adapter for DeepEval client integration.
+    """Adapter for DeepEval client integration.
+
     Adapts input and output formats as needed by deepeval library.
     """
 
@@ -94,8 +93,7 @@ class DeepEvalAdapter:
     def transform_test_case(
         self, metric_name: str, test_case_dict: Mapping[str, str | list[str] | None]
     ) -> LLMTestCase:
-        """
-        Convert a test case dictionary to DeepEval LLMTestCase format.
+        """Convert a test case dictionary to DeepEval LLMTestCase format.
 
         Supports canonical Floeval keys (question, answer, contexts, expected_answer)
         and maps them to DeepEval's expected keys (user_input, actual_output, etc.).
