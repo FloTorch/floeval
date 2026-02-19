@@ -1,0 +1,39 @@
+site_name: Floeval
+site_url: https://github.com/FloTorch/Floeval
+site_description: Multi-backend evaluation framework for LLM and RAG systems
+
+theme:
+  name: readthedocs
+  highlightjs: true
+  hljs_languages:
+    - yaml
+    - python
+    - cmd
+    - bash
+    - json
+
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji
+
+nav:
+  - Home: index.md
+  - Prerequisites & Setup: setup.md
+  - Quick Copy & Run: copy-run.md
+  - All Examples: examples.md
+  - Metrics: metrics.md
+  - Custom Metrics: custom-metrics.md
+  - API Reference: api-reference.md
+  - Troubleshooting: troubleshooting.md
+
+plugins:
+  - search
