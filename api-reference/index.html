@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/FloTorch/Floeval/api-reference/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>API Reference - Floeval</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "API Reference";
+        var mkdocs_page_input_path = "api-reference.md";
+        var mkdocs_page_url = "/FloTorch/Floeval/api-reference/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/cmd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Floeval
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../setup/">Prerequisites & Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../copy-run/">Quick Copy & Run</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../examples/">All Examples</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../metrics/">Metrics</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../custom-metrics/">Custom Metrics</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">API Reference</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#llm-config">LLM config</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#python-openaiproviderconfig">Python: OpenAIProviderConfig</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#config-file-keys-cli">Config file keys (CLI)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#evaluation-constructor">Evaluation constructor</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#results-structure">Results structure</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#metricregistry">MetricRegistry</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#metricregistry-methods">MetricRegistry methods</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#available-providers">Available providers</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#usage-flows-summary">Usage flows summary</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cli-commands">CLI commands</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#evaluate">evaluate</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#generate">generate</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#parameters">Parameters</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#use-cases">Use cases</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#example-two-step-workflow">Example: Two-step workflow</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#config-requirements">Config requirements</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#-version">--version</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#datasetloader">DatasetLoader</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#datasetloader-methods">DatasetLoader methods</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#when-to-use-full-vs-partial-datasets">When to use full vs. partial datasets</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#data-models">Data models</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#sample-full-dataset">Sample (full dataset)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#partialsample-partial-dataset">PartialSample (partial dataset)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#config-file-schema-evaluate">Config file schema (evaluate)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#error-handling">Error handling</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Floeval</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="api-reference">API Reference</h1>
+<p>Complete reference for config, CLI, and API.</p>
+<hr />
+<h2 id="llm-config">LLM config</h2>
+<h3 id="python-openaiproviderconfig">Python: OpenAIProviderConfig</h3>
+<p>Use <code>OpenAIProviderConfig</code> from a dict. Pass to <code>Evaluation</code> as <code>llm_config</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIProviderConfig</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">llm_config</span> <span class="o">=</span> <span class="n">OpenAIProviderConfig</span><span class="p">(</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://api.openai.com/v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;your-api-key&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">chat_model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">embedding_model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">system_prompt</span><span class="o">=</span><span class="s2">&quot;You are a helpful assistant.&quot;</span>  <span class="c1"># optional, for partial dataset generation</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
+</code></pre></div>
+<p>Or from a dict:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">LLM_CONFIG</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="s2">&quot;base_url&quot;</span><span class="p">:</span> <span class="s2">&quot;https://api.openai.com/v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="s2">&quot;api_key&quot;</span><span class="p">:</span> <span class="s2">&quot;your-api-key&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s2">&quot;chat_model&quot;</span><span class="p">:</span> <span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="s2">&quot;embedding_model&quot;</span><span class="p">:</span> <span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="s2">&quot;system_prompt&quot;</span><span class="p">:</span> <span class="s2">&quot;You are a helpful assistant.&quot;</span><span class="p">,</span>  <span class="c1"># optional</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">}</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">llm_config</span> <span class="o">=</span> <span class="n">OpenAIProviderConfig</span><span class="p">(</span><span class="o">**</span><span class="n">LLM_CONFIG</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="config-file-keys-cli">Config file keys (CLI)</h3>
+<p>Under <code>llm_config</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>base_url</td>
+<td>Yes</td>
+<td>API endpoint (e.g. https://api.openai.com/v1)</td>
+</tr>
+<tr>
+<td>api_key</td>
+<td>Yes</td>
+<td>Your API key</td>
+</tr>
+<tr>
+<td>chat_model</td>
+<td>Yes</td>
+<td>LLM model name (e.g. gpt-4o-mini)</td>
+</tr>
+<tr>
+<td>embedding_model</td>
+<td>Yes</td>
+<td>Embedding model (e.g. text-embedding-3-small)</td>
+</tr>
+<tr>
+<td>system_prompt</td>
+<td>No</td>
+<td>Optional. Used when generating responses for partial datasets</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="evaluation-constructor">Evaluation constructor</h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dataset</td>
+<td>Dataset or PartialDataset (required)</td>
+</tr>
+<tr>
+<td>llm_config</td>
+<td>Config for RAGAS/DeepEval/criteria metrics and partial dataset generation</td>
+</tr>
+<tr>
+<td>metrics</td>
+<td>List of metric specs (required)</td>
+</tr>
+<tr>
+<td>default_provider</td>
+<td>"ragas" or "deepeval" when using string metric names</td>
+</tr>
+<tr>
+<td>metric_params</td>
+<td>Dict of metric_name → params (e.g. <code>{"answer_relevancy": {"threshold": 0.8}}</code>)</td>
+</tr>
+<tr>
+<td>dataset_generator_model</td>
+<td>Required when using PartialDataset (samples without llm_response). Label for the provider.</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval</span><span class="w"> </span><span class="kn">import</span> <span class="n">Evaluation</span><span class="p">,</span> <span class="n">DatasetLoader</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIProviderConfig</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">llm_config</span> <span class="o">=</span> <span class="n">OpenAIProviderConfig</span><span class="p">(</span><span class="o">**</span><span class="n">LLM_CONFIG</span><span class="p">)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">evaluation</span> <span class="o">=</span> <span class="n">Evaluation</span><span class="p">(</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">llm_config</span><span class="o">=</span><span class="n">llm_config</span><span class="p">,</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;answer_relevancy&quot;</span><span class="p">,</span> <span class="s2">&quot;faithfulness&quot;</span><span class="p">],</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">default_provider</span><span class="o">=</span><span class="s2">&quot;ragas&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="n">metric_params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;answer_relevancy&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;threshold&quot;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">}},</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">dataset_generator_model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>  <span class="c1"># only for partial datasets</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="results-structure">Results structure</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Aggregate scores per metric</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">results</span><span class="o">.</span><span class="n">aggregate_scores</span>   <span class="c1"># {&quot;ragas:answer_relevancy&quot;: 0.91, ...}</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1"># Per-sample results</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">results</span><span class="o">.</span><span class="n">sample_results</span>     <span class="c1"># List of {user_input, llm_response, metrics: {...}}</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1"># Summary</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">results</span><span class="o">.</span><span class="n">summary</span>            <span class="c1"># {total_samples, providers_used, pass_rates, aggregate_scores}</span>
+</code></pre></div>
+<hr />
+<h2 id="metricregistry">MetricRegistry</h2>
+<p>Discover available metrics and their providers programmatically.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.api.metrics.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetricRegistry</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># List all available providers</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">providers</span> <span class="o">=</span> <span class="n">MetricRegistry</span><span class="o">.</span><span class="n">list_providers</span><span class="p">()</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># Returns: [&#39;ragas&#39;, &#39;deepeval&#39;, &#39;custom&#39;]</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># List metrics for a specific provider</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">ragas_metrics</span> <span class="o">=</span> <span class="n">MetricRegistry</span><span class="o">.</span><span class="n">list_metrics</span><span class="p">(</span><span class="s2">&quot;ragas&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="c1"># Returns: [&#39;answer_relevancy&#39;, &#39;faithfulness&#39;]</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1"># Get all available metrics</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="n">all_metrics</span> <span class="o">=</span> <span class="n">MetricRegistry</span><span class="o">.</span><span class="n">list_all_metrics</span><span class="p">()</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="c1"># Returns: [&#39;answer_relevancy&#39;, &#39;faithfulness&#39;, &#39;custom_metric_name&#39;, ...]</span>
+</code></pre></div>
+<h3 id="metricregistry-methods">MetricRegistry methods</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Parameters</th>
+<th>Returns</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list_providers()</code></td>
+<td>None</td>
+<td>list[str]</td>
+<td>Get all registered metric providers</td>
+</tr>
+<tr>
+<td><code>list_metrics(provider: str)</code></td>
+<td>provider name</td>
+<td>list[str]</td>
+<td>Get metrics available for a provider</td>
+</tr>
+<tr>
+<td><code>list_all_metrics()</code></td>
+<td>None</td>
+<td>list[str]</td>
+<td>Get all registered metric names</td>
+</tr>
+</tbody>
+</table>
+<h3 id="available-providers">Available providers</h3>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Metrics</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ragas</code></td>
+<td>answer_relevancy, faithfulness</td>
+<td>RAGAS framework metrics for RAG evaluation</td>
+</tr>
+<tr>
+<td><code>deepeval</code></td>
+<td>answer_relevancy, faithfulness</td>
+<td>DeepEval metrics (alternative provider)</td>
+</tr>
+<tr>
+<td><code>custom</code></td>
+<td>user-defined</td>
+<td>Custom metrics defined with <code>@custom_metric</code> or <code>criteria()</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="usage-flows-summary">Usage flows summary</h2>
+<table>
+<thead>
+<tr>
+<th>Flow</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Flow A: CLI (full dataset)</strong></td>
+<td>Config YAML/JSON + dataset JSON/JSONL → <code>floeval evaluate -c config.yaml -d dataset.json</code></td>
+</tr>
+<tr>
+<td><strong>Flow B: CLI (partial dataset)</strong></td>
+<td>Same, but dataset has no llm_response. CLI auto-detects and generates. Requires <code>dataset_generation_config</code> in config.</td>
+</tr>
+<tr>
+<td><strong>Flow C: Python (from samples)</strong></td>
+<td>DatasetLoader.from_samples([dicts]) + OpenAIProviderConfig + Evaluation</td>
+</tr>
+<tr>
+<td><strong>Flow D: Python (from file)</strong></td>
+<td>DatasetLoader.from_file() / from_json() + Evaluation</td>
+</tr>
+<tr>
+<td><strong>Flow E: Custom metrics</strong></td>
+<td>@custom_metric or criteria() + mix with built-in metrics</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="cli-commands">CLI commands</h2>
+<h3 id="evaluate">evaluate</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>floeval<span class="w"> </span>evaluate<span class="w"> </span>-c<span class="w"> </span>CONFIG<span class="w"> </span>-d<span class="w"> </span>DATASET<span class="w"> </span><span class="o">[</span>-o<span class="w"> </span>OUTPUT<span class="o">]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-c, --config</code></td>
+<td>Yes</td>
+<td>Path to config file (YAML or JSON)</td>
+</tr>
+<tr>
+<td><code>-d, --dataset</code></td>
+<td>Yes</td>
+<td>Path to dataset file (JSON or JSONL). Full or partial (auto-detected).</td>
+</tr>
+<tr>
+<td><code>-o, --output</code></td>
+<td>No</td>
+<td>Save results to JSON file</td>
+</tr>
+</tbody>
+</table>
+<h3 id="generate">generate</h3>
+<p>Generate <code>llm_response</code> for partial datasets and save to file. Useful when you want to generate responses separately from evaluation.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>floeval<span class="w"> </span>generate<span class="w"> </span>-c<span class="w"> </span>CONFIG<span class="w"> </span>-d<span class="w"> </span>PARTIAL_DATASET<span class="w"> </span>-o<span class="w"> </span>OUTPUT
+</code></pre></div>
+<h4 id="parameters">Parameters</h4>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-c, --config</code></td>
+<td>Yes</td>
+<td>Path to config file (YAML or JSON). Must include <code>llm_config</code> and <code>dataset_generation_config</code></td>
+</tr>
+<tr>
+<td><code>-d, --dataset</code></td>
+<td>Yes</td>
+<td>Path to partial dataset file (JSON or JSONL).  Samples should only have <code>user_input</code> and optional <code>contexts</code></td>
+</tr>
+<tr>
+<td><code>-o, --output</code></td>
+<td>Yes</td>
+<td>Path to save complete dataset with generated <code>llm_response</code> for each sample</td>
+</tr>
+</tbody>
+</table>
+<h4 id="use-cases">Use cases</h4>
+<table>
+<thead>
+<tr>
+<th>Use case</th>
+<th>Flow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Generate once, evaluate multiple times</strong></td>
+<td><code>floeval generate ...</code> → <code>floeval evaluate ... (multiple times)</code></td>
+</tr>
+<tr>
+<td><strong>Audit generated responses</strong></td>
+<td><code>floeval generate ...</code> → inspect output → <code>floeval evaluate ...</code></td>
+</tr>
+<tr>
+<td><strong>Parallelize generation and evaluation</strong></td>
+<td>Generate responses in batch, then evaluate separately</td>
+</tr>
+<tr>
+<td><strong>Build reusable evaluation dataset</strong></td>
+<td>Generate and save, then version control or share the dataset</td>
+</tr>
+</tbody>
+</table>
+<h4 id="example-two-step-workflow">Example: Two-step workflow</h4>
+<p><strong>Step 1: Generate responses</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>floeval<span class="w"> </span>generate<span class="w"> </span>-c<span class="w"> </span>config.yaml<span class="w"> </span>-d<span class="w"> </span>partial_questions.json<span class="w"> </span>-o<span class="w"> </span>generated_dataset.json
+</code></pre></div>
+<p>Input (<code>partial_questions.json</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span><span class="nt">&quot;samples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What is Python?&quot;</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What is RAG?&quot;</span><span class="p">}]}</span>
+</code></pre></div>
+<p>Output (<code>generated_dataset.json</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span><span class="nt">&quot;samples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What is Python?&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;llm_response&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Python is...&quot;</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What is RAG?&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;llm_response&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RAG is...&quot;</span><span class="p">}]}</span>
+</code></pre></div>
+<p><strong>Step 2: Evaluate the complete dataset</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>floeval<span class="w"> </span>evaluate<span class="w"> </span>-c<span class="w"> </span>config.yaml<span class="w"> </span>-d<span class="w"> </span>generated_dataset.json<span class="w"> </span>-o<span class="w"> </span>results.json
+</code></pre></div>
+<h4 id="config-requirements">Config requirements</h4>
+<p>Both <code>llm_config</code> and <code>dataset_generation_config</code> are required:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">&quot;llm_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nt">&quot;base_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://api.openai.com/v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="nt">&quot;api_key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;your-api-key&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="nt">&quot;chat_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="nt">&quot;embedding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text-embedding-3-small&quot;</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span><span class="nt">&quot;dataset_generation_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">    </span><span class="nt">&quot;generator_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o-mini&quot;</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="-version">--version</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>floeval<span class="w"> </span>--version
+</code></pre></div>
+<hr />
+<h2 id="datasetloader">DatasetLoader</h2>
+<p>Load datasets from various sources for evaluation.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval</span><span class="w"> </span><span class="kn">import</span> <span class="n">DatasetLoader</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="c1"># From file (auto-detect JSON/JSONL)</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">DatasetLoader</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;dataset.json&quot;</span><span class="p">,</span> <span class="n">partial_dataset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="n">partial_ds</span> <span class="o">=</span> <span class="n">DatasetLoader</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;partial.json&quot;</span><span class="p">,</span> <span class="n">partial_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># From JSON file explicitly</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">DatasetLoader</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="s2">&quot;dataset.json&quot;</span><span class="p">,</span> <span class="n">partial_dataset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="c1"># From Python list of dicts</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">DatasetLoader</span><span class="o">.</span><span class="n">from_samples</span><span class="p">([</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>    <span class="p">{</span><span class="s2">&quot;user_input&quot;</span><span class="p">:</span> <span class="s2">&quot;Q?&quot;</span><span class="p">,</span> <span class="s2">&quot;llm_response&quot;</span><span class="p">:</span> <span class="s2">&quot;A.&quot;</span><span class="p">}</span>
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="p">],</span> <span class="n">partial_dataset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>
+<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="c1"># From dict with &quot;samples&quot; key</span>
+<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">DatasetLoader</span><span class="o">.</span><span class="n">from_dict</span><span class="p">({</span><span class="s2">&quot;samples&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">]},</span> <span class="n">partial_dataset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="datasetloader-methods">DatasetLoader methods</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Parameters</th>
+<th>Returns</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>from_file()</code></td>
+<td><code>path: str</code>, <code>partial_dataset: bool</code></td>
+<td>Dataset | PartialDataset</td>
+<td>Auto-detect JSON/JSONL and load</td>
+</tr>
+<tr>
+<td><code>from_json()</code></td>
+<td><code>path: str</code>, <code>partial_dataset: bool</code></td>
+<td>Dataset | PartialDataset</td>
+<td>Load from JSON file</td>
+</tr>
+<tr>
+<td><code>from_samples()</code></td>
+<td><code>samples: list[dict]</code>, <code>partial_dataset: bool</code></td>
+<td>Dataset | PartialDataset</td>
+<td>Create from Python list</td>
+</tr>
+<tr>
+<td><code>from_dict()</code></td>
+<td><code>data: dict</code>, <code>partial_dataset: bool</code></td>
+<td>Dataset | PartialDataset</td>
+<td>Create from dict with "samples" key</td>
+</tr>
+</tbody>
+</table>
+<h3 id="when-to-use-full-vs-partial-datasets">When to use full vs. partial datasets</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Use</th>
+<th>Dataset type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>You have pre-generated LLM responses</td>
+<td>Full dataset</td>
+<td><code>partial_dataset=False</code></td>
+</tr>
+<tr>
+<td>You only have questions; want Floeval to generate responses</td>
+<td>Partial dataset</td>
+<td><code>partial_dataset=True</code></td>
+</tr>
+<tr>
+<td>Evaluating existing outputs</td>
+<td>Full dataset</td>
+<td><code>partial_dataset=False</code></td>
+</tr>
+<tr>
+<td>Building evaluation dataset; generating responses on-the-fly</td>
+<td>Partial dataset</td>
+<td><code>partial_dataset=True</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note</strong>: Partial datasets require <code>dataset_generation_config</code> in your config or <code>llm_config</code> in Python.</p>
+<hr />
+<h2 id="data-models">Data models</h2>
+<h3 id="sample-full-dataset">Sample (full dataset)</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>user_input</td>
+<td>str</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>llm_response</td>
+<td>str</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>contexts</td>
+<td>list[str]</td>
+<td>For faithfulness</td>
+</tr>
+<tr>
+<td>ground_truth</td>
+<td>str</td>
+<td>Optional</td>
+</tr>
+<tr>
+<td>metadata</td>
+<td>dict</td>
+<td>Optional</td>
+</tr>
+</tbody>
+</table>
+<h3 id="partialsample-partial-dataset">PartialSample (partial dataset)</h3>
+<p>Same as Sample, but <code>llm_response</code> can be omitted or empty. Used when generating responses.</p>
+<hr />
+<h2 id="config-file-schema-evaluate">Config file schema (evaluate)</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="p">{</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">&quot;llm_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nt">&quot;base_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">&quot;api_key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nt">&quot;chat_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="nt">&quot;embedding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">    </span><span class="nt">&quot;system_prompt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">  </span><span class="nt">&quot;evaluation_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">    </span><span class="nt">&quot;metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ragas:answer_relevancy&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ragas:faithfulness&quot;</span><span class="p">],</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">    </span><span class="nt">&quot;default_provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ragas&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">    </span><span class="nt">&quot;metric_params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;answer_relevancy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;threshold&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.6</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="w">  </span><span class="nt">&quot;dataset_generation_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="w">    </span><span class="nt">&quot;generator_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o-mini&quot;</span>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>dataset_generation_config</code> is required only when evaluating a partial dataset.</p>
+<hr />
+<h2 id="error-handling">Error handling</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="n">results</span> <span class="o">=</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Config or dataset file not found&quot;</span><span class="p">)</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Invalid configuration or dataset&quot;</span><span class="p">)</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Evaluation failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="next-steps">Next steps</h2>
+<ul>
+<li><strong><a href="../copy-run/">Copy &amp; Run</a></strong> — Copy-paste examples</li>
+<li><strong><a href="../examples/">Examples</a></strong> — Usage patterns</li>
+<li><strong><a href="../troubleshooting/">Troubleshooting</a></strong> — Common issues</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../custom-metrics/" class="btn btn-neutral float-left" title="Custom Metrics"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../troubleshooting/" class="btn btn-neutral float-right" title="Troubleshooting">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../custom-metrics/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../troubleshooting/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

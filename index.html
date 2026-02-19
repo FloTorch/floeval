@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="Multi-backend evaluation framework for LLM and RAG systems" /><link rel="canonical" href="https://github.com/FloTorch/Floeval/" />
+      <link rel="shortcut icon" href="img/favicon.ico" />
+    <title>Floeval</title>
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Home";
+        var mkdocs_page_input_path = "index.md";
+        var mkdocs_page_url = "/FloTorch/Floeval/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/cmd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="." class="icon icon-home"> Floeval
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Home</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#what-is-floeval">What is Floeval?</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#what-it-solves">What it solves</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#two-ways-to-use">Two ways to use</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#built-in-metrics">Built-in metrics</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#quick-decision">Quick decision</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#quick-start">Quick start</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#whats-next">What's next?</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="setup/">Prerequisites & Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="copy-run/">Quick Copy & Run</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="examples/">All Examples</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="metrics/">Metrics</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="custom-metrics/">Custom Metrics</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="api-reference/">API Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href=".">Floeval</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Home</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="floeval-user-guide">Floeval User Guide</h1>
+<p>Set up and start evaluating your LLM responses using Floeval. All functionalities, flows, and usage options in one place.</p>
+<hr />
+<h2 id="what-is-floeval">What is Floeval?</h2>
+<p>Floeval evaluates LLM and RAG system responses using metrics like <code>answer_relevancy</code> and <code>faithfulness</code>.</p>
+<h3 id="what-it-solves">What it solves</h3>
+<ul>
+<li>Measures how relevant and accurate your LLM answers are</li>
+<li>Helps you verify RAG systems stay grounded in context</li>
+</ul>
+<h3 id="two-ways-to-use">Two ways to use</h3>
+<table>
+<thead>
+<tr>
+<th>Way</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Flow 1: CLI</strong></td>
+<td>Run evaluations from command line</td>
+</tr>
+<tr>
+<td><strong>Flow 2: Python</strong></td>
+<td>Integrate into your code</td>
+</tr>
+</tbody>
+</table>
+<h3 id="built-in-metrics">Built-in metrics</h3>
+<ul>
+<li><strong>RAGAS &amp; DeepEval</strong>: <code>answer_relevancy</code>, <code>faithfulness</code></li>
+<li>Plus create your own custom metrics</li>
+</ul>
+<hr />
+<h2 id="quick-decision">Quick decision</h2>
+<table>
+<thead>
+<tr>
+<th>I want to...</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Run evaluations quickly</td>
+<td>CLI (Flow 1)</td>
+</tr>
+<tr>
+<td>Integrate into my app</td>
+<td>Python (Flow 2)</td>
+</tr>
+<tr>
+<td>Check answer relevancy</td>
+<td><code>answer_relevancy</code> metric</td>
+</tr>
+<tr>
+<td>Check RAG accuracy</td>
+<td><code>faithfulness</code> metric</td>
+</tr>
+<tr>
+<td>Create my own check</td>
+<td>Custom metrics</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="quick-start">Quick start</h2>
+<ol>
+<li><code>pip install floeval</code></li>
+<li>Create config file (YAML/JSON) with <code>llm_config</code> (base_url, api_key, chat_model, embedding_model)</li>
+<li>Create dataset (JSON/JSONL) with samples</li>
+<li><code>floeval evaluate -c config.yaml -d dataset.json</code></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">API credentials</p>
+<p>Pass your API key in the config file (<code>llm_config.api_key</code>) or in your Python script. See <a href="setup/">Setup</a> and <a href="examples/">Examples</a> for details.</p>
+</div>
+<hr />
+<h2 id="whats-next">What's next?</h2>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="setup/">Prerequisites &amp; Setup</a></td>
+<td>Python, API key, install, verify</td>
+</tr>
+<tr>
+<td><a href="copy-run/">Quick Copy &amp; Run</a></td>
+<td>Copy-paste ready examples (no reading required!)</td>
+</tr>
+<tr>
+<td><a href="examples/#flow-1-using-cli">Flow 1: CLI</a></td>
+<td>Run from command line</td>
+</tr>
+<tr>
+<td><a href="examples/#flow-2-using-python">Flow 2: Python</a></td>
+<td>Integrate into your app</td>
+</tr>
+<tr>
+<td><a href="metrics/">Metrics &amp; Custom</a></td>
+<td>Built-in metrics and custom metrics</td>
+</tr>
+<tr>
+<td><a href="api-reference/">API Reference</a></td>
+<td>Complete config and API reference</td>
+</tr>
+<tr>
+<td><a href="troubleshooting/">Troubleshooting</a></td>
+<td>Common issues and fixes</td>
+</tr>
+</tbody>
+</table>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="setup/" class="btn btn-neutral float-right" title="Prerequisites & Setup">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+    
+      <span><a href="setup/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = ".";</script>
+    <script src="js/theme_extra.js"></script>
+    <script src="js/theme.js"></script>
+      <script src="search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
+
+<!--
+MkDocs version : 1.6.1
+Build Date UTC : 2026-02-19 08:00:19.430729+00:00
+-->
