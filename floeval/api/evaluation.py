@@ -7,14 +7,15 @@ from typing import Any, Mapping
 
 from pydantic import BaseModel, Field
 
-import floeval.metric_providers
 from floeval.api.metrics.base import BaseMetric, MetricResult
-from floeval.api.metrics.custom.llm_helper import SimpleLLMHelper
 from floeval.api.metrics.registry import MetricRegistry
 from floeval.config.schemas.io.dataset import Dataset, PartialDataset
-from floeval.core.execution import response_synthesizer
+from floeval.config.schemas.io.llm import LLMProviderConfig, OpenAIProviderConfig
 from floeval.core.execution.llm_executor import OpenAIProvider
 from floeval.core.execution.response_synthesizer import populate_llm_responses
+from floeval.metric_providers.deepeval.custom_adapter import (
+    DeepEvalCustomMetricAdapter,
+)
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
 from floeval.utils.gateway import normalize_openai_api_base
 from floeval.utils.ragas_results import extract_ragas_score
@@ -53,7 +54,7 @@ class Evaluation:
     ):
         self.dataset_generator_model = dataset_generator_model
         self.default_provider = default_provider
-        self.llm_config = llm_config
+        self.llm_config: OpenAIProviderConfig | LLMProviderConfig | None = llm_config
         self.dataset = self._prepare_dataset(dataset)
         self.metric_params = dict(metric_params or {})
         self._registry = MetricRegistry()
@@ -98,7 +99,7 @@ class Evaluation:
                 | {"chat_model": self.dataset_generator_model}
             )
         )
-        dataset = response_synthesizer.populate_llm_responses(
+        dataset = populate_llm_responses(
             partial_dataset=_partial_dataset, llm_provider=llm_provider
         )
         return dataset
@@ -112,13 +113,12 @@ class Evaluation:
     def _merge_params(
         self, provider: str, metric_id: str, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """
-        Merge user-provided params with Evaluation-level defaults.
+        """Merge user-provided params with Evaluation-level defaults.
 
         Precedence (highest to lowest):
         1) Explicit params passed in the metric spec dict
         2) metric_params mapping (keyed by "provider:metric" or "metric")
-        3) Evaluation.llm_config (injected as "gateway_config" for metrics)
+        3) Evaluation.llm_config (injected as "llm_config" for metrics)
         """
         merged: dict[str, Any] = {}
 
@@ -126,9 +126,9 @@ class Evaluation:
         merged.update(self.metric_params.get(metric_id, {}))
         merged.update(self.metric_params.get(f"{provider}:{metric_id}", {}))
 
-        # 3) Evaluation-level llm config (metrics expect "gateway_config" key)
-        if self.llm_config is not None and "gateway_config" not in merged:
-            merged["gateway_config"] = self.llm_config
+        # 3) Evaluation-level llm config (metrics expect "llm_config" key)
+        if self.llm_config is not None and "llm_config" not in merged:
+            merged["llm_config"] = self.llm_config
 
         # 1) Spec params override everything
         merged.update(params)
@@ -139,19 +139,19 @@ class Evaluation:
     ) -> BaseMetric:
         """Build merged params, inject cached adapter for RAGAS, then create metric instance."""
         merged = self._merge_params(provider, metric_id, params)
-        llm_config = merged.get("gateway_config")
+        llm_config = merged.get("llm_config")
         if provider == "ragas" and "adapter" not in merged:
             merged["adapter"] = self._get_ragas_adapter(llm_config)
-        elif provider == "deepeval" and "gateway_config" not in merged and self.llm_config:
-            merged["gateway_config"] = self.llm_config
+        elif provider == "deepeval" and "llm_config" not in merged and self.llm_config:
+            merged["llm_config"] = self.llm_config
 
         try:
             return self._registry.create(provider, metric_id, **merged)
         except TypeError as e:
-            # If metric doesn't accept gateway_config or adapter, retry without them
-            if "gateway_config" in merged or "adapter" in merged:
+            # If metric doesn't accept llm_config or adapter, retry without them
+            if "llm_config" in merged or "adapter" in merged:
                 merged2 = dict(merged)
-                merged2.pop("gateway_config", None)
+                merged2.pop("llm_config", None)
                 merged2.pop("adapter", None)
                 return self._registry.create(provider, metric_id, **merged2)
             raise e
@@ -165,12 +165,10 @@ class Evaluation:
             if isinstance(spec, BaseMetric):
                 # Inject llm_config when not set (user passes config to Evaluation)
                 if self.llm_config:
-                    if not hasattr(spec, 'gateway_config') or spec.gateway_config is None:
-                        spec.gateway_config = self.llm_config
-                        # Replace llm_helper with one initialized with config (no mutation of existing helper)
-                        if hasattr(spec, 'llm_helper') and getattr(spec, 'llm_helper', None) is not None:
-                            llm_model = getattr(spec, 'llm_model', None) or getattr(spec, '_default_llm_model', 'gpt-4')
-                            spec.llm_helper = SimpleLLMHelper(self.llm_config, llm_model=llm_model)
+                    # TODO: code cleanup needed to avoid this hacky injection.
+                    # Used for custom metrics that rely on llm_config, but defined using decorator
+                    if not hasattr(spec, "llm_config") or spec.llm_config is None:
+                        spec.llm_config = self.llm_config
                 resolved.append(spec)
                 continue
 
@@ -435,10 +433,6 @@ class Evaluation:
         """Run metrics via deepeval.evaluate() per sample; map results to sample dicts."""
         from deepeval.evaluate import evaluate as deepeval_evaluate
 
-        from floeval.metric_providers.deepeval.custom_adapter import (
-            DeepEvalCustomMetricAdapter,
-        )
-
         adapter = DeepEvalCustomMetricAdapter(self.llm_config)
 
         # Transform metrics to DeepEval classes
@@ -522,9 +516,8 @@ class Evaluation:
         return sample_results
 
     async def arun(self) -> EvaluationResult:
-        """
-        Run evaluation asynchronously (concurrent metric execution per sample).
-        
+        """Run evaluation asynchronously (concurrent metric execution per sample).
+
         Uses metric.aevaluate() so metrics can run concurrently per sample.
         Optional for users who want true async concurrency; most users use run().
         """
