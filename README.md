@@ -8,12 +8,12 @@ Floeval is a flexible evaluation framework designed to support multiple metric p
 
 ## Structure
 
-- `api/` - Public API (Evaluation, Dataset, Sample, Metrics)
-- `core/execution/` - Execution engine (LLM calls, response synthesis)
-- `metric_providers/` - Metrics organized by provider (builtin, ragas, deepeval)
-- `config/schemas/` - Configuration schemas and data models
-- `cli/` - Command-line interface
-- `utils/` - Utility functions (loaders, gateways, etc.)
+- [api/](https://github.com/FloTorch/Floeval/tree/dev/floeval/api) - Public API (Evaluation, Dataset, Sample, Metrics)
+- [core/execution/](https://github.com/FloTorch/Floeval/tree/dev/floeval/core/execution) - Execution engine (LLM calls, response synthesis)
+- [metric_providers/](https://github.com/FloTorch/Floeval/tree/dev/floeval/metric_providers) - Metrics organized by provider (builtin, ragas, deepeval)
+- [config/schemas/](https://github.com/FloTorch/Floeval/tree/dev/floeval/config/schemas) - Configuration schemas and data models
+- [cli/](https://github.com/FloTorch/Floeval/tree/dev/floeval/cli) - Command-line interface
+- [utils/](https://github.com/FloTorch/Floeval/tree/dev/floeval/utils) - Utility functions (loaders, gateways, etc.)
 
 ## Installation
 
