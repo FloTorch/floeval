@@ -18,6 +18,7 @@ from floeval.metric_providers.deepeval.custom_adapter import (
 )
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
 from floeval.utils.gateway import normalize_openai_api_base
+from floeval.utils.loaders import load_prompts_file
 from floeval.utils.ragas_results import extract_ragas_score
 
 logger = logging.getLogger(__name__)
@@ -51,10 +52,12 @@ class Evaluation:
         llm_config: Any | None = None,
         metric_params: Mapping[str, dict[str, Any]] | None = None,
         dataset_generator_model: str | None = None,
+        prompts_file: str | None = None,
     ):
         self.dataset_generator_model = dataset_generator_model
         self.default_provider = default_provider
         self.llm_config: OpenAIProviderConfig | LLMProviderConfig | None = llm_config
+        self.prompts_file = prompts_file
         self.dataset = self._prepare_dataset(dataset)
         self.metric_params = dict(metric_params or {})
         self._registry = MetricRegistry()
@@ -92,15 +95,22 @@ class Evaluation:
             )
 
         llm_provider = OpenAIProvider(
-
             config_name=f"{self.dataset_generator_model}_generation",
             **(
                 self.llm_config.model_dump()
                 | {"chat_model": self.dataset_generator_model}
-            )
+            ),
         )
+
+        # Load prompts file if specified
+        prompts = None
+        if self.prompts_file:
+            prompts = load_prompts_file(self.prompts_file)
+
         dataset = populate_llm_responses(
-            partial_dataset=_partial_dataset, llm_provider=llm_provider
+            partial_dataset=_partial_dataset,
+            llm_provider=llm_provider,
+            prompts=prompts,
         )
         return dataset
 
