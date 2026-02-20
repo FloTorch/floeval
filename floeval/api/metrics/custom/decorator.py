@@ -8,6 +8,11 @@ from typing import Any, Callable
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.registry import MetricRegistry
+from floeval.config.schemas.io.dataset import Sample
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+
+from .context import MetricContext
+from .llm_helper import SimpleLLMHelper
 
 logger = logging.getLogger(__name__)
 
@@ -75,10 +80,10 @@ def _generate_function_metric_class(
     is_async: bool
 ) -> type[BaseMetric]:
     """Generate BaseMetric subclass from function."""
-    
+
     class FunctionBasedMetric(BaseMetric):
         """Generated metric class for function-based custom metric."""
-        
+
         def __init__(self, **kwargs):
             super().__init__(name=metric_name, **kwargs)
             self.user_func = user_func
@@ -88,10 +93,10 @@ def _generate_function_metric_class(
             self.sig = sig
             self.is_async_func = is_async
             self.provider = "custom"
-            self.gateway_config = kwargs.get('gateway_config')
-            self.llm_model = kwargs.get('llm_model')
+            self.llm_config = kwargs.get("llm_config")
+            self.chat_model = kwargs.get("chat_model")
             self._executor = ThreadPoolExecutor(max_workers=1)
-        
+
         def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
             """Execute metric synchronously. Async functions run in thread executor."""
             args = self._prepare_args(sample)
@@ -116,7 +121,7 @@ def _generate_function_metric_class(
                         **self.metadata_params
                     }
                 )
-        
+
         def _run_async_user_in_thread(self, args: dict[str, Any]) -> Any:
             """Run async user function in isolated thread with its own event loop."""
             loop = asyncio.new_event_loop()
@@ -125,11 +130,11 @@ def _generate_function_metric_class(
                 return loop.run_until_complete(self.user_func(**args))
             finally:
                 loop.close()
-        
+
         async def aevaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
             """Execute metric asynchronously. Sync functions run in executor."""
             args = self._prepare_args(sample)
-            
+
             try:
                 if self.is_async_func:
                     # Async function - await directly
@@ -137,7 +142,7 @@ def _generate_function_metric_class(
                 else:
                     loop = asyncio.get_event_loop()
                     result = await loop.run_in_executor(None, lambda: self.user_func(**args))
-                
+
                 return self._normalize_result(result)
             except Exception as e:
                 logger.error(f"Metric {self.name} failed for sample: {e}", exc_info=True)
@@ -150,11 +155,11 @@ def _generate_function_metric_class(
                         **self.metadata_params
                     }
                 )
-        
-        def _prepare_args(self, sample: Any) -> dict[str, Any]:
+
+        def _prepare_args(self, sample: Sample) -> dict[str, Any]:
             """Map sample fields to function parameters."""
             args: dict[str, Any] = {}
-            
+
             for param_name, param in self.sig.parameters.items():
                 if param_name in ["response", "answer", "actual_output"]:
                     args[param_name] = getattr(sample, "llm_response", "") or ""
@@ -163,24 +168,30 @@ def _generate_function_metric_class(
                 elif param_name == "contexts":
                     args[param_name] = getattr(sample, "contexts", []) or []
                 elif param_name == "context":
-                    from .context import MetricContext
-                    gateway_config = getattr(self, 'gateway_config', None)
-                    args[param_name] = MetricContext(sample=sample, gateway_config=gateway_config)
+                    llm_config = self.llm_config
+                    args[param_name] = MetricContext(
+                        sample=sample, llm_config=llm_config
+                    )
                 elif param_name == "llm":
-                    from .llm_helper import SimpleLLMHelper
-                    gateway_config = getattr(self, 'gateway_config', None)
-                    llm_model = getattr(self, 'llm_model', None)
-                    args[param_name] = SimpleLLMHelper(gateway_config, llm_model)
+                    llm_config = self.llm_config
+
+                    # TODO: once SimpleLLMHelper is generalized to support multiple providers,
+                    # update assert to check instance from LLMProviderConfig (base class)
+                    assert llm_config and isinstance(
+                        llm_config, (OpenAIProviderConfig,)
+                    ), "LLM config must be provided for 'llm' parameter. "
+
+                    args[param_name] = SimpleLLMHelper(llm_config, self.chat_model)
                 elif param_name == "sample":
                     args[param_name] = sample
-            
+
             return args
-        
+
         def _normalize_result(self, result: Any) -> MetricResult:
             """Convert function result to MetricResult."""
             if isinstance(result, MetricResult):
                 return result
-            
+
             elif isinstance(result, dict):
                 score = result.get("score")
                 metadata = result.get("metadata", {})
@@ -190,7 +201,7 @@ def _generate_function_metric_class(
                     **self.metadata_params
                 })
                 return MetricResult(score=score, metadata=metadata)
-            
+
             elif isinstance(result, (int, float)):
                 score = float(result)
                 return MetricResult(
@@ -201,16 +212,16 @@ def _generate_function_metric_class(
                         **self.metadata_params
                     }
                 )
-            
+
             else:
                 raise ValueError(
                     f"Invalid metric result type: {type(result)}. "
                     f"Expected: float, dict, or MetricResult"
                 )
-    
+
     # Set class metadata
     FunctionBasedMetric.__name__ = f"{metric_name}_metric"
     FunctionBasedMetric.__qualname__ = f"{metric_name}_metric"
     FunctionBasedMetric.__doc__ = user_func.__doc__
-    
+
     return FunctionBasedMetric

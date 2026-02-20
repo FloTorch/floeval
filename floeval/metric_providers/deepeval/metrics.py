@@ -3,14 +3,14 @@ DeepEval metric implementations
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from deepeval.evaluate import evaluate
 from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
-from floeval.config import GatewayConfig
 from floeval.config.schemas.io.dataset import Sample
+from floeval.config.schemas.io.llm import LLMProviderConfig
 from floeval.metric_providers.deepeval.adapter import DeepEvalAdapter, DeepEvalLLMAdapter
 
 logger = logging.getLogger(__name__)
@@ -28,14 +28,12 @@ __VALID_DEEPEVAL_METRICS__ = {
 
 
 class DeepEvalMetric(BaseMetric):
-    """
-    Base class for DeepEval metrics.
-    """
+    """Base class for DeepEval metrics."""
 
-    def __init__(self, gateway_config: Optional[GatewayConfig] = None, *args, **kwargs):
+    def __init__(self, llm_config: LLMProviderConfig | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.provider = "deepeval"
-        self.gateway_config = gateway_config
+        self.llm_config = llm_config
 
         params = kwargs.get("params", {})
         if not isinstance(params, dict):
@@ -46,15 +44,14 @@ class DeepEvalMetric(BaseMetric):
         self._metric_params = self._extract_metric_params(params, kwargs)
 
         # Initialize LLM adapter internally (like RAGAS does)
-        self._llm_adapter = self._create_llm_adapter(gateway_config)
+        self._llm_adapter = self._create_llm_adapter(llm_config) if llm_config else None
 
     def _extract_metric_params(
         self, params: Dict[str, Any], kwargs: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """
-        Extract parameters that should be passed to DeepEval metric constructor.
+        """Extract parameters that should be passed to DeepEval metric constructor.
 
-        Excludes gateway_config and other Floeval-specific params.
+        Excludes llm_config and other Floeval-specific params.
         Includes threshold, include_reason, async_mode, strict_mode, verbose_mode, etc.
         """
         metric_params = {}
@@ -77,30 +74,25 @@ class DeepEvalMetric(BaseMetric):
 
         return metric_params
 
-    def _create_llm_adapter(
-        self, gateway_config: Optional[GatewayConfig]
-    ) -> Optional[DeepEvalLLMAdapter]:
-        """
-        Create and cache LLM adapter internally.
+    def _create_llm_adapter(self, llm_config: LLMProviderConfig) -> DeepEvalLLMAdapter:
+        """Create and cache LLM adapter internally.
 
         Args:
-            gateway_config: Gateway configuration (optional)
+            llm_config: LLM configuration (optional)
 
         Returns:
-            DeepEvalLLMAdapter instance or None if no config provided
+            DeepEvalLLMAdapter instance
         """
-        if gateway_config:
-            model_name = gateway_config.chat_model or "default"
-            return DeepEvalLLMAdapter(model_name=model_name, config=gateway_config)
-        return None  # Will use DeepEval defaults if available
+        model_name = llm_config.chat_model
+        return DeepEvalLLMAdapter(model_name=model_name, config=llm_config)
 
     @property
     def config(self):
         return self.adapter.config
 
     def _run_evaluate(self, metrics, test_cases):
-        """
-        Run DeepEval evaluate with proper event loop handling.
+        """Run DeepEval evaluate with proper event loop handling.
+
         DeepEval's OpenAI client uses async operations internally, so we need
         to ensure consistent event loop usage to avoid conflicts.
         """
@@ -136,8 +128,8 @@ class DeepEvalMetric(BaseMetric):
             raise
 
     def _extract_metric_result(self, result, metric_name: str) -> MetricResult:
-        """
-        Extract MetricResult from DeepEval evaluation result.
+        """Extract MetricResult from DeepEval evaluation result.
+
         Common error handling for all DeepEval metrics.
         """
         if result.metrics_data is None:
@@ -220,16 +212,13 @@ class DeepEvalMetric(BaseMetric):
 
 
 class FaithfulnessDeepEvalMetric(DeepEvalMetric):
-    """
-    Faithfulness metric implementation using DeepEval.
-    """
+    """Faithfulness metric implementation using DeepEval."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, name="faithfulness", **kwargs)
 
     def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
-        """
-        Compute faithfulness metric score using DeepEval.
+        """Compute faithfulness metric score using DeepEval.
 
         Args:
             sample: Sample to evaluate
@@ -241,7 +230,7 @@ class FaithfulnessDeepEvalMetric(DeepEvalMetric):
         # Use internal adapter (initialized in __init__)
         if self._llm_adapter is None:
             raise ValueError(
-                "LLM adapter not initialized. Provide gateway_config when creating metric."
+                "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
             )
         # Create metric instance with internal adapter and all metric params
         metric_kwargs = self._metric_params | {"model": self._llm_adapter}
@@ -254,16 +243,13 @@ class FaithfulnessDeepEvalMetric(DeepEvalMetric):
 
 
 class AnswerRelevancyDeepEvalMetric(DeepEvalMetric):
-    """
-    Answer Relevancy metric implementation using DeepEval.
-    """
+    """Answer Relevancy metric implementation using DeepEval."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, name="answer_relevancy", **kwargs)
 
     def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
-        """
-        Compute answer relevancy metric score using DeepEval.
+        """Compute answer relevancy metric score using DeepEval.
 
         Args:
             sample: Sample to evaluate
@@ -275,7 +261,7 @@ class AnswerRelevancyDeepEvalMetric(DeepEvalMetric):
         # Use internal adapter (initialized in __init__)
         if self._llm_adapter is None:
             raise ValueError(
-                "LLM adapter not initialized. Provide gateway_config when creating metric."
+                "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
             )
         # Create metric instance with internal adapter and all metric params
         metric_kwargs = self._metric_params | {"model": self._llm_adapter}

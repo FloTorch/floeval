@@ -15,20 +15,22 @@ class LLMProviderConfig(BaseModel):
         ..., description="Endpoint/path for chat/completion requests on the provider."
     )
     embedding_model: str | None = Field(
-        None, description="Optional model name/ID to use for embeddings."
+        default=None, description="Optional model name/ID to use for embeddings."
     )
     embedding_endpoint: str | None = Field(
-        None, description="Optional endpoint/path for embedding requests."
+        default=None, description="Optional endpoint/path for embedding requests."
     )
     system_prompt: str | None = Field(
-        None, description="Optional default system prompt to include in chat requests."
+        default=None,
+        description="Optional default system prompt to include in chat requests.",
     )
     extra_kwargs: dict | None = Field(
-        None, description="Optional additional provider-specific keyword arguments."
+        default=None,
+        description="Optional additional provider-specific keyword arguments.",
     )
 
 
-class OpenAIProviderConfig(BaseModel):
+class OpenAIProviderConfig(LLMProviderConfig):
     """OpenAI-compatible provider configuration with sensible defaults."""
 
     base_url: str = Field(
