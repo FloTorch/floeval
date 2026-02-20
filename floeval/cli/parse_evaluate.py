@@ -2,11 +2,13 @@ import argparse
 import json
 from pathlib import Path
 
+from floeval.api.agent_evaluation import AgentEvaluation, AgentEvaluationResult
 from floeval.api.dataset import DatasetLoader
 from floeval.api.evaluation import Evaluation, EvaluationResult
 from floeval.cli import CLIEvaluationConfig, ConfigError
 from floeval.cli.utils import CLIConfigLoader, check_if_file_exists
-from floeval.config.schemas.io.llm import LLMProviderConfig
+from floeval.config.schemas.io.agent_dataset import AgentDataset
+from floeval.config.schemas.io.llm import LLMProviderConfig, OpenAIProviderConfig
 
 
 def _is_partial_dataset(file_path: Path) -> bool:
@@ -66,7 +68,7 @@ def output_results(results: EvaluationResult, output_path: Path | None):
     if output_path:
         try:
             with open(output_path, "w") as f:
-                json.dump(results.model_dump(), f, indent=4)
+                json.dump(results.model_dump(), f, indent=4, default=str)
             print(f"Results successfully saved to {output_path}")
         except Exception as e:
             print(f"Error saving results to {output_path}: {e}")
@@ -74,7 +76,139 @@ def output_results(results: EvaluationResult, output_path: Path | None):
         _pretty_print_results(results)
 
 
+def _pretty_print_agent_results(results: AgentEvaluationResult):
+    """Pretty-print agent evaluation results to console."""
+    print("\n" + "-" * 80)
+    print("Agent Evaluation - Detailed Results:")
+    print("-" * 80)
+    for i, sr in enumerate(results.sample_results, start=1):
+        user_in = sr.get("user_input", "")
+        if isinstance(user_in, dict):
+            user_in = json.dumps(user_in)
+        elif len(str(user_in)) > 80:
+            user_in = str(user_in)[:80] + "..."
+        print(f"\nSample {i}: {user_in}")
+        for metric_key, metric_data in sr.get("metrics", {}).items():
+            score = metric_data.get("score")
+            passed = metric_data.get("metadata", {}).get("passed")
+            err = metric_data.get("metadata", {}).get("error")
+
+            if score is None:
+                print(f"  ❌ {metric_key}: N/A")
+                if err:
+                    print(f"     Error: {err}")
+            else:
+                status = "PASSED" if passed else "WARNING"
+                print(f"  {status} {metric_key}: {score:.4f}")
+                if err:
+                    print(f"     Warning: {err}")
+    if results.summary:
+        print("\n" + "-" * 80)
+        print("Summary:")
+        for k, v in results.summary.items():
+            if isinstance(v, float):
+                print(f"  {k}: {v:.4f}")
+            else:
+                print(f"  {k}: {v}")
+        print("-" * 80)
+
+
+def output_agent_results(results: AgentEvaluationResult, output_path: Path | None):
+    """Save or print agent evaluation results."""
+    if output_path:
+        try:
+            with open(output_path, "w") as f:
+                json.dump(results.model_dump(), f, indent=4, default=str)
+            print(f"Results successfully saved to {output_path}")
+        except Exception as e:
+            print(f"Error saving results to {output_path}: {e}")
+    else:
+        _pretty_print_agent_results(results)
+
+
+def _run_agent_evaluate(args: argparse.Namespace):
+    """Run agent evaluation (Mode 1 or 4)."""
+    config_file = args.config
+    output_file = Path(args.output) if args.output else None
+
+    if output_file and not output_file.parent.exists():
+        raise FileNotFoundError(
+            f"Output directory does not exist: {output_file.parent}; "
+            "please provide a valid output path with --output"
+        )
+
+    try:
+        dataset_path = check_if_file_exists(args.dataset)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(
+            f"Dataset file error: {e}; please provide a valid dataset file path with --dataset"
+        ) from e
+
+    config_loader = CLIConfigLoader(model_class=CLIEvaluationConfig)
+    evaluation_config = config_loader.load(config_file)
+    llm_config_dict = evaluation_config.llm_config
+    if not llm_config_dict:
+        raise ConfigError("Missing 'llm_config' section in the configuration file")
+
+    llm_config = OpenAIProviderConfig(
+        base_url=llm_config_dict.get("base_url", "https://api.openai.com/v1"),
+        api_key=llm_config_dict["api_key"],
+        chat_model=llm_config_dict.get("chat_model", "gpt-3.5-turbo"),
+        chat_endpoint=llm_config_dict.get("chat_endpoint", "chat/completions"),
+        embedding_model=llm_config_dict.get("embedding_model"),
+        embedding_endpoint=llm_config_dict.get("embedding_endpoint"),
+        system_prompt=llm_config_dict.get("system_prompt"),
+    )
+
+    eval_config = evaluation_config.evaluation_config or {}
+    agent_name = eval_config.get("agent_name")
+    metrics = eval_config.get("metrics")
+    if not metrics:
+        raise ConfigError(
+            "metrics are required for agent evaluation. "
+            "Add 'metrics' to evaluation_config in your config file (e.g. metrics: [goal_achievement])."
+        )
+    metrics = list(metrics)
+
+    dataset = AgentDataset.from_file(dataset_path)
+
+    if dataset.is_partial and not agent_name:
+        raise ConfigError(
+            "Partial dataset requires agent_name for Mode 4. "
+            "Add 'agent_name' to evaluation_config in your config file."
+        )
+
+    agent_runner = None
+    if agent_name:
+        try:
+            from floeval.flotorch import create_flotorch_runner
+
+            agent_runner = create_flotorch_runner(
+                agent_name,
+                llm_config=llm_config,
+            )
+        except ImportError as e:
+            raise ConfigError(
+                f"FloTorch required for Mode 4 (agent_name={agent_name}). "
+                f"Import failed: {e}"
+            ) from e
+
+    evaluation = AgentEvaluation(
+        dataset=dataset,
+        metrics=metrics,
+        llm_config=llm_config,
+        agent_runner=agent_runner,
+        metric_params=eval_config.get("metric_params", {}),
+    )
+
+    results = evaluation.run()
+    output_agent_results(results, output_file)
+
+
 def parse_args(args: argparse.Namespace):
+    if getattr(args, "agent", False):
+        return _run_agent_evaluate(args)
+
     config_file = args.config
     output_file = Path(args.output) if args.output else None
 
