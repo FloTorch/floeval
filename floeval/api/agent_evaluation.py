@@ -3,16 +3,21 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, Mapping
 
 from pydantic import BaseModel, Field
 
 import floeval.metric_providers  # noqa: F401 - trigger metric registration
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.registry import MetricRegistry
-from floeval.config.schemas.io.agent_dataset import AgentDataset, AgentSample
+from floeval.config.schemas.io.agent_dataset import (
+    AgentDataset,
+    AgentSample,
+    _to_display_str,
+)
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
 from floeval.core.execution.llm_executor import OpenAIProvider
 
@@ -44,7 +49,7 @@ class AgentEvaluation:
         | None = None,
         agent_runner: Any | None = None,
         default_provider: str | None = "builtin",
-        metric_params: dict[str, dict[str, Any]] | None = None,
+        metric_params: Mapping[str, dict[str, Any]] | None = None,
     ):
         self.dataset = dataset
         self.metrics = metrics
@@ -62,6 +67,10 @@ class AgentEvaluation:
 
         for spec in specs:
             if isinstance(spec, BaseMetric):
+                if self.llm_config and (
+                    not hasattr(spec, "llm_config") or spec.llm_config is None
+                ):
+                    spec.llm_config = self.llm_config
                 resolved.append(spec)
                 continue
 
@@ -69,7 +78,11 @@ class AgentEvaluation:
                 metric_id = spec.get("id")
                 if not metric_id:
                     raise ValueError("Metric dict spec must include 'id'")
-                provider = spec.get("provider") or self.default_provider
+                provider = (
+                    spec.get("provider")
+                    or self.default_provider
+                    or self._registry.resolve_best(metric_id, self.default_provider)
+                )
                 params = spec.get("params", {}) or {}
                 metric = self._create_metric(provider, metric_id, params)
                 resolved.append(metric)
@@ -83,7 +96,7 @@ class AgentEvaluation:
                     provider = self._registry.resolve_best(
                         metric_id, self.default_provider
                     )
-                metric = self._create_metric(provider, metric_id, {})
+                metric = self._create_metric(provider, metric_id, params={})
                 resolved.append(metric)
                 continue
 
@@ -91,24 +104,72 @@ class AgentEvaluation:
 
         return resolved
 
+    def _merge_params(
+        self, provider: str, metric_id: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Merge user-provided params with evaluation-level defaults.
+
+        Precedence (highest to lowest):
+        1) Explicit params passed in the metric spec dict
+        2) metric_params mapping (keyed by "provider:metric" or "metric")
+        3) llm_config when metrics expect it
+        """
+        merged: dict[str, Any] = {}
+        merged.update(self.metric_params.get(metric_id, {}))
+        merged.update(self.metric_params.get(f"{provider}:{metric_id}", {}))
+        merged.update(params)
+        return merged
+
+    def _inject_context_params(
+        self, provider: str, metric_id: str, merged: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Inject context-derived params based on metric constructor signature.
+
+        Uses introspection to avoid hardcoding metric names. Injects:
+        - llm_config: when metric accepts it and not in merged
+        - llm_provider: when metric accepts it, not in merged, and we have llm_config
+        """
+        metric_cls = self._registry.get_class(provider, metric_id)
+        if metric_cls is None:
+            return merged
+
+        try:
+            sig = inspect.signature(metric_cls.__init__)
+        except (TypeError, ValueError):
+            return merged
+
+        if self.llm_config is None:
+            return merged
+
+        if "llm_config" in sig.parameters and "llm_config" not in merged:
+            merged["llm_config"] = self.llm_config
+
+        if "llm_provider" in sig.parameters and "llm_provider" not in merged:
+            merged["llm_provider"] = OpenAIProvider(
+                config_name=f"{provider}:{metric_id}",
+                **self.llm_config.model_dump(),
+            )
+
+        return merged
+
     def _create_metric(
         self, provider: str, metric_id: str, params: dict[str, Any]
     ) -> BaseMetric:
-        """Create metric instance. Injects llm_provider for goal_achievement."""
-        merged = dict(self.metric_params.get(metric_id, {}))
-        merged.update(self.metric_params.get(f"{provider}:{metric_id}", {}))
-        merged.update(params)
+        """Create metric instance with dynamic dependency injection."""
+        merged = self._merge_params(provider, metric_id, params)
+        merged = self._inject_context_params(provider, metric_id, merged)
 
-        if provider == "builtin" and metric_id == "goal_achievement":
-            if "llm_provider" not in merged and self.llm_config is not None:
-                merged["llm_provider"] = OpenAIProvider(
-                    config_name="goal_achievement",
-                    **self.llm_config.model_dump(),
-                )
-        elif self.llm_config is not None and "llm_config" not in merged:
-            merged["llm_config"] = self.llm_config
-
-        return self._registry.create(provider, metric_id, **merged)
+        try:
+            return self._registry.create(provider, metric_id, **merged)
+        except TypeError as e:
+            if "llm_config" in merged or "llm_provider" in merged or "adapter" in merged:
+                fallback = {k: v for k, v in merged.items()
+                            if k not in ("llm_config", "llm_provider", "adapter")}
+                try:
+                    return self._registry.create(provider, metric_id, **fallback)
+                except TypeError:
+                    pass
+            raise e
 
     def _ensure_full_samples(self) -> list[AgentSample]:
         """Ensure all samples have traces. Run agent/runner if partial."""
@@ -124,7 +185,8 @@ class AgentEvaluation:
                 return self.agent_runner.run_on_dataset(partial)
             full = []
             for p in partial:
-                trace = self.agent_runner.run(p.user_input)
+                text = _to_display_str(p.user_input)
+                trace = self.agent_runner.run(text)
                 full.append(AgentSample.from_partial(p, trace))
             return full
 
@@ -175,6 +237,7 @@ class AgentEvaluation:
             row: dict[str, Any] = {
                 "user_input": sample.user_input,
                 "final_response": sample.trace.final_response,
+                "reference_outcome": sample.reference_outcome,
                 "metrics": {},
             }
 

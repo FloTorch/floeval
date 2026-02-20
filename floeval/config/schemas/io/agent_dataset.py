@@ -8,6 +8,17 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+AgentInputOutput = str | dict[str, Any]
+
+
+def _to_display_str(val: str | dict[str, Any] | None) -> str:
+    """Convert user_input or reference_outcome to string for display/prompts."""
+    if val is None:
+        return ""
+    if isinstance(val, str):
+        return val
+    return json.dumps(val)
+
 
 class ToolCall(BaseModel):
     """Tool/function invocation."""
@@ -166,8 +177,8 @@ def _safe_json_loads(s: str) -> dict:
 class PartialAgentSample(BaseModel):
     """Test case before agent execution."""
 
-    user_input: str
-    reference_outcome: str | None = None
+    user_input: AgentInputOutput
+    reference_outcome: AgentInputOutput | None = None
     reference_tool_calls: list[ToolCall] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -175,9 +186,9 @@ class PartialAgentSample(BaseModel):
 class AgentSample(BaseModel):
     """Test case after agent execution (has trace)."""
 
-    user_input: str
+    user_input: AgentInputOutput
     trace: AgentTrace
-    reference_outcome: str | None = None
+    reference_outcome: AgentInputOutput | None = None
     reference_tool_calls: list[ToolCall] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 

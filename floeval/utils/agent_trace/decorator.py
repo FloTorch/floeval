@@ -6,6 +6,7 @@ Inspired by deepeval's @observe pattern but adapted for floeval.
 
 import asyncio
 import functools
+import json
 import logging
 from typing import Any, Callable
 
@@ -18,6 +19,15 @@ from floeval.utils.agent_trace.trace_context import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _coerce_to_string(val: object) -> str:
+    """Coerce non-str/non-AgentTrace result to string for log_ai_turn."""
+    if isinstance(val, str):
+        return val
+    if isinstance(val, (dict, list)):
+        return json.dumps(val)
+    return str(val)
 
 
 def capture_trace(func: Callable | None = None, *, name: str | None = None) -> Callable:
@@ -97,7 +107,7 @@ def capture_trace(func: Callable | None = None, *, name: str | None = None) -> C
                         display_name,
                         type(result),
                     )
-                    trace_ctx.log_ai_turn(str(result))
+                    trace_ctx.log_ai_turn(_coerce_to_string(result))
                     return trace_ctx.to_trace()
                 finally:
                     clear_current_trace()
@@ -135,7 +145,7 @@ def capture_trace(func: Callable | None = None, *, name: str | None = None) -> C
                     display_name,
                     type(result),
                 )
-                trace_ctx.log_ai_turn(str(result))
+                trace_ctx.log_ai_turn(_coerce_to_string(result))
                 return trace_ctx.to_trace()
             finally:
                 clear_current_trace()

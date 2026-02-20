@@ -1,13 +1,15 @@
 """Collect traces by running user's agent."""
 
 import asyncio
+import json
 import logging
-from typing import Callable
+from typing import Awaitable, Callable
 
 from floeval.config.schemas.io.agent_dataset import (
     AgentSample,
     AgentTrace,
     PartialAgentSample,
+    _to_display_str,
 )
 from floeval.utils.agent_trace.patchers.langchain_callback import (
     get_langchain_callback,
@@ -23,6 +25,15 @@ from floeval.utils.agent_trace.trace_context import (
 logger = logging.getLogger(__name__)
 
 
+def _coerce_to_string(result: object) -> str:
+    """Convert non-str/non-AgentTrace result to string for trace logging."""
+    if isinstance(result, str):
+        return result
+    if isinstance(result, (dict, list)):
+        return json.dumps(result)
+    return str(result)
+
+
 class TraceCollector:
     """Run user's agent and capture traces.
 
@@ -31,9 +42,8 @@ class TraceCollector:
 
     def __init__(
         self,
-        agent_callable: Callable[[str], str | AgentTrace] | Callable[
-            [str], asyncio.Future[str | AgentTrace]
-        ],
+        agent_callable: Callable[[str], str | AgentTrace]
+        | Callable[[str], Awaitable[str | AgentTrace]],
     ):
         self.agent = agent_callable
         self._is_async = asyncio.iscoroutinefunction(agent_callable)
@@ -105,30 +115,46 @@ class TraceCollector:
 
     def _run_one_sync(self, partial: PartialAgentSample) -> AgentTrace:
         """Run agent once (sync)."""
-        trace_ctx = TraceContext(user_input=partial.user_input)
+        user_input_str = _to_display_str(partial.user_input)
+        trace_ctx = TraceContext(user_input=user_input_str)
         set_current_trace(trace_ctx)
 
         try:
-            result = self._invoke_agent_sync(partial.user_input)
+            result = self._invoke_agent_sync(user_input_str)
             if isinstance(result, AgentTrace):
                 return result
             if isinstance(result, str) and not trace_ctx.final_response:
                 trace_ctx.log_ai_turn(result)
+            elif not trace_ctx.final_response:
+                trace_ctx.log_ai_turn(_coerce_to_string(result))
+            return trace_ctx.to_trace()
+        except Exception as e:
+            logger.exception("Agent invocation failed for sample: %s", e)
+            trace_ctx.final_response = f"[Error: {e}]"
+            trace_ctx.metadata["error"] = str(e)
             return trace_ctx.to_trace()
         finally:
             clear_current_trace()
 
     async def _run_one_async(self, partial: PartialAgentSample) -> AgentTrace:
         """Run agent once (async)."""
-        trace_ctx = TraceContext(user_input=partial.user_input)
+        user_input_str = _to_display_str(partial.user_input)
+        trace_ctx = TraceContext(user_input=user_input_str)
         set_current_trace(trace_ctx)
 
         try:
-            result = await self._invoke_agent_async(partial.user_input)
+            result = await self._invoke_agent_async(user_input_str)
             if isinstance(result, AgentTrace):
                 return result
             if isinstance(result, str) and not trace_ctx.final_response:
                 trace_ctx.log_ai_turn(result)
+            elif not trace_ctx.final_response:
+                trace_ctx.log_ai_turn(_coerce_to_string(result))
+            return trace_ctx.to_trace()
+        except Exception as e:
+            logger.exception("Agent invocation failed for sample: %s", e)
+            trace_ctx.final_response = f"[Error: {e}]"
+            trace_ctx.metadata["error"] = str(e)
             return trace_ctx.to_trace()
         finally:
             clear_current_trace()

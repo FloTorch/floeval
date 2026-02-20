@@ -52,6 +52,14 @@ class AgentDatasetLoader:
             raise DatasetLoadError(f"Failed to load dataset: {e}") from e
 
     @staticmethod
+    def _parse_reference_tool_calls(data: dict) -> list[ToolCall] | None:
+        """Parse reference tool calls from data dict."""
+        raw = data.get("reference_tool_calls")
+        if not raw:
+            return None
+        return [ToolCall(**tc) for tc in raw]
+
+    @staticmethod
     def _load_jsonl(path: Path) -> AgentDataset:
         """Load JSONL file."""
         samples = []
@@ -111,11 +119,7 @@ class AgentDatasetLoader:
             return PartialAgentSample(
                 user_input=data["user_input"],
                 reference_outcome=data.get("reference_outcome"),
-                reference_tool_calls=[
-                    ToolCall(**tc) for tc in data.get("reference_tool_calls", [])
-                ]
-                if data.get("reference_tool_calls")
-                else None,
+                reference_tool_calls=AgentDatasetLoader._parse_reference_tool_calls(data),
                 metadata=data.get("metadata", {}),
             )
 
@@ -161,10 +165,6 @@ class AgentDatasetLoader:
             user_input=data["user_input"],
             trace=trace,
             reference_outcome=data.get("reference_outcome"),
-            reference_tool_calls=[
-                ToolCall(**tc) for tc in data.get("reference_tool_calls", [])
-            ]
-            if data.get("reference_tool_calls")
-            else None,
+            reference_tool_calls=AgentDatasetLoader._parse_reference_tool_calls(data),
             metadata=data.get("metadata", {}),
         )

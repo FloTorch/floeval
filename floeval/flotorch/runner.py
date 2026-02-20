@@ -10,6 +10,7 @@ from floeval.config.schemas.io.agent_dataset import (
     AgentSample,
     AgentTrace,
     PartialAgentSample,
+    _to_display_str,
 )
 from floeval.flotorch.adk.utils.adk_utils import process_session_events
 
@@ -101,6 +102,7 @@ class FloTorchRunner:
         """Run agent on each partial sample and return full samples."""
         full = []
         for partial in partial_samples:
-            trace = self.run(partial.user_input)
+            text = _to_display_str(partial.user_input)
+            trace = self.run(text)
             full.append(AgentSample.from_partial(partial, trace))
         return full
