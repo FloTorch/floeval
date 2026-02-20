@@ -271,6 +271,7 @@ def parse_args(args: argparse.Namespace):
         metrics=eval_config["metrics"],
         metric_params=eval_config.get("metric_params", {}),
         dataset_generator_model=dataset_generator_model,
+        prompts_file=eval_config.get("prompts_file"),
     )
 
     results = evaluation.run()
