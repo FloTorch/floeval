@@ -17,7 +17,13 @@ try:
 except ImportError:
     pass
 
-from ragas.metrics import answer_relevancy, faithfulness
+from ragas.metrics import (
+    answer_relevancy,
+    context_entity_recall,
+    context_precision,
+    context_recall,
+    faithfulness,
+)
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
@@ -233,6 +239,183 @@ class RAGASFaithfulness(RAGASMetric):
             )
         except Exception as e:
             logger.error(f"Error computing faithfulness: {e}", exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+
+class RAGASContextPrecision(RAGASMetric):
+    """RAGAS Context Precision metric with custom gateway support.
+
+    Measures whether relevant retrieved contexts are ranked ahead of irrelevant ones.
+    Higher scores indicate better retrieval ranking precision.
+
+    Args:
+        llm_config: Optional LLM configuration for custom API endpoint.
+            If None, uses default RAGAS configuration (environment variables).
+        adapter: Optional RAGASAdapter instance (for reuse across metrics).
+        threshold: Optional threshold for pass/fail determination.
+            If None, only score is returned (no pass/fail).
+        name: Metric name (default: "context_precision")
+    """
+
+    def __init__(
+        self,
+        llm_config: LLMProviderConfig | None = None,
+        adapter: RAGASAdapter | None = None,
+        threshold: float | None = None,
+        name: str = "context_precision",
+        **kwargs: Any,
+    ):
+        super().__init__(
+            ragas_metric_instance=context_precision,
+            llm_config=llm_config,
+            adapter=adapter,
+            threshold=threshold,
+            name=name,
+            **kwargs,
+        )
+
+    def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        """Compute context precision score for a sample.
+
+        Args:
+            sample: Floeval Sample object with inputs and ground_truth
+            **kwargs: Additional arguments (unused)
+
+        Returns:
+            MetricResult with score and metadata
+        """
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = _run_async(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score_float = float(score)
+
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:
+            logger.error(f"Error computing context precision: {e}", exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+
+class RAGASContextRecall(RAGASMetric):
+    """RAGAS Context Recall metric with custom gateway support.
+
+    Measures how much relevant reference information is covered by retrieved contexts.
+    Higher scores indicate better retrieval coverage (fewer missed relevant details).
+
+    Args:
+        llm_config: Optional LLM configuration for custom API endpoint.
+            If None, uses default RAGAS configuration (environment variables).
+        adapter: Optional RAGASAdapter instance (for reuse across metrics).
+        threshold: Optional threshold for pass/fail determination.
+            If None, only score is returned (no pass/fail).
+        name: Metric name (default: "context_recall")
+    """
+
+    def __init__(
+        self,
+        llm_config: LLMProviderConfig | None = None,
+        adapter: RAGASAdapter | None = None,
+        threshold: float | None = None,
+        name: str = "context_recall",
+        **kwargs: Any,
+    ):
+        super().__init__(
+            ragas_metric_instance=context_recall,
+            llm_config=llm_config,
+            adapter=adapter,
+            threshold=threshold,
+            name=name,
+            **kwargs,
+        )
+
+    def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        """Compute context recall score for a sample.
+
+        Args:
+            sample: Floeval Sample object with inputs and ground_truth
+            **kwargs: Additional arguments (unused)
+
+        Returns:
+            MetricResult with score and metadata
+        """
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = _run_async(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score_float = float(score)
+
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:
+            logger.error(f"Error computing context recall: {e}", exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+
+class RAGASContextEntityRecall(RAGASMetric):
+    """RAGAS Context Entity Recall metric with custom gateway support.
+
+    Measures how well entities in the reference are covered by retrieved contexts.
+    Higher scores indicate stronger entity-level retrieval coverage.
+
+    Args:
+        llm_config: Optional LLM configuration for custom API endpoint.
+            If None, uses default RAGAS configuration (environment variables).
+        adapter: Optional RAGASAdapter instance (for reuse across metrics).
+        threshold: Optional threshold for pass/fail determination.
+            If None, only score is returned (no pass/fail).
+        name: Metric name (default: "context_entity_recall")
+    """
+
+    def __init__(
+        self,
+        llm_config: LLMProviderConfig | None = None,
+        adapter: RAGASAdapter | None = None,
+        threshold: float | None = None,
+        name: str = "context_entity_recall",
+        **kwargs: Any,
+    ):
+        super().__init__(
+            ragas_metric_instance=context_entity_recall,
+            llm_config=llm_config,
+            adapter=adapter,
+            threshold=threshold,
+            name=name,
+            **kwargs,
+        )
+
+    def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        """Compute context entity recall score for a sample.
+
+        Args:
+            sample: Floeval Sample object with inputs and ground_truth
+            **kwargs: Additional arguments (unused)
+
+        Returns:
+            MetricResult with score and metadata
+        """
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = _run_async(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score_float = float(score)
+
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:
+            logger.error(f"Error computing context entity recall: {e}", exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
