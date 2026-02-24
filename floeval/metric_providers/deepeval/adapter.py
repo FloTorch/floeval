@@ -8,13 +8,18 @@ from deepeval.test_case import LLMTestCase
 from langchain_core.language_models import LanguageModelInput
 from langchain_openai import ChatOpenAI
 
-from floeval.config.schemas.deepeval import AnswerRelevancyTestCase, FaithfulnessTestCase
+from floeval.config.schemas.deepeval import (
+    AnswerRelevancyTestCase,
+    ContextualPrecisionTestCase,
+    FaithfulnessTestCase,
+)
 from floeval.config.schemas.io.llm import LLMProviderConfig
 from floeval.utils.gateway import normalize_openai_api_base
 
 __VALID_TEST_CASE_SCHEMAS__ = {
     "faithfulness": FaithfulnessTestCase,
     "answer_relevancy": AnswerRelevancyTestCase,
+    "contextual_precision": ContextualPrecisionTestCase,
 }
 
 
@@ -129,6 +134,19 @@ class DeepEvalAdapter:
             return LLMTestCase(
                 input=test_case.user_input,
                 actual_output=test_case.llm_response,
+            )
+        elif metric_name == "contextual_precision":
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            if not isinstance(test_case, ContextualPrecisionTestCase):
+                raise TypeError(
+                    f"Expected ContextualPrecisionTestCase after validation, got {type(test_case)}"
+                )
+
+            return LLMTestCase(
+                input=test_case.user_input,
+                actual_output=test_case.llm_response,
+                expected_output=test_case.ground_truth,
+                retrieval_context=test_case.contexts,
             )
 
         else:

@@ -6,7 +6,11 @@ import logging
 from typing import Any, Dict
 
 from deepeval.evaluate import evaluate
-from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
+from deepeval.metrics import (
+    AnswerRelevancyMetric,
+    ContextualPrecisionMetric,
+    FaithfulnessMetric,
+)
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.config.schemas.io.dataset import Sample
@@ -21,10 +25,6 @@ try:
     nest_asyncio.apply()
 except ImportError:
     pass
-
-__VALID_DEEPEVAL_METRICS__ = {
-    "faithfulness": FaithfulnessMetric,
-}
 
 
 class DeepEvalMetric(BaseMetric):
@@ -272,3 +272,35 @@ class AnswerRelevancyDeepEvalMetric(DeepEvalMetric):
         )
         result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
         return self._extract_metric_result(result, "answer_relevancy")
+
+
+class ContextualPrecisionDeepEvalMetric(DeepEvalMetric):
+    """Contextual Precision metric implementation using DeepEval."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="contextual_precision", **kwargs)
+
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
+        """Compute contextual precision metric score using DeepEval.
+
+        Args:
+            sample: Sample to evaluate
+            **kwargs: Additional arguments (unused, kept for interface consistency)
+
+        Returns:
+            MetricResult: The result of the contextual precision metric computation
+        """
+        # Use internal adapter (initialized in __init__)
+        if self._llm_adapter is None:
+            raise ValueError(
+                "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
+            )
+        # Create metric instance with internal adapter and all metric params
+        metric_kwargs = self._metric_params | {"model": self._llm_adapter}
+        metric_instance = ContextualPrecisionMetric(**metric_kwargs)
+        test_case = self.adapter.transform_test_case(
+            metric_name="contextual_precision",
+            test_case_dict=sample.model_dump(),
+        )
+        result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+        return self._extract_metric_result(result, "contextual_precision")
