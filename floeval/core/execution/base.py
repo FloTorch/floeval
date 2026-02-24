@@ -13,3 +13,7 @@ class BaseLLMProvider(ABC):
     @abstractmethod
     def generate_embedding(self, *args, **kwargs) -> list[float]:
         """Generate an embedding based on input arguments."""
+
+    @abstractmethod
+    async def a_generate(self, *args, **kwargs) -> str:
+        """Async version of generate method."""

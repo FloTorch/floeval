@@ -56,9 +56,9 @@ class OpenAIProvider(BaseLLMProvider):
             ]
         else:
             messages = [HumanMessage(content=prompt)]
-        print(f"---------messages-----------\n{messages}")
+        logger.debug(f"---------messages-----------\n{messages}")
         _output_text = self._llm_client.invoke(messages).content
-        print(f"---------generated llm response-----------\n{_output_text}")
+        logger.debug(f"---------generated llm response-----------\n{_output_text}")
         if not isinstance(_output_text, str):
             logger.warning(
                 f"Expected output_text to be a string, but got {type(_output_text)}"
@@ -79,3 +79,18 @@ class OpenAIProvider(BaseLLMProvider):
         raise NotImplementedError(
             "Embedding generation is not implemented for OpenAIProvider yet."
         )
+
+    async def a_generate(self, prompt: str, **kwargs) -> str:
+        """Asynchronous version of the generate method."""
+        system_prompt = kwargs.get("system_prompt") or getattr(
+            self.provider_config, "system_prompt", None
+        )
+        if system_prompt:
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=prompt),
+            ]
+        else:
+            messages = [HumanMessage(content=prompt)]
+        _output_text = await self._llm_client.ainvoke(messages)
+        return _output_text.text
