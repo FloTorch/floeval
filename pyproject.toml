@@ -35,7 +35,6 @@ dev = [
     "mypy>=1.19.1",
     "pylint>=4.0.4",
     "ruff>=0.14.14",
-    "types-PyYAML>=6.0",
 ]
 
 [project.scripts]
@@ -50,10 +49,7 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "D", "B"]
-ignore = [
-    "D100", "D101", "D102", "D103", "D104", "D105", "D107", "D200", "D205",
-    "D212", "D415", "D417", "B027", "B028", "B004", "F401", "F841", "E501",
-]
+ignore = ["D100", "D107"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -67,20 +63,6 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 check_untyped_defs = true
-explicit_package_bases = true
-
-# Relax strictness for third-party interop and pre-existing code
-[[tool.mypy.overrides]]
-module = [
-    "floeval.api.dataset_loaders.*",
-    "floeval.api.dataset",
-    "floeval.metric_providers.ragas.*",
-    "floeval.metric_providers.deepeval.*",
-    "floeval.metric_providers.builtin.*",
-    "floeval.core.execution.response_synthesizer",
-    "floeval.api.evaluation",
-]
-disable_error_code = ["arg-type", "assignment", "union-attr", "no-any-return", "attr-defined", "valid-type", "call-arg", "empty-body", "misc", "list-item"]
 
 [tool.pylint.messages_control]
 disable = [
