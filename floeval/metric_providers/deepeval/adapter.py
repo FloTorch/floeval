@@ -11,6 +11,8 @@ from langchain_openai import ChatOpenAI
 from floeval.config.schemas.deepeval import (
     AnswerRelevancyTestCase,
     ContextualPrecisionTestCase,
+    ContextualRecallTestCase,
+    ContextualRelevancyTestCase,
     FaithfulnessTestCase,
 )
 from floeval.config.schemas.io.llm import LLMProviderConfig
@@ -20,6 +22,8 @@ __VALID_TEST_CASE_SCHEMAS__ = {
     "faithfulness": FaithfulnessTestCase,
     "answer_relevancy": AnswerRelevancyTestCase,
     "contextual_precision": ContextualPrecisionTestCase,
+    "contextual_recall": ContextualRecallTestCase,
+    "contextual_relevancy": ContextualRelevancyTestCase,
 }
 
 
@@ -146,6 +150,31 @@ class DeepEvalAdapter:
                 input=test_case.user_input,
                 actual_output=test_case.llm_response,
                 expected_output=test_case.ground_truth,
+                retrieval_context=test_case.contexts,
+            )
+        elif metric_name == "contextual_recall":
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            if not isinstance(test_case, ContextualRecallTestCase):
+                raise TypeError(
+                    f"Expected ContextualRecallTestCase after validation, got {type(test_case)}"
+                )
+
+            return LLMTestCase(
+                input=test_case.user_input,
+                actual_output=test_case.llm_response,
+                expected_output=test_case.ground_truth,
+                retrieval_context=test_case.contexts,
+            )
+        elif metric_name == "contextual_relevancy":
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            if not isinstance(test_case, ContextualRelevancyTestCase):
+                raise TypeError(
+                    f"Expected ContextualRelevancyTestCase after validation, got {type(test_case)}"
+                )
+
+            return LLMTestCase(
+                input=test_case.user_input,
+                actual_output=test_case.llm_response,
                 retrieval_context=test_case.contexts,
             )
 
