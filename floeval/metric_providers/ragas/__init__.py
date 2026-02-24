@@ -6,6 +6,7 @@ This module registers RAGAS metrics:
     - context_precision
     - context_recall
     - context_entity_recall
+    - noise_sensitivity
     - agent_goal_accuracy
     - tool_call_accuracy
 with the global metric registry.
@@ -23,6 +24,7 @@ from floeval.metric_providers.ragas.metrics import (
     RAGASContextPrecision,
     RAGASContextRecall,
     RAGASFaithfulness,
+    RAGASNoiseSensitivity,
 )
 
 # Create a module-level registry instance for registration
@@ -35,6 +37,7 @@ _registry.register("ragas", "faithfulness", RAGASFaithfulness)
 _registry.register("ragas", "context_precision", RAGASContextPrecision)
 _registry.register("ragas", "context_recall", RAGASContextRecall)
 _registry.register("ragas", "context_entity_recall", RAGASContextEntityRecall)
+_registry.register("ragas", "noise_sensitivity", RAGASNoiseSensitivity)
 _registry.register("ragas", "agent_goal_accuracy", RAGASAgentGoalAccuracy)
 _registry.register("ragas", "tool_call_accuracy", RAGASToolCallAccuracy)
 
@@ -44,6 +47,7 @@ __all__ = [
     "RAGASContextPrecision",
     "RAGASContextRecall",
     "RAGASContextEntityRecall",
+    "RAGASNoiseSensitivity",
     "RAGASAgentGoalAccuracy",
     "RAGASToolCallAccuracy",
     "RAGASAdapter",

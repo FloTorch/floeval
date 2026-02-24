@@ -18,6 +18,7 @@ except ImportError:
     pass
 
 from ragas.metrics import (
+    NoiseSensitivity,
     answer_relevancy,
     context_entity_recall,
     context_precision,
@@ -416,6 +417,65 @@ class RAGASContextEntityRecall(RAGASMetric):
             )
         except Exception as e:
             logger.error(f"Error computing context entity recall: {e}", exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+
+class RAGASNoiseSensitivity(RAGASMetric):
+    """RAGAS Noise Sensitivity metric with custom gateway support.
+
+    Measures how often the response includes incorrect claims attributable to
+    retrieved context noise. Lower scores indicate better performance.
+
+    Args:
+        llm_config: Optional LLM configuration for custom API endpoint.
+            If None, uses default RAGAS configuration (environment variables).
+        adapter: Optional RAGASAdapter instance (for reuse across metrics).
+        threshold: Optional threshold for pass/fail determination.
+            If None, only score is returned (no pass/fail).
+        name: Metric name (default: "noise_sensitivity")
+    """
+
+    def __init__(
+        self,
+        llm_config: LLMProviderConfig | None = None,
+        adapter: RAGASAdapter | None = None,
+        threshold: float | None = None,
+        name: str = "noise_sensitivity",
+        **kwargs: Any,
+    ):
+        super().__init__(
+            ragas_metric_instance=NoiseSensitivity(),
+            llm_config=llm_config,
+            adapter=adapter,
+            threshold=threshold,
+            name=name,
+            **kwargs,
+        )
+
+    def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        """Compute noise sensitivity score for a sample.
+
+        Args:
+            sample: Floeval Sample object with inputs and ground_truth
+            **kwargs: Additional arguments (unused)
+
+        Returns:
+            MetricResult with score and metadata
+        """
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = _run_async(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score_float = float(score)
+
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:
+            logger.error(f"Error computing noise sensitivity: {e}", exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
