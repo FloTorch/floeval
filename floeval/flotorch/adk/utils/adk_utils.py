@@ -32,8 +32,7 @@ def tools_to_openai_format(tools: Any) -> List[Dict[str, Any]]:
             description = getattr(
                 tool,
                 "description",
-                getattr(getattr(tool, "func", tool), "__doc__", "")
-                or getattr(tool, "__doc__", ""),
+                getattr(getattr(tool, "func", tool), "__doc__", "") or getattr(tool, "__doc__", ""),
             )
             parameters: Dict[str, Any] = {
                 "type": "object",
@@ -44,7 +43,11 @@ def tools_to_openai_format(tools: Any) -> List[Dict[str, Any]]:
             if hasattr(tool, "_get_declaration"):
                 try:
                     decl = tool._get_declaration()
-                    if decl and hasattr(decl, "parameters_json_schema") and decl.parameters_json_schema:
+                    if (
+                        decl
+                        and hasattr(decl, "parameters_json_schema")
+                        and decl.parameters_json_schema
+                    ):
                         parameters = (
                             decl.parameters_json_schema.copy()
                             if isinstance(decl.parameters_json_schema, dict)
@@ -79,9 +82,7 @@ def tools_to_openai_format(tools: Any) -> List[Dict[str, Any]]:
             elif hasattr(tool, "input_schema"):
                 schema = tool.input_schema
                 if hasattr(schema, "properties"):
-                    parameters["properties"] = {
-                        n: {"type": "string"} for n in schema.properties
-                    }
+                    parameters["properties"] = {n: {"type": "string"} for n in schema.properties}
                     parameters["required"] = getattr(schema, "required", [])
                     normalize_mcp_schema(parameters)
                 elif isinstance(schema, dict):
@@ -89,16 +90,20 @@ def tools_to_openai_format(tools: Any) -> List[Dict[str, Any]]:
                     normalize_mcp_schema(parameters)
             elif hasattr(tool, "func") or hasattr(tool, "__call__"):
                 sig = inspect.signature(getattr(tool, "func", tool))
-                parameters["properties"] = {
-                    n: {"type": "string"} for n in sig.parameters
-                }
+                parameters["properties"] = {n: {"type": "string"} for n in sig.parameters}
                 parameters["required"] = list(sig.parameters.keys())
                 normalize_mcp_schema(parameters)
 
-            result.append({
-                "type": "function",
-                "function": {"name": name, "description": description, "parameters": parameters},
-            })
+            result.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": name,
+                        "description": description,
+                        "parameters": parameters,
+                    },
+                }
+            )
         except Exception as e:
             logger.warning("Failed to convert tool to OpenAI format: %s", e)
     return result
@@ -131,7 +136,11 @@ def parse_function_response(response_content: Any) -> str:
                     and "text" in content_list[0]
                     else str(response_content)
                 )
-            return json.dumps(response_content) if isinstance(response_content, dict) else str(response_content)
+            return (
+                json.dumps(response_content)
+                if isinstance(response_content, dict)
+                else str(response_content)
+            )
         return str(response_content)
     except Exception:
         return str(response_content)
@@ -151,15 +160,15 @@ def parse_llm_response_with_tools(response_data: Dict[str, Any]) -> List[Dict[st
                 tool_call = msg["tool_calls"][0]
                 try:
                     args_raw = tool_call["function"].get("arguments", "{}")
-                    fn_args = (
-                        json.loads(args_raw) if isinstance(args_raw, str) else args_raw
+                    fn_args = json.loads(args_raw) if isinstance(args_raw, str) else args_raw
+                    parts.append(
+                        {
+                            "type": "function_call",
+                            "name": tool_call["function"]["name"],
+                            "args": fn_args,
+                            "id": tool_call.get("id", f"call_{tool_call['function']['name']}"),
+                        }
                     )
-                    parts.append({
-                        "type": "function_call",
-                        "name": tool_call["function"]["name"],
-                        "args": fn_args,
-                        "id": tool_call.get("id", f"call_{tool_call['function']['name']}"),
-                    })
                 except Exception as e:
                     logger.warning("Failed to parse tool call arguments: %s", e)
                     parts.append({"type": "text", "content": "Let me help you with that query."})
@@ -167,15 +176,15 @@ def parse_llm_response_with_tools(response_data: Dict[str, Any]) -> List[Dict[st
                 fn_call = msg["function_call"]
                 try:
                     args_raw = fn_call.get("arguments", "{}")
-                    fn_args = (
-                        json.loads(args_raw) if isinstance(args_raw, str) else args_raw
+                    fn_args = json.loads(args_raw) if isinstance(args_raw, str) else args_raw
+                    parts.append(
+                        {
+                            "type": "function_call",
+                            "name": fn_call["name"],
+                            "args": fn_args,
+                            "id": f"call_{fn_call['name']}",
+                        }
                     )
-                    parts.append({
-                        "type": "function_call",
-                        "name": fn_call["name"],
-                        "args": fn_args,
-                        "id": f"call_{fn_call['name']}",
-                    })
                 except Exception as e:
                     logger.warning("Failed to parse function call arguments: %s", e)
                     parts.append({"type": "text", "content": "Let me help you with that query."})
@@ -225,15 +234,22 @@ def process_session_events(session_events: Any) -> List[Dict[str, Any]]:
                         if isinstance(args, dict)
                         else (args if isinstance(args, str) else "{}")
                     )
-                    messages.append({
-                        "role": "assistant",
-                        "content": "",
-                        "tool_calls": [{
-                            "id": getattr(fc, "id", ""),
-                            "type": "function",
-                            "function": {"name": getattr(fc, "name", ""), "arguments": args_str},
-                        }],
-                    })
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": "",
+                            "tool_calls": [
+                                {
+                                    "id": getattr(fc, "id", ""),
+                                    "type": "function",
+                                    "function": {
+                                        "name": getattr(fc, "name", ""),
+                                        "arguments": args_str,
+                                    },
+                                }
+                            ],
+                        }
+                    )
                 elif hasattr(part, "tool_calls") and part.tool_calls:
                     for tc in part.tool_calls:
                         fn = getattr(tc, "function", None) or tc
@@ -244,24 +260,30 @@ def process_session_events(session_events: Any) -> List[Dict[str, Any]]:
                             if isinstance(args, dict)
                             else (args if isinstance(args, str) else "{}")
                         )
-                        messages.append({
-                            "role": "assistant",
-                            "content": "",
-                            "tool_calls": [{
-                                "id": getattr(tc, "id", ""),
-                                "type": "function",
-                                "function": {"name": name, "arguments": args_str},
-                            }],
-                        })
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "content": "",
+                                "tool_calls": [
+                                    {
+                                        "id": getattr(tc, "id", ""),
+                                        "type": "function",
+                                        "function": {"name": name, "arguments": args_str},
+                                    }
+                                ],
+                            }
+                        )
                 elif hasattr(part, "function_response") and part.function_response:
                     fr = part.function_response
                     resp = getattr(fr, "response", None)
                     content = json.dumps(resp) if isinstance(resp, dict) else str(resp)
-                    messages.append({
-                        "role": "tool",
-                        "content": content,
-                        "tool_call_id": getattr(fr, "id", ""),
-                    })
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "content": content,
+                            "tool_call_id": getattr(fr, "id", ""),
+                        }
+                    )
     except Exception:
         pass
     return messages
@@ -276,25 +298,31 @@ def process_content_parts(content: Any) -> List[Dict[str, Any]]:
                 if hasattr(part, "text") and part.text:
                     messages.append({"role": content.role, "content": part.text})
                 elif hasattr(part, "function_call") and part.function_call:
-                    messages.append({
-                        "role": "assistant",
-                        "content": "",
-                        "tool_calls": [{
-                            "id": part.function_call.id,
-                            "type": "function",
-                            "function": {
-                                "name": part.function_call.name,
-                                "arguments": json.dumps(part.function_call.args),
-                            },
-                        }],
-                    })
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": "",
+                            "tool_calls": [
+                                {
+                                    "id": part.function_call.id,
+                                    "type": "function",
+                                    "function": {
+                                        "name": part.function_call.name,
+                                        "arguments": json.dumps(part.function_call.args),
+                                    },
+                                }
+                            ],
+                        }
+                    )
                 elif hasattr(part, "function_response") and part.function_response:
                     response_text = parse_function_response(part.function_response.response)
-                    messages.append({
-                        "role": "tool",
-                        "content": response_text,
-                        "tool_call_id": part.function_response.id,
-                    })
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "content": response_text,
+                            "tool_call_id": part.function_response.id,
+                        }
+                    )
     except Exception:
         pass
     return messages
@@ -305,10 +333,12 @@ def build_messages_from_request(llm_request: Any) -> List[Dict[str, Any]]:
     messages: List[Dict[str, Any]] = []
 
     if hasattr(llm_request, "config") and getattr(llm_request.config, "system_instruction", None):
-        messages.append({
-            "role": "system",
-            "content": llm_request.config.system_instruction,
-        })
+        messages.append(
+            {
+                "role": "system",
+                "content": llm_request.config.system_instruction,
+            }
+        )
 
     try:
         ctx = getattr(llm_request, "_invocation_context", None)

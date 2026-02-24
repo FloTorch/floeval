@@ -1,248 +1,171 @@
-"""LLM Helper for custom metrics.
+"""LLM helper for custom metrics with separate sync and async clients.
 
-Provides simple interface for LLM calls in custom metrics.
-Supports both sync (generate) and async (agenerate) usage.
-Sync API runs async code in an isolated thread via ThreadPoolExecutor (production-safe).
+Provides SimpleLLMHelper, a lightweight wrapper around the OpenAI API
+for use within custom metrics (criteria, decorator). Exposes:
+- generate(): Synchronous API using openai.OpenAI (httpx.Client — no threads)
+- agenerate(): Asynchronous API using openai.AsyncOpenAI (httpx.AsyncClient — native async)
+
+No ThreadPoolExecutor, no asyncio.new_event_loop(), no shared mutable state.
 """
 
-import asyncio
 import logging
-from concurrent.futures import ThreadPoolExecutor
+import threading
+from typing import Any
 
 import openai
 
-from floeval.config.schemas.io.llm import OpenAIProviderConfig
-from floeval.utils.gateway import normalize_openai_api_base
+from floeval.config.schemas.io.llm import OpenAIProviderConfig, _normalize_openai_base_url
 
 logger = logging.getLogger(__name__)
 
 
 class SimpleLLMHelper:
-    """Simple LLM wrapper for custom metrics.
+    """LLM helper with truly separate sync and async paths.
 
-    Supports both sync and async usage transparently.
-    - generate(): Sync API; runs async call in isolated thread (ThreadPoolExecutor).
-      User can write sync metrics and call llm.generate() - it just works.
-    - agenerate(): Async API for async metrics or Evaluation.arun().
+    Design:
+    - generate() → openai.OpenAI (sync httpx.Client) — no threads needed
+    - agenerate() → openai.AsyncOpenAI (async httpx.AsyncClient) — native async
+    - No shared client state — each path has its own client instance
+    - Lazy initialization — clients created on first use
+    - Thread-safe — no mutable shared state between paths
 
-    Each thread has its own event loop (complete isolation, no main-thread event loop creation).
+    Args:
+        config: OpenAI provider configuration.
+        chat_model: Override model name (defaults to config.chat_model).
     """
 
-    # TODO: generalize the helper to support multiple providers (not just OpenAI-compatible) by accepting a more generic llm config and client factory.
-    def __init__(
-        self,
-        openai_provider_config: OpenAIProviderConfig,
-        chat_model: str | None = None,
-    ):
-        """Initialize LLM helper from llm configuration.
+    def __init__(self, config: OpenAIProviderConfig, chat_model: str | None = None):
+        """Initialize with config. Clients are created lazily on first use."""
+        self._config = config
+        self._chat_model = chat_model or config.chat_model
+        self._base_url = _normalize_openai_base_url(config.base_url)
+        self._api_key = config.api_key
 
-        Client initialization is lazy (deferred until first use) to allow
-        openai_provider_config to be injected later by Evaluation.
+        # Separate clients — lazily initialized, independent lifecycle
+        self._sync_client: openai.OpenAI | None = None
+        self._async_client: openai.AsyncOpenAI | None = None
+        self._sync_lock: threading.Lock = threading.Lock()
 
-        Args:
-            openai_provider_config: model instance of OpenAIProviderConfig
-            chat_model: LLM model identifier (e.g., "gpt-4", "flotorch/openai-gpt-4").
-                        If provided, it overrides the chat_model in openai_provider_config.
+    @property
+    def sync_client(self) -> openai.OpenAI:
+        """Get or create sync client (thread-safe via double-checked locking)."""
+        if self._sync_client is None:
+            with self._sync_lock:
+                if self._sync_client is None:
+                    self._sync_client = openai.OpenAI(
+                        base_url=self._base_url,
+                        api_key=self._api_key,
+                    )
+        return self._sync_client
 
-
-        Raises:
-            ValueError: If openai_provider_config is None when generate() or agenerate() is called.
-        """
-        self.openai_provider_config = openai_provider_config
-        self._chat_model = chat_model or self.openai_provider_config.chat_model
-
-        # Initialize client lazily (only when needed)
-        self.client = None
-
-        # ThreadPoolExecutor for sync generate(): one worker, own event loop per call (isolation)
-        self._executor = ThreadPoolExecutor(max_workers=1)
-
-    def _init_client(self):
-        """Initialize OpenAI client from llm config (lazy initialization).
-
-        Called automatically on first use. Ensures openai_provider_config is available
-        and creates AsyncOpenAI client with normalized llm URL.
-
-        Raises:
-            ValueError: If openai_provider_config is None or missing required fields.
-        """
-        if self.client is not None:
-            return  # Already initialized
-
-        if not self.openai_provider_config:
-            raise ValueError(
-                "openai_provider_config is required for LLM-based custom metrics. "
-                "Pass openai_provider_config to Evaluation when creating the evaluation instance."
+    @property
+    def async_client(self) -> openai.AsyncOpenAI:
+        """Get or create async client."""
+        if self._async_client is None:
+            self._async_client = openai.AsyncOpenAI(
+                base_url=self._base_url,
+                api_key=self._api_key,
             )
+        return self._async_client
 
-        base_url = normalize_openai_api_base(self.openai_provider_config.base_url)
-
-        self.client = openai.AsyncOpenAI(
-            base_url=base_url, api_key=self.openai_provider_config.api_key
-        )
-
-        logger.debug(
-            f"Initialized LLM client for model: {self._chat_model}, base_url: {base_url}"
-        )
+    def _build_params(
+        self,
+        prompt: str,
+        temperature: float = 0.0,
+        max_tokens: int | None = None,
+    ) -> dict[str, Any]:
+        """Build request parameters (shared between sync and async)."""
+        params: dict[str, Any] = {
+            "model": self._chat_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": temperature,
+        }
+        if max_tokens is not None:
+            params["max_tokens"] = max_tokens
+        return params
 
     def generate(
         self,
         prompt: str,
         temperature: float = 0.0,
-        max_tokens: int | None = None
-    ) -> str:
-        """Generate text from prompt (sync interface).
-
-        Works in sync context by running the async call in an isolated thread
-        via ThreadPoolExecutor. Each thread has its own event loop.
-        User can write sync custom metrics and call llm.generate() - it just works.
-
-        Args:
-            prompt: Question or instruction to send to LLM.
-            temperature: Randomness control (0.0 = deterministic, 1.0 = creative).
-            max_tokens: Maximum response length. None uses model default.
-
-        Returns:
-            str: Raw text response from LLM. User is responsible for parsing.
-
-        Raises:
-            ValueError: If openai_provider_config is not set.
-            TimeoutError: If gateway times out (504 error).
-            RuntimeError: If gateway returns server error (500 error).
-
-        Example:
-            @custom_metric
-            def helpfulness(response: str, llm) -> float:
-                answer = llm.generate(f"Rate helpfulness 0-1: {response}")
-                return float(answer.strip())
-        """
-        future = self._executor.submit(
-            self._run_async_in_thread,
-            prompt,
-            temperature,
-            max_tokens,
-        )
-        return future.result()
-
-    def _run_async_in_thread(
-        self,
-        prompt: str,
-        temperature: float = 0.0,
         max_tokens: int | None = None,
     ) -> str:
-        """Run async generation in a new thread with its own event loop.
+        """Synchronous LLM call using openai.OpenAI (sync httpx.Client).
 
-        bridge for sync -> async. ThreadPoolExecutor provides
-        complete isolation; no main-thread event loop creation.
+        This is a true sync call — no ThreadPoolExecutor, no event loops.
+        Safe to call from any context (sync functions, threads, workers).
+
+        Args:
+            prompt: The prompt text for the LLM.
+            temperature: Sampling temperature (default 0.0 for deterministic).
+            max_tokens: Maximum tokens in response (None = provider default).
+
+        Returns:
+            Generated text response.
+
+        Raises:
+            openai.APITimeoutError: If the request timed out.
+            openai.APIError: For other API errors.
         """
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        # Create client in this thread so it is bound to this loop (avoids "Event loop is closed" on cleanup)
-        self.client = None
+        params = self._build_params(prompt, temperature, max_tokens)
         try:
-            self._init_client()
-            return loop.run_until_complete(
-                self.agenerate(prompt, temperature=temperature, max_tokens=max_tokens)
-            )
-        finally:
-            if self.client is not None:
-                try:
-                    # Run async client cleanup while the loop is still open.
-                    # Avoids "Event loop is closed" when httpx AsyncClient runs aclose().
-                    loop.run_until_complete(self.client.close())
-                except Exception as e:
-                    logger.debug("LLM client close: %s", e)
-            loop.close()
-            self.client = None
+            response = self.sync_client.chat.completions.create(**params)
+            content = response.choices[0].message.content
+            return content or ""
+        except openai.APITimeoutError as e:
+            logger.error("LLM call timed out: %s", e)
+            raise
+        except openai.APIError as e:
+            logger.error("LLM API error (status=%s): %s", getattr(e, "status_code", "N/A"), e)
+            raise
 
     async def agenerate(
         self,
         prompt: str,
         temperature: float = 0.0,
-        max_tokens: int | None = None
+        max_tokens: int | None = None,
     ) -> str:
-        """Generate text from prompt (asynchronous interface).
+        """Asynchronous LLM call using openai.AsyncOpenAI (async httpx.AsyncClient).
 
-        This is the only allowed way to call LLM from custom metrics.
-        Use this method inside async custom metric functions or when Evaluation.arun() is available.
+        Natively awaitable — no threads, no sync bridges.
+        Use this inside async metric functions and aevaluate() paths.
 
         Args:
-            prompt: Question or instruction to send to LLM. Should be clear and
-                   specific about desired output format (e.g., "Return only a number 0-1").
-            temperature: Randomness control (0.0 = deterministic, 1.0 = creative).
-                       Default 0.0 for consistent scoring/metrics.
-            max_tokens: Maximum response length. None uses model default.
-                       Lower values reduce latency and cost.
+            prompt: The prompt text for the LLM.
+            temperature: Sampling temperature (default 0.0 for deterministic).
+            max_tokens: Maximum tokens in response (None = provider default).
 
         Returns:
-            str: Raw text response from LLM. User is responsible for parsing
-                 (e.g., float(answer.strip()) for scores, json.loads() for JSON).
+            Generated text response.
 
         Raises:
-            ValueError: If openai_provider_config is not set.
-            TimeoutError: If gateway times out (504 error).
-            RuntimeError: If gateway returns server error (500 error).
-
-        Examples:
-            # In async custom metric:
-            @custom_metric
-            async def helpfulness(response: str, llm) -> float:
-                answer = await llm.agenerate(
-                    f"Rate helpfulness 0-1: {response}"
-                )
-                return float(answer.strip())
-
-            # Yes/no question
-            @custom_metric
-            async def is_professional(response: str, llm) -> float:
-                answer = await llm.agenerate(
-                    f"Is this professional? yes/no: {response}"
-                )
-                return 1.0 if "yes" in answer.lower() else 0.0
+            openai.APITimeoutError: If the request timed out.
+            openai.APIError: For other API errors.
         """
-        # Ensure client is initialized (lazy initialization)
-        self._init_client()
-
+        params = self._build_params(prompt, temperature, max_tokens)
         try:
-            # Build request parameters
-            request_params = {
-                "model": self._chat_model,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": temperature,
-            }
-            # Only include max_tokens if specified
-            if max_tokens is not None:
-                request_params["max_tokens"] = max_tokens
-
-            logger.debug(
-                f"Calling LLM with model={self._chat_model}, temperature={temperature}, max_tokens={max_tokens}"
-            )
-            response = await self.client.chat.completions.create(**request_params)
-
+            response = await self.async_client.chat.completions.create(**params)
             content = response.choices[0].message.content
-            logger.debug(f"LLM response received, length={len(content)}")
-            return content
+            return content or ""
+        except openai.APITimeoutError as e:
+            logger.error("Async LLM call timed out: %s", e)
+            raise
+        except openai.APIError as e:
+            logger.error(
+                "Async LLM API error (status=%s): %s",
+                getattr(e, "status_code", "N/A"),
+                e,
+            )
+            raise
 
-        except Exception as e:
-            # Provide better error messages for common issues
-            error_code = getattr(e, 'status_code', None) or getattr(e, 'code', None)
-            error_msg = str(e)
+    def close(self) -> None:
+        """Clean up sync client."""
+        if self._sync_client:
+            self._sync_client.close()
+            self._sync_client = None
 
-            logger.error(f"LLM call failed: {error_msg}", exc_info=True)
-
-            if error_code == 504 or '504' in error_msg or 'timeout' in error_msg.lower():
-                raise TimeoutError(
-                    f"Gateway timeout (504) while calling LLM. "
-                    f"This usually means the request took too long. "
-                    f"Try reducing max_tokens or simplifying the prompt. "
-                    f"Original error: {error_msg}"
-                ) from e
-            elif error_code == 500 or '500' in error_msg:
-                raise RuntimeError(
-                    f"Gateway server error (500) while calling LLM. "
-                    f"This may be a temporary issue. Please try again later. "
-                    f"Original error: {error_msg}"
-                ) from e
-            else:
-                # Re-raise other errors as-is
-                raise
+    async def aclose(self) -> None:
+        """Clean up async client."""
+        if self._async_client:
+            await self._async_client.close()
+            self._async_client = None

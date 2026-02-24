@@ -75,9 +75,7 @@ def capture_trace(func: Callable | None = None, *, name: str | None = None) -> C
         if asyncio.iscoroutinefunction(fn):
 
             @functools.wraps(fn)
-            async def async_wrapper(
-                user_input: str, *args: Any, **kwargs: Any
-            ) -> AgentTrace:
+            async def async_wrapper(user_input: str, *args: Any, **kwargs: Any) -> AgentTrace:
                 existing_trace = get_current_trace()
 
                 if existing_trace is not None:

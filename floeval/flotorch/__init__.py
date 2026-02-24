@@ -43,9 +43,7 @@ try:
                 "FloTorch gateway base_url and api_key required. "
                 "Pass llm_config, or set FLOTORCH_BASE_URL and FLOTORCH_API_KEY."
             )
-        adk = FlotorchADKAgent(
-            agent_name=agent_name, base_url=base_url, api_key=api_key
-        )
+        adk = FlotorchADKAgent(agent_name=agent_name, base_url=base_url, api_key=api_key)
         return FloTorchRunner(adk.get_agent())
 
     __all__ = [

@@ -12,6 +12,20 @@ from floeval.core.execution.llm_executor import OpenAIProvider
 logger = logging.getLogger(__name__)
 
 
+def _fix_json_escapes(s: str) -> str:
+    """Fix invalid JSON escape sequences (e.g. \\(, \\times) so json.loads succeeds."""
+    # Backslash not followed by valid JSON escape char: " \ / b f n r t u
+    return re.sub(r'\\(?!["\\/bfnrtu])', r"\\\\", s)
+
+
+def _parse_llm_json(raw: str) -> dict:
+    """Parse JSON from LLM response, tolerating invalid escapes in strings."""
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return json.loads(_fix_json_escapes(raw))
+
+
 class GoalAchievementMetric(BaseMetric):
     """LLM-as-judge: Did agent achieve the goal?
 
@@ -74,7 +88,7 @@ Respond ONLY with JSON:
                     metadata={"error": f"No JSON in response: {response[:200]}"},
                 )
 
-            data = json.loads(match.group())
+            data = _parse_llm_json(match.group())
             score = float(data.get("score", 0))
             score = max(0.0, min(1.0, score))
 
@@ -160,7 +174,7 @@ Respond ONLY with JSON:
                     metadata={"error": f"No JSON in response: {response[:200]}"},
                 )
 
-            data = json.loads(match.group())
+            data = _parse_llm_json(match.group())
             score = float(data.get("score", 0))
             score = max(0.0, min(1.0, score))
 

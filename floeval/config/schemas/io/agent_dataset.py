@@ -71,9 +71,7 @@ class AgentTrace(BaseModel):
     model_config = {"frozen": True}
 
     @classmethod
-    def from_simple_response(
-        cls, user_input: str, response: str, **metadata: Any
-    ) -> AgentTrace:
+    def from_simple_response(cls, user_input: str, response: str, **metadata: Any) -> AgentTrace:
         """Factory: Create trace from simple input/output."""
         return cls(
             messages=[
@@ -112,14 +110,10 @@ class AgentTrace(BaseModel):
                         name = fn.get("name", "")
                         args_str = fn.get("arguments", "{}")
                         args = (
-                            args_str
-                            if isinstance(args_str, dict)
-                            else _safe_json_loads(args_str)
+                            args_str if isinstance(args_str, dict) else _safe_json_loads(args_str)
                         )
                         tool_calls.append(ToolCall(name=name, args=args or {}))
-                agent_messages.append(
-                    AIMessage(content=content, tool_calls=tool_calls)
-                )
+                agent_messages.append(AIMessage(content=content, tool_calls=tool_calls))
                 if content:
                     final_response = content
             elif role == "tool":
@@ -141,7 +135,11 @@ class AgentTrace(BaseModel):
         if not final_response and agent_messages:
             last = agent_messages[-1]
             if isinstance(last, ToolMessage) and last.content:
-                final_response = f"[Tool result: {last.content[:500]}...]" if len(last.content) > 500 else f"[Tool result: {last.content}]"
+                final_response = (
+                    f"[Tool result: {last.content[:500]}...]"
+                    if len(last.content) > 500
+                    else f"[Tool result: {last.content}]"
+                )
 
         return cls(
             messages=agent_messages,
@@ -152,12 +150,7 @@ class AgentTrace(BaseModel):
     @property
     def tool_calls_made(self) -> list[ToolCall]:
         """Derived property: all tool calls in trace."""
-        return [
-            tc
-            for msg in self.messages
-            if isinstance(msg, AIMessage)
-            for tc in msg.tool_calls
-        ]
+        return [tc for msg in self.messages if isinstance(msg, AIMessage) for tc in msg.tool_calls]
 
     @property
     def turn_count(self) -> int:
@@ -193,9 +186,7 @@ class AgentSample(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @classmethod
-    def from_partial(
-        cls, partial: PartialAgentSample, trace: AgentTrace
-    ) -> AgentSample:
+    def from_partial(cls, partial: PartialAgentSample, trace: AgentTrace) -> AgentSample:
         """Factory: Convert partial + trace to full sample."""
         return cls(
             user_input=partial.user_input,

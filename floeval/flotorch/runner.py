@@ -1,4 +1,9 @@
-"""FloTorch ADK runner for Mode 4 agent evaluation."""
+"""FloTorch ADK runner for Mode 4 agent evaluation.
+
+If you see "Error on session runner task: Attempted to exit cancel scope in a
+different task than it was entered in" — this comes from google-adk when the
+agent uses MCP tools. See MODE4_FLOW_ANALYSIS.md for flow and root cause.
+"""
 
 from __future__ import annotations
 
@@ -96,13 +101,22 @@ class FloTorchRunner:
         messages = process_session_events(session.events)
         return AgentTrace.from_messages(messages)
 
-    def run_on_dataset(
-        self, partial_samples: list[PartialAgentSample]
-    ) -> list[AgentSample]:
-        """Run agent on each partial sample and return full samples."""
+    def run_on_dataset(self, partial_samples: list[PartialAgentSample]) -> list[AgentSample]:
+        """Run agent on each partial sample and return full samples (sync)."""
         full = []
         for partial in partial_samples:
             text = _to_display_str(partial.user_input)
             trace = self.run(text)
+            full.append(AgentSample.from_partial(partial, trace))
+        return full
+
+    async def run_on_dataset_async(
+        self, partial_samples: list[PartialAgentSample]
+    ) -> list[AgentSample]:
+        """Run agent on each partial sample (async, same event loop — avoids ADK cleanup errors)."""
+        full = []
+        for partial in partial_samples:
+            text = _to_display_str(partial.user_input)
+            trace = await self.arun(text)
             full.append(AgentSample.from_partial(partial, trace))
         return full

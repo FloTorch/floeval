@@ -54,9 +54,7 @@ class TraceCollector:
             return asyncio.run(self.acollect(partial_samples))
         return self._collect_sync(partial_samples)
 
-    async def acollect(
-        self, partial_samples: list[PartialAgentSample]
-    ) -> list[AgentSample]:
+    async def acollect(self, partial_samples: list[PartialAgentSample]) -> list[AgentSample]:
         """Async interface."""
         patch_openai()
 
@@ -69,9 +67,7 @@ class TraceCollector:
         finally:
             unpatch_openai()
 
-    def _collect_sync(
-        self, partial_samples: list[PartialAgentSample]
-    ) -> list[AgentSample]:
+    def _collect_sync(self, partial_samples: list[PartialAgentSample]) -> list[AgentSample]:
         """Sync collection."""
         patch_openai()
 

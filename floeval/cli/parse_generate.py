@@ -20,9 +20,7 @@ def parse_args(args: argparse.Namespace):
     output_file = Path(args.output) if args.output else None
     config_file = Path(args.config) if args.config else None
 
-    assert (
-        partial_dataset_file is not None
-    ), "Dataset file path must be provided with --dataset"
+    assert partial_dataset_file is not None, "Dataset file path must be provided with --dataset"
     assert config_file is not None, "Config file path must be provided with --config"
     assert output_file is not None, "Output file path must be provided with --output"
 
@@ -34,13 +32,11 @@ def parse_args(args: argparse.Namespace):
     partial_dataset_file_path = check_if_file_exists(partial_dataset_file)
     config_file_path = check_if_file_exists(config_file)
 
-    partial_dataset = DatasetLoader.from_file(
-        partial_dataset_file_path, partial_dataset=True
-    )
+    partial_dataset = DatasetLoader.from_file(partial_dataset_file_path, partial_dataset=True)
     assert partial_dataset is not None, "Failed to load partial dataset from file"
-    assert isinstance(
-        partial_dataset, PartialDataset
-    ), f"Expected a PartialDataset instance; got {type(partial_dataset)}"
+    assert isinstance(partial_dataset, PartialDataset), (
+        f"Expected a PartialDataset instance; got {type(partial_dataset)}"
+    )
 
     config_loader = CLIConfigLoader(model_class=CLIGenerationConfig)
     generation_config = config_loader.load(config_file_path)

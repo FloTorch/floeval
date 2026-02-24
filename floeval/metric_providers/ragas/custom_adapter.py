@@ -25,9 +25,7 @@ class RAGASCustomMetricAdapter:
         """Use ragas_adapter if provided, else create from llm_config."""
         self.llm_config = llm_config
         self._ragas_adapter = (
-            ragas_adapter
-            if ragas_adapter is not None
-            else RAGASAdapter(config=llm_config)
+            ragas_adapter if ragas_adapter is not None else RAGASAdapter(config=llm_config)
         )
 
     @property
@@ -42,10 +40,10 @@ class RAGASCustomMetricAdapter:
 
     def transform_metric(self, floeval_metric: BaseMetric) -> Type[MetricWithLLM]:
         """Return RAGAS metric class for this Floeval metric."""
-        if hasattr(floeval_metric, 'user_func'):
+        if hasattr(floeval_metric, "user_func") or hasattr(floeval_metric, "_user_func"):
             return self._transform_function_metric(floeval_metric)
 
-        if hasattr(floeval_metric, 'description') and hasattr(floeval_metric, 'llm_helper'):
+        if hasattr(floeval_metric, "description") and hasattr(floeval_metric, "llm_helper"):
             return self._transform_criteria_metric(floeval_metric)
 
         raise ValueError(
@@ -57,13 +55,15 @@ class RAGASCustomMetricAdapter:
         """Transform function-based metric to RAGAS metric class."""
         metric_name = metric.name
         floeval_metric_instance = metric
-        threshold = getattr(metric, 'threshold', 0.5)
+        threshold = getattr(metric, "threshold", 0.5)
 
         class GeneratedRAGASMetric(MetricWithLLM, SingleTurnMetric):
             """Runtime-generated RAGAS metric from Floeval custom metric."""
 
             def __init__(self, llm=None, name=metric_name):
-                _required_columns = {MetricType.SINGLE_TURN: {"response", "user_input", "retrieved_contexts"}}
+                _required_columns = {
+                    MetricType.SINGLE_TURN: {"response", "user_input", "retrieved_contexts"}
+                }
                 super().__init__(_required_columns=_required_columns, llm=llm, name=name)
                 self._floeval_metric = floeval_metric_instance
                 self._threshold = threshold
@@ -117,9 +117,9 @@ class RAGASCustomMetricAdapter:
             RAGAS metric class
         """
         metric_name = metric.name
-        description = getattr(metric, 'description', '')
-        evaluation_steps = getattr(metric, 'evaluation_steps', [])
-        threshold = getattr(metric, 'threshold', 0.5)
+        description = getattr(metric, "description", "")
+        evaluation_steps = getattr(metric, "evaluation_steps", [])
+        threshold = getattr(metric, "threshold", 0.5)
         floeval_metric_instance = metric
 
         class GeneratedRAGASCriteriaMetric(MetricWithLLM, SingleTurnMetric):
@@ -133,11 +133,7 @@ class RAGASCustomMetricAdapter:
                 self._evaluation_steps = evaluation_steps
                 self._threshold = threshold
 
-            async def _single_turn_ascore(
-                self,
-                sample: SingleTurnSample,
-                callbacks=None
-            ) -> float:
+            async def _single_turn_ascore(self, sample: SingleTurnSample, callbacks=None) -> float:
                 """RAGAS evaluation method for criteria-based metric.
 
                 Uses Floeval criteria metric's evaluation logic.

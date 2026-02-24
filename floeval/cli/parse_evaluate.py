@@ -189,8 +189,7 @@ def _run_agent_evaluate(args: argparse.Namespace):
             )
         except ImportError as e:
             raise ConfigError(
-                f"FloTorch required for Mode 4 (agent_name={agent_name}). "
-                f"Import failed: {e}"
+                f"FloTorch required for Mode 4 (agent_name={agent_name}). Import failed: {e}"
             ) from e
 
     evaluation = AgentEvaluation(
@@ -232,9 +231,7 @@ def parse_args(args: argparse.Namespace):
         raise ConfigError("Missing 'llm_config' section in the configuration file")
     eval_config = evaluation_config.evaluation_config
     if not eval_config:
-        raise ConfigError(
-            "Missing 'evaluation_config' section in the configuration file"
-        )
+        raise ConfigError("Missing 'evaluation_config' section in the configuration file")
     llm_config = LLMProviderConfig(
         base_url=llm_config["base_url"],
         api_key=llm_config["api_key"],
