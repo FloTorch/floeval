@@ -25,7 +25,9 @@ class RAGASCustomMetricAdapter:
         """Use ragas_adapter if provided, else create from llm_config."""
         self.llm_config = llm_config
         self._ragas_adapter = (
-            ragas_adapter if ragas_adapter is not None else RAGASAdapter(config=llm_config)
+            ragas_adapter 
+            if ragas_adapter is not None 
+            else RAGASAdapter(config=llm_config)
         )
 
     @property

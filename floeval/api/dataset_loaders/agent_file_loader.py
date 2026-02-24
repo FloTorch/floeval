@@ -43,7 +43,9 @@ class AgentDatasetLoader:
                 return AgentDatasetLoader._load_jsonl(path)
             if path.suffix == ".json":
                 return AgentDatasetLoader._load_json(path)
-            raise DatasetLoadError(f"Unsupported format: {path.suffix}. Use .json or .jsonl")
+            raise DatasetLoadError(
+                f"Unsupported format: {path.suffix}. Use .json or .jsonl"
+            )
         except DatasetLoadError:
             raise
         except Exception as e:
@@ -73,9 +75,13 @@ class AgentDatasetLoader:
                     sample = AgentDatasetLoader._parse_sample(data)
                     samples.append(sample)
                 except json.JSONDecodeError as e:
-                    raise DatasetLoadError(f"Invalid JSON on line {line_num}: {e}") from e
+                    raise DatasetLoadError(
+                        f"Invalid JSON on line {line_num}: {e}"
+                    ) from e
                 except Exception as e:
-                    raise DatasetLoadError(f"Error parsing sample on line {line_num}: {e}") from e
+                    raise DatasetLoadError(
+                        f"Error parsing sample on line {line_num}: {e}"
+                    ) from e
 
         if not samples:
             raise DatasetLoadError(f"No valid samples found in {path}")
@@ -97,7 +103,9 @@ class AgentDatasetLoader:
         if not isinstance(data["samples"], list):
             raise DatasetLoadError("'samples' must be an array")
 
-        samples = [AgentDatasetLoader._parse_sample(s) for s in data["samples"]]
+        samples = [
+            AgentDatasetLoader._parse_sample(s) for s in data["samples"]
+        ]
 
         if not samples:
             raise DatasetLoadError("'samples' array is empty")
@@ -122,9 +130,13 @@ class AgentDatasetLoader:
             role = msg_data.get("role", "")
 
             if role == "human":
-                messages.append(HumanMessage(content=msg_data.get("content", "")))
+                messages.append(
+                    HumanMessage(content=msg_data.get("content", ""))
+                )
             elif role == "ai":
-                tool_calls = [ToolCall(**tc) for tc in msg_data.get("tool_calls", [])]
+                tool_calls = [
+                    ToolCall(**tc) for tc in msg_data.get("tool_calls", [])
+                ]
                 messages.append(
                     AIMessage(
                         content=msg_data.get("content", ""),

@@ -126,10 +126,7 @@ class DeepEvalMetric(BaseMetric):
                         "passed": False,
                         "provider": "deepeval",
                         "metric_name": metric_name,
-                        "error": (
-                            f"Multiple metric results ({len(result.metrics_data)}); "
-                            "only single metric expected."
-                        ),
+                        "error": f"Multiple metric results ({len(result.metrics_data)}); only single metric expected."
                     },
                 )
 
@@ -144,10 +141,7 @@ class DeepEvalMetric(BaseMetric):
                         "passed": False,
                         "provider": "deepeval",
                         "metric_name": metric_name,
-                        "error": (
-                            f"Expected score for metric: {metric_data.name}; "
-                            f"success: {metric_data.success}"
-                        ),
+                        "error": f"Expected a score value for metric: {metric_data.name}; success: {metric_data.success}",
                     },
                 )
 

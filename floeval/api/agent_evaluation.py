@@ -154,7 +154,9 @@ class AgentEvaluation:
 
         return merged
 
-    def _create_metric(self, provider: str, metric_id: str, params: dict[str, Any]) -> BaseMetric:
+    def _create_metric(
+        self, provider: str, metric_id: str, params: dict[str, Any]
+    ) -> BaseMetric:
         """Create metric instance with dynamic dependency injection."""
         merged = self._merge_params(provider, metric_id, params)
         merged = self._inject_context_params(provider, metric_id, merged)
@@ -163,10 +165,7 @@ class AgentEvaluation:
             return self._registry.create(provider, metric_id, **merged)
         except TypeError as e:
             if "llm_config" in merged or "llm_provider" in merged or "adapter" in merged:
-                fallback = {
-                    k: v
-                    for k, v in merged.items()
-                    if k not in ("llm_config", "llm_provider", "adapter")
+                fallback = {k: v for k, v in merged.items() if k not in ("llm_config", "llm_provider", "adapter")
                 }
                 try:
                     return self._registry.create(provider, metric_id, **fallback)
@@ -276,11 +275,6 @@ class AgentEvaluation:
                 sample_results=[],
                 summary={"error": "No full samples to evaluate"},
             )
-
-        # Cross-verify: dataset prepared and passed to evaluation
-        print("\n--- Dataset prepared for evaluation ---")
-        print(full_samples)
-        print("\n--- End dataset preparation ---")
 
         sample_results: list[dict[str, Any]] = []
         metric_scores: dict[str, list[float]] = {}

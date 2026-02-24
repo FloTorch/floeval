@@ -16,7 +16,9 @@ def main():
     parser = argparse.ArgumentParser(description="floeval cli")
     parser.add_argument("--version", action="version", version="floeval 0.1.0")
 
-    sub_parsers = parser.add_subparsers(description="Run evaluations with floeval", dest="command")
+    sub_parsers = parser.add_subparsers(
+        description="Run evaluations with floeval", dest="command"
+    )
     # ---- subcommand for running evaluations ----
     evaluate = sub_parsers.add_parser("evaluate", help="Run evaluations with floeval")
     evaluate.add_argument(

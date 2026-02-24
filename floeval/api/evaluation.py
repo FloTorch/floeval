@@ -91,11 +91,15 @@ class Evaluation:
             else dict(self.llm_config)
         )
         if config_dict.get("base_url"):
-            config_dict["base_url"] = _normalize_openai_base_url(config_dict["base_url"])
+            config_dict["base_url"] = _normalize_openai_base_url(
+                config_dict["base_url"]
+            )
 
         llm_provider = OpenAIProvider(
             config_name=f"{self.dataset_generator_model}_generation",
-            **(self.llm_config.model_dump() | {"chat_model": self.dataset_generator_model}),
+            **(self.llm_config.model_dump() 
+            | {"chat_model": self.dataset_generator_model}
+            ),
         )
 
         # Load prompts file if specified
@@ -273,7 +277,9 @@ class Evaluation:
                         "metadata": result.metadata,
                     }
                 except Exception as e:
-                    logger.error(f"Metric {key} failed for sample: {e}", exc_info=True)
+                    logger.error(
+                        f"Metric {key} failed for sample: {e}", exc_info=True
+                    )
                     metric_results[key] = {
                         "score": None,
                         "passed": False,
@@ -307,9 +313,7 @@ class Evaluation:
                 ragas_metrics.append(ragas_metric_instance)
                 metric_mapping.append((ragas_metric_instance, metric))
             except Exception as e:
-                logger.error(
-                    f"Failed to transform metric {metric.name} to RAGAS: {e}", exc_info=True
-                )
+                logger.error(f"Failed to transform metric {metric.name} to RAGAS: {e}", exc_info=True)
 
         if not ragas_metrics:
             return []
@@ -332,15 +336,11 @@ class Evaluation:
         elif hasattr(ragas_eval_result, "columns"):
             ragas_results = ragas_eval_result
         else:
-            logger.error(
-                f"RAGAS results cannot be converted to DataFrame. Type: {type(ragas_eval_result)}"
-            )
+            logger.error(f"RAGAS results cannot be converted to DataFrame. Type: {type(ragas_eval_result)}")
             return []
 
         if not hasattr(ragas_results, "columns"):
-            logger.error(
-                f"RAGAS results is not a DataFrame after conversion. Type: {type(ragas_results)}"
-            )
+            logger.error(f"RAGAS results is not a DataFrame after conversion. Type: {type(ragas_results)}")
             return []
 
         available_columns = list(ragas_results.columns)
@@ -372,10 +372,14 @@ class Evaluation:
                         "passed": score >= threshold if score is not None else False,
                         "reason": None,
                         "provider": provider,
-                        "metadata": {"threshold": threshold, "execution_provider": "ragas"},
+                        "metadata": {
+                            "threshold": threshold, "execution_provider": "ragas"
+                        },
                     }
                 except Exception as e:
-                    logger.error(f"Failed to extract RAGAS result for {key}: {e}", exc_info=True)
+                    logger.error(
+                        f"Failed to extract RAGAS result for {key}: {e}", exc_info=True
+                    )
                     metric_results[key] = {
                         "score": None,
                         "passed": False,
@@ -456,7 +460,8 @@ class Evaluation:
                 deepeval_metric_classes.append((deepeval_class, metric))
             except Exception as e:
                 logger.error(
-                    f"Failed to transform metric {metric.name} to DeepEval: {e}", exc_info=True
+                    f"Failed to transform metric {metric.name} to DeepEval: {e}", 
+                    exc_info=True
                 )
 
         if not deepeval_metric_classes:

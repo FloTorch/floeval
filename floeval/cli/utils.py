@@ -51,7 +51,9 @@ class CLIConfigLoader(Generic[ConfigT], ConfigLoader):
         with open(file_path, "r") as f:
             yaml_data = yaml.safe_load(f)
 
-            assert isinstance(yaml_data, dict), "config must be a dictionary at the top level"
+            assert isinstance(
+                yaml_data, dict
+            ), "config must be a dictionary at the top level"
 
             cli_config = self.model_class(**yaml_data)
             return cli_config
@@ -60,12 +62,15 @@ class CLIConfigLoader(Generic[ConfigT], ConfigLoader):
         with open(file_path, "r") as f:
             json_data = json.load(f)
 
-            assert isinstance(json_data, dict), "config must be a dictionary at the top level"
+            assert isinstance(
+                json_data, dict
+            ), "config must be a dictionary at the top level"
 
             cli_config = self.model_class(**json_data)
             return cli_config
 
     def load(self, file_path: str | Path) -> ConfigT:
+        
         if isinstance(file_path, str):
             _file_path = Path(file_path)
         else:

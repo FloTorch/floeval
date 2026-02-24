@@ -37,7 +37,9 @@ def populate_llm_responses(
             continue
 
         # Determine which prompt_ids to process
-        prompt_ids_to_process = partial_sample.prompt_ids if partial_sample.prompt_ids else [None]
+        prompt_ids_to_process = (
+            partial_sample.prompt_ids if partial_sample.prompt_ids else [None]
+        )
 
         for prompt_id in prompt_ids_to_process:
             system_prompt = None

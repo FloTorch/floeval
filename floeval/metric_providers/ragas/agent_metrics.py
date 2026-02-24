@@ -55,7 +55,9 @@ class RAGASAgentGoalAccuracy(BaseMetric):
             final = sample.trace.final_response
             if final is not None and str(final).strip():
                 messages = list(messages) + [
-                    RAGASHumanMessage(content=f"[Agent's final response to user: {final}]")
+                    RAGASHumanMessage(
+                        content=f"[Agent's final response to user: {final}]"
+                    )
                 ]
             reference = _to_display_str(sample.reference_outcome)
             result = asyncio.run(self._metric.ascore(user_input=messages, reference=reference))

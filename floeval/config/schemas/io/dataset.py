@@ -23,7 +23,9 @@ class PartialSample(BaseModel):
     ground_truth: str | None = Field(
         default=None, description="Optional ground truth/reference information"
     )
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Optional sample metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Optional sample metadata"
+    )
     prompt_ids: list[str] | None = Field(
         default=None,
         description="List of prompt IDs to generate responses for (expands to multiple samples)",
@@ -38,7 +40,9 @@ class Sample(BaseModel):
         default=None,
         description="Optional retrieved contexts or supporting information",
     )
-    llm_response: str = Field(..., description="The actual output/response from the LLM")
+    llm_response: str = Field(
+        ..., description="The actual output/response from the LLM"
+    )
     ground_truth: str | None = Field(
         default=None, description="Optional ground truth/reference information"
     )
@@ -52,7 +56,9 @@ class Sample(BaseModel):
 class Dataset(BaseModel):
     """Collection of samples."""
 
-    samples: list[Sample] = Field(..., min_length=1, description="Non-empty list of samples")
+    samples: list[Sample] = Field(
+        ..., min_length=1, description="Non-empty list of samples"
+    )
 
     def __len__(self) -> int:
         """Return the number of samples in the dataset."""
@@ -66,7 +72,9 @@ class PartialDataset(BaseModel):
         BaseModel: missing contents are set for auto generation.
     """
 
-    samples: list[PartialSample] = Field(..., min_length=1, description="Non-empty list of samples")
+    samples: list[PartialSample] = Field(
+        ..., min_length=1, description="Non-empty list of samples"
+    )
 
     def __len__(self) -> int:
         """Return the number of partial samples in the dataset."""

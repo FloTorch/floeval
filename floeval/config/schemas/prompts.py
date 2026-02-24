@@ -14,4 +14,6 @@ class Prompt(BaseModel):
 class PromptFile(BaseModel):
     """Collection of prompts loaded from YAML/JSON file."""
 
-    prompts: dict[str, Prompt] = Field(..., description="Mapping of prompt_id to Prompt")
+    prompts: dict[str, Prompt] = Field(
+        ..., description="Mapping of prompt_id to Prompt"
+    )

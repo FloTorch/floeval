@@ -2,8 +2,8 @@
 ExecutionTrace model for tracking execution
 """
 
-from datetime import datetime
 from typing import Any, Dict, Optional
+from datetime import datetime
 
 
 class ExecutionTrace:
