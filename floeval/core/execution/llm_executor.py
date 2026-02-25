@@ -1,81 +1,199 @@
+"""OpenAI-compatible LLM provider with separate sync and async clients.
+
+Uses native openai SDK (not LangChain) for direct, lightweight LLM access.
+- Sync path: openai.OpenAI (httpx.Client) — no threads, no event loops
+- Async path: openai.AsyncOpenAI (httpx.AsyncClient) — native async, no bridges
+"""
+
 import logging
+from typing import Any
 
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
+import openai
 
-from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.config.schemas.io.llm import (
+    LLMProviderConfig,
+    OpenAIProviderConfig,
+    _normalize_openai_base_url,
+)
 from floeval.core.execution.base import BaseLLMProvider
 
 logger = logging.getLogger(__name__)
 
 
 class OpenAIProvider(BaseLLMProvider):
-    """OpenAI compatible llm provider implementation for response/embedding generation."""
+    """OpenAI-compatible LLM provider with separate sync and async clients.
 
-    def __init__(self, config_name: str, **kwargs):
-        super().__init__()
-        # name: to reference this provider config during dataset synthesis or metric evaluation
-        self.name = config_name
-        self.provider_config = OpenAIProviderConfig(**kwargs)
-        self._llm_client = self._initialize_llm_client()
+    Works with any OpenAI-compatible API: OpenAI, Azure OpenAI, vLLM, LiteLLM, etc.
 
-    def _initialize_llm_client(self):
-        """Initialize the LLM client based on the provider configuration."""
-        # return openai.Client(
-        #     base_url=self.provider_config.provider_base_url,
-        #     api_key=self.provider_config.api_key,
-        # )
-        return ChatOpenAI(
-            base_url=self.provider_config.base_url,
-            model=self.provider_config.chat_model,
-            api_key=self.provider_config.api_key,
-            **(self.provider_config.extra_kwargs or {}),
-        )
+    Key design:
+    - No ThreadPoolExecutor — sync client is natively sync (httpx.Client)
+    - No asyncio.run() — async client is natively async (httpx.AsyncClient)
+    - Lazy client initialization — clients created on first use
+    - Separate client instances — no shared state between sync and async paths
+    """
+
+    def __init__(self, config: LLMProviderConfig | None = None, **kwargs):
+        """Initialize with LLM config.
+
+        Args:
+            config: LLMProviderConfig or OpenAIProviderConfig instance.
+                If None, creates OpenAIProviderConfig from kwargs.
+        """
+        if config is None:
+            config = OpenAIProviderConfig(**kwargs)
+        self.config = config
+        self._base_url = _normalize_openai_base_url(config.base_url)
+        self._chat_model = config.chat_model
+        self._system_prompt = config.system_prompt
+
+        # Lazy-initialized, separate clients — no shared state
+        self._sync_client: openai.OpenAI | None = None
+        self._async_client: openai.AsyncOpenAI | None = None
+
+    @property
+    def sync_client(self) -> openai.OpenAI:
+        """Lazily create sync OpenAI client."""
+        if self._sync_client is None:
+            self._sync_client = openai.OpenAI(
+                base_url=self._base_url,
+                api_key=self.config.api_key,
+            )
+        return self._sync_client
+
+    @property
+    def async_client(self) -> openai.AsyncOpenAI:
+        """Lazily create async OpenAI client."""
+        if self._async_client is None:
+            self._async_client = openai.AsyncOpenAI(
+                base_url=self._base_url,
+                api_key=self.config.api_key,
+            )
+        return self._async_client
+
+    def _build_messages(
+        self, prompt: str, system_prompt: str | None = None
+    ) -> list[dict[str, str]]:
+        """Build message list for chat completion."""
+        messages: list[dict[str, str]] = []
+        sys_prompt = system_prompt or self._system_prompt
+        if sys_prompt:
+            messages.append({"role": "system", "content": sys_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return messages
 
     def generate(
-        self,
-        prompt: str,
-        **kwargs,
+        self, prompt: str, system_prompt: str | None = None, **kwargs: Any
     ) -> str:
-        """Generate a response from the LLM based on the given prompt and system prompt.
+        """Sync generation using openai.OpenAI (no threads, no event loops).
 
         Args:
-            prompt: The user prompt to send to the LLM.
-            kwargs: Additional keyword arguments (e.g. system_prompt override).
+            prompt: User prompt text.
+            system_prompt: Optional system prompt override.
+            **kwargs: Additional params passed to chat.completions.create
+                (e.g., temperature, max_tokens).
 
         Returns:
-            response: The generated response from the LLM.
+            Generated response text.
         """
-        system_prompt = kwargs.get("system_prompt") or getattr(
-            self.provider_config, "system_prompt", None
+        messages = self._build_messages(prompt, system_prompt)
+        logger.debug(
+            "LLM request: model=%s, messages=%d", self._chat_model, len(messages)
         )
-        if system_prompt:
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=prompt),
-            ]
-        else:
-            messages = [HumanMessage(content=prompt)]
-        print(f"---------messages-----------\n{messages}")
-        _output_text = self._llm_client.invoke(messages).content
-        print(f"---------generated llm response-----------\n{_output_text}")
-        if not isinstance(_output_text, str):
-            logger.warning(
-                f"Expected output_text to be a string, but got {type(_output_text)}"
-            )
-            return _output_text
-        return _output_text
 
-    def generate_embedding(self, input: str, **kwargs) -> list[float]:
-        """Generate an embedding from the LLM based on the given input.
+        params: dict[str, Any] = {
+            "model": self._chat_model,
+            "messages": messages,
+        }
+        params.update(kwargs)
+
+        response = self.sync_client.chat.completions.create(**params)
+        content = response.choices[0].message.content
+        logger.debug("LLM response: %s chars", len(content) if content else 0)
+        return content or ""
+
+    async def agenerate(
+        self, prompt: str, system_prompt: str | None = None, **kwargs: Any
+    ) -> str:
+        """Async generation using openai.AsyncOpenAI (natively awaitable).
 
         Args:
-            input: content to be embedded by the LLM. Can be a single string or an array of strings.
-            **kwargs: Additional keyword arguments
+            prompt: User prompt text.
+            system_prompt: Optional system prompt override.
+            **kwargs: Additional params passed to chat.completions.create.
 
         Returns:
-            The generated embedding(s) as a list of floats, or None if embedding generation failed.
+            Generated response text.
         """
-        raise NotImplementedError(
-            "Embedding generation is not implemented for OpenAIProvider yet."
+        messages = self._build_messages(prompt, system_prompt)
+        logger.debug(
+            "LLM async request: model=%s, messages=%d",
+            self._chat_model,
+            len(messages),
         )
+
+        params: dict[str, Any] = {
+            "model": self._chat_model,
+            "messages": messages,
+        }
+        params.update(kwargs)
+
+        response = await self.async_client.chat.completions.create(**params)
+        content = response.choices[0].message.content
+        logger.debug("LLM async response: %s chars", len(content) if content else 0)
+        return content or ""
+
+    def generate_embedding(self, text: str, **kwargs: Any) -> list[float]:
+        """Sync embedding generation.
+
+        Args:
+            text: Text to embed.
+            **kwargs: Additional params.
+
+        Returns:
+            Embedding vector.
+
+        Raises:
+            NotImplementedError: If no embedding_model configured.
+        """
+        if not self.config.embedding_model:
+            raise NotImplementedError("No embedding_model configured.")
+        response = self.sync_client.embeddings.create(
+            model=self.config.embedding_model,
+            input=text,
+            **kwargs,
+        )
+        return response.data[0].embedding
+
+    async def agenerate_embedding(self, text: str, **kwargs: Any) -> list[float]:
+        """Async embedding generation.
+
+        Args:
+            text: Text to embed.
+            **kwargs: Additional params.
+
+        Returns:
+            Embedding vector.
+
+        Raises:
+            NotImplementedError: If no embedding_model configured.
+        """
+        if not self.config.embedding_model:
+            raise NotImplementedError("No embedding_model configured.")
+        response = await self.async_client.embeddings.create(
+            model=self.config.embedding_model,
+            input=text,
+            **kwargs,
+        )
+        return response.data[0].embedding
+
+    def close(self) -> None:
+        """Clean up sync client."""
+        if self._sync_client:
+            self._sync_client.close()
+            self._sync_client = None
+
+    async def aclose(self) -> None:
+        """Clean up async client."""
+        if self._async_client:
+            await self._async_client.close()
+            self._async_client = None

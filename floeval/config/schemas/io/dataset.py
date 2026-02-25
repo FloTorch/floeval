@@ -46,9 +46,7 @@ class Sample(BaseModel):
     ground_truth: str | None = Field(
         default=None, description="Optional ground truth/reference information"
     )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Optional sample metadata"
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Optional sample metadata")
     prompt_id: str | None = Field(
         default=None,
         description="ID of the prompt used for this response (set after generation)",

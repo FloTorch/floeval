@@ -5,7 +5,7 @@ Key points:
 - Uses unified LLMProviderConfig for consistency across providers.
 - Provides RAGASAdapter class similar to DeepEvalAdapter for consistency.
 - Agent metrics (agent_goal_accuracy) use LangChain-based structured LLM by default,
-  which works with any OpenAI-compatible gateway (no response_format required).
+  which works with any OpenAI-compatible API (no response_format required).
 """
 
 import json
@@ -21,14 +21,13 @@ from ragas.llms.base import InstructorBaseRagasLLM
 from ragas.messages import AIMessage, HumanMessage, ToolCall as RAGASToolCall, ToolMessage
 
 from floeval.config.schemas.io.agent_dataset import (
-    AIMessage as FloevalAIMessage,
     AgentSample,
+    AIMessage as FloevalAIMessage,
     HumanMessage as FloevalHumanMessage,
     ToolMessage as FloevalToolMessage,
 )
 from floeval.config.schemas.io.dataset import Sample
-from floeval.config.schemas.io.llm import LLMProviderConfig
-from floeval.utils.gateway import normalize_openai_api_base
+from floeval.config.schemas.io.llm import LLMProviderConfig, _normalize_openai_base_url
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -38,15 +37,15 @@ class LangChainStructuredLLM(InstructorBaseRagasLLM):
 
     Uses ChatOpenAI with plain completion (no response_format). RAGAS prompts
     already ask for JSON output; we parse the response and validate into the
-    Pydantic model. Works with any OpenAI-compatible gateway (e.g. FloTorch)
-    that does not support response_format.
+    Pydantic model. Works with any OpenAI-compatible API that does not support
+    response_format.
     """
 
     def __init__(self, config: LLMProviderConfig | None = None):
         llm_args: Dict[str, Any] = {"temperature": 0.01, "model": "gpt-4o-mini"}
         if config:
             if config.base_url:
-                llm_args["openai_api_base"] = normalize_openai_api_base(config.base_url)
+                llm_args["openai_api_base"] = _normalize_openai_base_url(config.base_url)
             if config.api_key:
                 llm_args["openai_api_key"] = config.api_key
             if config.chat_model:
@@ -56,6 +55,7 @@ class LangChainStructuredLLM(InstructorBaseRagasLLM):
     def generate(self, prompt: str, response_model: Type[T]) -> T:
         """Sync generate - runs async in loop."""
         import asyncio
+
         return asyncio.run(self.agenerate(prompt, response_model))
 
     async def agenerate(self, prompt: str, response_model: Type[T]) -> T:
@@ -98,7 +98,7 @@ def create_ragas_llm(config: LLMProviderConfig | None = None) -> LangchainLLMWra
     """
     llm_args: Dict[str, Any] = {}
     if config and config.base_url:
-        llm_args["openai_api_base"] = normalize_openai_api_base(config.base_url)
+        llm_args["openai_api_base"] = _normalize_openai_base_url(config.base_url)
     if config and config.api_key:
         llm_args["openai_api_key"] = config.api_key
     if config and config.chat_model:
@@ -122,7 +122,7 @@ def create_ragas_embeddings(
         "check_embedding_ctx_length": False,
     }
     if config and config.base_url:
-        embedding_args["openai_api_base"] = normalize_openai_api_base(config.base_url)
+        embedding_args["openai_api_base"] = _normalize_openai_base_url(config.base_url)
     if config and config.api_key:
         embedding_args["openai_api_key"] = config.api_key
     if config and config.embedding_model:
@@ -137,7 +137,7 @@ def create_ragas_instructor_llm(
     """Create LLM for RAGAS agent metrics (agent_goal_accuracy).
 
     Uses LangChain ChatOpenAI + JSON parsing (no response_format), so it works
-    with any OpenAI-compatible gateway (e.g. FloTorch). Pass the same llm_config
+    with any OpenAI-compatible API. Pass the same llm_config
     as the rest of evaluation - no separate RAGAS config needed.
     """
     return LangChainStructuredLLM(config)
@@ -152,10 +152,7 @@ def transform_agent_sample_to_ragas_messages(
         if isinstance(msg, FloevalHumanMessage):
             result.append(HumanMessage(content=msg.content))
         elif isinstance(msg, FloevalAIMessage):
-            tool_calls = [
-                RAGASToolCall(name=tc.name, args=tc.args)
-                for tc in msg.tool_calls
-            ]
+            tool_calls = [RAGASToolCall(name=tc.name, args=tc.args) for tc in msg.tool_calls]
             result.append(AIMessage(content=msg.content, tool_calls=tool_calls))
         elif isinstance(msg, FloevalToolMessage):
             result.append(
@@ -202,15 +199,13 @@ class RAGASAdapter:
     @property
     def agent_llm(self):
         """LLM for agent metrics (agent_goal_accuracy, tool_call_accuracy).
-        Uses LangChain + JSON parse; works with any OpenAI-compatible gateway.
+        Uses LangChain + JSON parse; works with any OpenAI-compatible API.
         """
         if self._agent_llm is None:
             self._agent_llm = create_ragas_instructor_llm(self.config)
         return self._agent_llm
 
-    def transform_sample(
-        self, sample: Sample | dict[str, str | Sequence[Any]]
-    ) -> SingleTurnSample:
+    def transform_sample(self, sample: Sample | dict[str, str | Sequence[Any]]) -> SingleTurnSample:
         """
         Convert Floeval Sample to RAGAS SingleTurnSample format.
 
@@ -225,7 +220,6 @@ class RAGASAdapter:
         Raises:
             ValueError: If sample doesn't have required fields
         """
-
         # Handle Pydantic models
         if isinstance(sample, Sample):
             sample_data = sample.model_dump()
@@ -241,7 +235,7 @@ class RAGASAdapter:
         llm_response = sample_data.get("llm_response", "")
         ground_truth = sample_data.get("ground_truth", "")
 
-        # TODO: Use model attributes instead of hardcoded keys? (.model_validate() for the validation and transformation logic)
+        # TODO: Use model attributes instead of hardcoded keys?
 
         return SingleTurnSample(
             user_input=user_input,
