@@ -8,19 +8,26 @@ from deepeval.test_case import LLMTestCase
 from langchain_core.language_models import LanguageModelInput
 from langchain_openai import ChatOpenAI
 
-from floeval.config.schemas.deepeval import AnswerRelevancyTestCase, FaithfulnessTestCase
-from floeval.config.schemas.io.llm import LLMProviderConfig
-from floeval.utils.gateway import normalize_openai_api_base
+from floeval.config.schemas.deepeval import (
+    AnswerRelevancyTestCase,
+    ContextualPrecisionTestCase,
+    ContextualRecallTestCase,
+    ContextualRelevancyTestCase,
+    FaithfulnessTestCase,
+)
+from floeval.config.schemas.io.llm import LLMProviderConfig, _normalize_openai_base_url
 
 __VALID_TEST_CASE_SCHEMAS__ = {
     "faithfulness": FaithfulnessTestCase,
     "answer_relevancy": AnswerRelevancyTestCase,
+    "contextual_precision": ContextualPrecisionTestCase,
+    "contextual_recall": ContextualRecallTestCase,
+    "contextual_relevancy": ContextualRelevancyTestCase,
 }
 
 
 # custom llm implementation for DeepEval
 class DeepEvalLLMAdapter(DeepEvalBaseLLM):
-
     def __init__(self, model_name: str, config: LLMProviderConfig):
         self._model_name = model_name
         self.config = config
@@ -39,7 +46,7 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
             chat_model = getattr(self.config, "chat_model", None)
             if chat_model:
                 kwargs["model"] = chat_model
-            # Only set temperature/max_tokens if explicitly provided (let provider use defaults otherwise)
+            # Set temperature/max_tokens only if provided; else use provider defaults
             temperature = getattr(self.config, "temperature", None)
             if temperature is not None:
                 kwargs["temperature"] = temperature
@@ -54,7 +61,7 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
             base_url = getattr(self.config, "base_url", None)
             if base_url:
                 # Normalize llm URL to OpenAI-compatible format (same as RAGAS)
-                kwargs["base_url"] = normalize_openai_api_base(base_url)
+                kwargs["base_url"] = _normalize_openai_base_url(base_url)
 
         self._llm_instance = ChatOpenAI(**kwargs)
         return self._llm_instance
@@ -66,7 +73,7 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
     def generate(self, prompt: LanguageModelInput) -> str:
         chat_model = self.init_model()
         response = chat_model.invoke(prompt)
-        # TODO: handle different response types (chat/completion), dict[str, Any], Sequence[str] etc.
+        # TODO: handle different response types (chat/completion, dict, Sequence[str])
         return response.content
 
     async def a_generate(self, prompt: LanguageModelInput) -> str:
@@ -130,6 +137,46 @@ class DeepEvalAdapter:
                 input=test_case.user_input,
                 actual_output=test_case.llm_response,
             )
+        elif metric_name == "contextual_precision":
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            if not isinstance(test_case, ContextualPrecisionTestCase):
+                raise TypeError(
+                    f"Expected ContextualPrecisionTestCase after validation, got {type(test_case)}"
+                )
+
+            return LLMTestCase(
+                input=test_case.user_input,
+                actual_output=test_case.llm_response,
+                expected_output=test_case.ground_truth,
+                retrieval_context=test_case.contexts,
+            )
+        elif metric_name == "contextual_recall":
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            if not isinstance(test_case, ContextualRecallTestCase):
+                raise TypeError(
+                    f"Expected ContextualRecallTestCase after validation, got {type(test_case)}"
+                )
+
+            return LLMTestCase(
+                input=test_case.user_input,
+                actual_output=test_case.llm_response,
+                expected_output=test_case.ground_truth,
+                retrieval_context=test_case.contexts,
+            )
+        elif metric_name == "contextual_relevancy":
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            if not isinstance(test_case, ContextualRelevancyTestCase):
+                raise TypeError(
+                    f"Expected ContextualRelevancyTestCase after validation, got {type(test_case)}"
+                )
+
+            return LLMTestCase(
+                input=test_case.user_input,
+                actual_output=test_case.llm_response,
+                retrieval_context=test_case.contexts,
+            )
 
         else:
-            raise ValueError(f"Unsupported metric for test case transformation: {metric_name}")
+            raise ValueError(
+                f"Unsupported metric for test case transformation: {metric_name}"
+            )

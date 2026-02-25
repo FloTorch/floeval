@@ -24,10 +24,10 @@ class DeepEvalCustomMetricAdapter:
 
     def transform_metric(self, floeval_metric: BaseMetric) -> Type[DeepEvalBaseMetric]:
         """Transform Floeval metric to DeepEval metric class."""
-        if hasattr(floeval_metric, 'user_func'):
+        if hasattr(floeval_metric, "user_func") or hasattr(floeval_metric, "_user_func"):
             return self._transform_function_metric(floeval_metric)
 
-        if hasattr(floeval_metric, 'description') and hasattr(floeval_metric, 'llm_helper'):
+        if hasattr(floeval_metric, "description") and hasattr(floeval_metric, "llm_helper"):
             return self._transform_criteria_metric(floeval_metric)
 
         raise ValueError(
@@ -39,12 +39,12 @@ class DeepEvalCustomMetricAdapter:
         """Transform function-based metric to DeepEval metric class."""
         metric_name = metric.name
         floeval_metric_instance = metric
-        threshold = getattr(metric, 'threshold', 0.5)
+        threshold = getattr(metric, "threshold", 0.5)
 
         class GeneratedDeepEvalMetric(DeepEvalBaseMetric):
             """
             Runtime-generated DeepEval metric from Floeval custom metric.
-            
+
             Wraps Floeval metric and adapts it to DeepEval interface.
             """
 
@@ -62,12 +62,12 @@ class DeepEvalCustomMetricAdapter:
             def measure(self, test_case: LLMTestCase) -> float:
                 """
                 Synchronous evaluation method.
-                
+
                 DeepEval requires this method. Must set self.score, self.success, self.reason.
-                
+
                 Args:
                     test_case: DeepEval LLMTestCase
-                
+
                 Returns:
                     float: Score between 0 and 1
                 """
@@ -93,12 +93,12 @@ class DeepEvalCustomMetricAdapter:
             async def a_measure(self, test_case: LLMTestCase) -> float:
                 """
                 Asynchronous evaluation method.
-                
+
                 DeepEval supports async evaluation via this method.
-                
+
                 Args:
                     test_case: DeepEval LLMTestCase
-                
+
                 Returns:
                     float: Score between 0 and 1
                 """
@@ -124,9 +124,9 @@ class DeepEvalCustomMetricAdapter:
             def is_successful(self) -> bool:
                 """
                 Check if evaluation passed.
-                
+
                 DeepEval requires this method.
-                
+
                 Returns:
                     bool: True if score >= threshold
                 """
@@ -146,16 +146,16 @@ class DeepEvalCustomMetricAdapter:
             def _transform_test_case(self, test_case: LLMTestCase) -> Sample:
                 """
                 Transform DeepEval test case to Floeval sample.
-                
+
                 Mapping:
                 - input → user_input
                 - actual_output → llm_response
                 - expected_output → ground_truth
                 - retrieval_context → contexts
-                
+
                 Args:
                     test_case: DeepEval LLMTestCase
-                
+
                 Returns:
                     Floeval Sample
                 """
@@ -169,7 +169,7 @@ class DeepEvalCustomMetricAdapter:
             def _set_state_from_result(self, result: Any) -> None:
                 """
                 Extract state from Floeval MetricResult and set DeepEval state.
-                
+
                 Args:
                     result: Floeval MetricResult or numeric value
                 """
@@ -194,24 +194,24 @@ class DeepEvalCustomMetricAdapter:
     def _transform_criteria_metric(self, metric: BaseMetric) -> Type[DeepEvalBaseMetric]:
         """
         Transform criteria-based metric to DeepEval metric class.
-        
+
         For criteria-based metrics, we generate a DeepEval metric that uses the Floeval
         criteria metric's LLM evaluation logic. This wraps the criteria metric's evaluation.
-        
+
         Args:
             metric: Floeval CriteriaBasedMetric instance
-        
+
         Returns:
             DeepEval metric class
         """
         metric_name = metric.name
-        threshold = getattr(metric, 'threshold', 0.5)
+        threshold = getattr(metric, "threshold", 0.5)
         floeval_metric_instance = metric
 
         class GeneratedDeepEvalCriteriaMetric(DeepEvalBaseMetric):
             """
             Runtime-generated DeepEval metric from Floeval criteria-based metric.
-            
+
             Uses Floeval criteria metric's LLM-as-judge evaluation logic.
             """
 

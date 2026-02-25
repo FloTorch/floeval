@@ -20,8 +20,7 @@ def parse_args(args: argparse.Namespace):
     output_file = Path(args.output) if args.output else None
     config_file = Path(args.config) if args.config else None
 
-    assert (
-        partial_dataset_file is not None
+    assert (partial_dataset_file is not None, 
     ), "Dataset file path must be provided with --dataset"
     assert config_file is not None, "Config file path must be provided with --config"
     assert output_file is not None, "Output file path must be provided with --output"
@@ -46,13 +45,18 @@ def parse_args(args: argparse.Namespace):
     generation_config = config_loader.load(config_file_path)
 
     _model_config_name = generation_config.dataset_generation_config.generator_model
+    batch_size = generation_config.dataset_generation_config.batch_size
+    max_concurrency = generation_config.dataset_generation_config.max_concurrency
     llm_provider = OpenAIProvider(
         config_name=f"{_model_config_name}_generation",
         **generation_config.llm_config | {"chat_model": _model_config_name},
     )
 
     dataset: Dataset = populate_llm_responses(
-        partial_dataset=partial_dataset, llm_provider=llm_provider
+        partial_dataset=partial_dataset,
+        llm_provider=llm_provider,
+        batch_size=batch_size,
+        max_concurrency=max_concurrency,
     )
 
     match output_file.suffix.lower():

@@ -11,3 +11,23 @@ class FaithfulnessTestCase(BaseModel):
 class AnswerRelevancyTestCase(BaseModel):
     user_input: str
     llm_response: str
+
+
+class ContextualPrecisionTestCase(BaseModel):
+    user_input: str
+    llm_response: str
+    ground_truth: str
+    contexts: list[str]
+
+
+class ContextualRecallTestCase(BaseModel):
+    user_input: str
+    llm_response: str
+    ground_truth: str
+    contexts: list[str]
+
+
+class ContextualRelevancyTestCase(BaseModel):
+    user_input: str
+    llm_response: str
+    contexts: list[str]
