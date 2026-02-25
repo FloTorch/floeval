@@ -70,7 +70,7 @@ class CLIConfigLoader(Generic[ConfigT], ConfigLoader):
             return cli_config
 
     def load(self, file_path: str | Path) -> ConfigT:
-
+        
         if isinstance(file_path, str):
             _file_path = Path(file_path)
         else:

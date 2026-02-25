@@ -42,6 +42,11 @@ def main():
         help="Path to save evaluation results (optional)",
         default=None,
     )
+    evaluate.add_argument(
+        "--agent",
+        action="store_true",
+        help="Run agent evaluation (Mode 1 or 4)",
+    )
     # ----- subcommand for dataset generation from partial dataset -----
     generate = sub_parsers.add_parser(
         "generate", help="Generate complete dataset from partial dataset"

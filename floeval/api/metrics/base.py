@@ -29,5 +29,5 @@ class BaseMetric(ABC):
 
     async def aevaluate(self, *args, **kwargs) -> MetricResult:
         """Default: run evaluate() in executor. Override for async."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, lambda: self.evaluate(*args, **kwargs))

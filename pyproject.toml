@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "floeval"
-version = "0.1.1"
+version = "0.1.2"
 description = "Multi-backend evaluation framework for LLM and RAG systems"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,6 +22,12 @@ dependencies = [
     "ragas>=0.4.3",
     "langchain-openai>=1.0.0",
     "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+flotorch = [
+    "google-adk>=1.5.0",
+    "httpx>=0.24",
 ]
 
 [dependency-groups]
