@@ -61,7 +61,7 @@ async def _generate_single_response(
 ) -> tuple[int, Sample]:
     result_index, partial_sample, prompt_id, system_prompt = item
     async with semaphore:
-        llm_response = await llm_provider.a_generate(
+        llm_response = await llm_provider.agenerate(
             partial_sample.user_input,
             system_prompt=system_prompt,
         )

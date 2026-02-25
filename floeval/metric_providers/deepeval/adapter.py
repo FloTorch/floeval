@@ -9,8 +9,7 @@ from langchain_core.language_models import LanguageModelInput
 from langchain_openai import ChatOpenAI
 
 from floeval.config.schemas.deepeval import AnswerRelevancyTestCase, FaithfulnessTestCase
-from floeval.config.schemas.io.llm import LLMProviderConfig
-from floeval.utils.gateway import normalize_openai_api_base
+from floeval.config.schemas.io.llm import LLMProviderConfig, _normalize_openai_base_url
 
 __VALID_TEST_CASE_SCHEMAS__ = {
     "faithfulness": FaithfulnessTestCase,
@@ -20,7 +19,6 @@ __VALID_TEST_CASE_SCHEMAS__ = {
 
 # custom llm implementation for DeepEval
 class DeepEvalLLMAdapter(DeepEvalBaseLLM):
-
     def __init__(self, model_name: str, config: LLMProviderConfig):
         self._model_name = model_name
         self.config = config
@@ -39,7 +37,7 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
             chat_model = getattr(self.config, "chat_model", None)
             if chat_model:
                 kwargs["model"] = chat_model
-            # Only set temperature/max_tokens if explicitly provided (let provider use defaults otherwise)
+            # Set temperature/max_tokens only if provided; else use provider defaults
             temperature = getattr(self.config, "temperature", None)
             if temperature is not None:
                 kwargs["temperature"] = temperature
@@ -54,7 +52,7 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
             base_url = getattr(self.config, "base_url", None)
             if base_url:
                 # Normalize llm URL to OpenAI-compatible format (same as RAGAS)
-                kwargs["base_url"] = normalize_openai_api_base(base_url)
+                kwargs["base_url"] = _normalize_openai_base_url(base_url)
 
         self._llm_instance = ChatOpenAI(**kwargs)
         return self._llm_instance
@@ -66,7 +64,7 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
     def generate(self, prompt: LanguageModelInput) -> str:
         chat_model = self.init_model()
         response = chat_model.invoke(prompt)
-        # TODO: handle different response types (chat/completion), dict[str, Any], Sequence[str] etc.
+        # TODO: handle different response types (chat/completion, dict, Sequence[str])
         return response.content
 
     async def a_generate(self, prompt: LanguageModelInput) -> str:

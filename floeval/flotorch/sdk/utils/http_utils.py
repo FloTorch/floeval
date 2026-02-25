@@ -1,7 +1,8 @@
 """Minimal HTTP utilities for FloTorch SDK (agent config fetch, LLM calls)."""
 
-import httpx
 from typing import Any, Dict, Optional, Union
+
+import httpx
 
 JSONType = Union[Dict[str, Any], list]
 

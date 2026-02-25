@@ -20,8 +20,7 @@ def parse_args(args: argparse.Namespace):
     output_file = Path(args.output) if args.output else None
     config_file = Path(args.config) if args.config else None
 
-    assert (
-        partial_dataset_file is not None
+    assert (partial_dataset_file is not None, 
     ), "Dataset file path must be provided with --dataset"
     assert config_file is not None, "Config file path must be provided with --config"
     assert output_file is not None, "Output file path must be provided with --output"
