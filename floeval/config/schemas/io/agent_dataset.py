@@ -112,8 +112,8 @@ class AgentTrace(BaseModel):
                         name = fn.get("name", "")
                         args_str = fn.get("arguments", "{}")
                         args = (
-                            args_str
-                            if isinstance(args_str, dict)
+                            args_str 
+                            if isinstance(args_str, dict) 
                             else _safe_json_loads(args_str)
                         )
                         tool_calls.append(ToolCall(name=name, args=args or {}))
@@ -153,9 +153,9 @@ class AgentTrace(BaseModel):
     def tool_calls_made(self) -> list[ToolCall]:
         """Derived property: all tool calls in trace."""
         return [
-            tc
-            for msg in self.messages
-            if isinstance(msg, AIMessage)
+            tc 
+            for msg in self.messages 
+            if isinstance(msg, AIMessage) 
             for tc in msg.tool_calls
         ]
 

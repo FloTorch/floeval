@@ -1,9 +1,44 @@
 from pydantic import BaseModel, Field
 
 
+def _normalize_openai_base_url(url: str) -> str:
+    """Return OpenAI-compatible API base URL (adds /openai/v1 if needed).
+
+    Ensures URL has http/https, strips trailing paths, and ends with
+    /openai/v1 or /v1 for OpenAI-compatible clients.
+
+    Args:
+        url: Raw base URL string.
+
+    Returns:
+        Normalized URL suitable for openai.OpenAI(base_url=...).
+
+    Raises:
+        ValueError: If url is empty.
+    """
+    raw = url.strip()
+    if not raw:
+        raise ValueError("base_url cannot be empty.")
+    if not raw.startswith(("http://", "https://")):
+        raw = f"https://{raw}"
+    raw = raw.rstrip("/")
+    for suffix in ("/chat/completions", "/embeddings"):
+        if raw.endswith(suffix):
+            raw = raw[: -len(suffix)]
+            raw = raw.rstrip("/")
+    if raw.endswith("/openai/v1") or raw.endswith("/v1"):
+        return raw
+    return f"{raw}/openai/v1"
+
+
 class LLMProviderConfig(BaseModel):
     """Generic LLM provider configuration for LLM-based evaluation execution."""
 
+    provider_type: str = Field(
+        default="openai",
+        description="Provider type identifier. Currently supports 'openai' and any "
+        "OpenAI-compatible API (e.g., Azure OpenAI, vLLM, LiteLLM).",
+    )
     base_url: str = Field(..., description="Base URL for the LLM provider API.")
     api_key: str = Field(
         ..., description="API key or token used to authenticate with the provider."

@@ -17,16 +17,12 @@ from deepeval.metrics import (
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.config.schemas.io.dataset import Sample
 from floeval.config.schemas.io.llm import LLMProviderConfig
-from floeval.metric_providers.deepeval.adapter import DeepEvalAdapter, DeepEvalLLMAdapter
+from floeval.metric_providers.deepeval.adapter import (
+    DeepEvalAdapter,
+    DeepEvalLLMAdapter,
+)
 
 logger = logging.getLogger(__name__)
-
-try:
-    import nest_asyncio
-
-    nest_asyncio.apply()
-except ImportError:
-    pass
 
 
 class DeepEvalMetric(BaseMetric):
@@ -93,41 +89,12 @@ class DeepEvalMetric(BaseMetric):
         return self.adapter.config
 
     def _run_evaluate(self, metrics, test_cases):
-        """Run DeepEval evaluate with proper event loop handling.
+        """Run DeepEval evaluate synchronously.
 
-        DeepEval's OpenAI client uses async operations internally, so we need
-        to ensure consistent event loop usage to avoid conflicts.
+        Safe to call from sync context. When called from async path (e.g.
+        Evaluation.arun), the orchestrator runs this via run_in_executor.
         """
-        try:
-            try:
-                import nest_asyncio
-
-                nest_asyncio.apply()
-            except ImportError:
-                pass
-
-            return evaluate(metrics=metrics, test_cases=test_cases).test_results[0]
-        except RuntimeError as e:
-            error_msg = str(e).lower()
-            if (
-                "bound to a different event loop" in error_msg
-                or "event loop is closed" in error_msg
-            ):
-                logger.debug(f"Event loop error in DeepEval evaluate: {e}")
-                try:
-                    import nest_asyncio
-
-                    nest_asyncio.apply()
-                    return evaluate(metrics=metrics, test_cases=test_cases).test_results[0]
-                except Exception as retry_error:
-                    logger.error(
-                        f"Failed to retry DeepEval evaluate after event loop error: {retry_error}"
-                    )
-                    raise RuntimeError(
-                        "Event loop conflict in DeepEval evaluation. "
-                        "Install `nest_asyncio` to resolve this issue."
-                    ) from e
-            raise
+        return evaluate(metrics=metrics, test_cases=test_cases).test_results[0]
 
     def _extract_metric_result(self, result, metric_name: str) -> MetricResult:
         """Extract MetricResult from DeepEval evaluation result.
@@ -152,7 +119,7 @@ class DeepEvalMetric(BaseMetric):
                     "passed": False,
                     "provider": "deepeval",
                     "metric_name": metric_name,
-                    "error": "Expected at least one metric data entry in the result, but got empty list.",
+                    "error": "Expected at least one metric data entry, got empty list.",
                 },
             )
 
@@ -164,7 +131,7 @@ class DeepEvalMetric(BaseMetric):
                         "passed": False,
                         "provider": "deepeval",
                         "metric_name": metric_name,
-                        "error": f"Multiple metric results found ({len(result.metrics_data)}); only single metric expected.",
+                        "error": f"Multiple metric results ({len(result.metrics_data)}); only single metric expected.",
                     },
                 )
 

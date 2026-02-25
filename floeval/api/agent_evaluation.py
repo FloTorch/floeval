@@ -45,8 +45,7 @@ class AgentEvaluation:
         dataset: AgentDataset,
         metrics: list[MetricSpec],
         llm_config: OpenAIProviderConfig | None = None,
-        agent: Callable[[str], str | Any] | Callable[[str], Awaitable[str | Any]]
-        | None = None,
+        agent: Callable[[str], str | Any] | Callable[[str], Awaitable[str | Any]] | None = None,
         agent_runner: Any | None = None,
         default_provider: str | None = "builtin",
         metric_params: Mapping[str, dict[str, Any]] | None = None,
@@ -67,8 +66,10 @@ class AgentEvaluation:
 
         for spec in specs:
             if isinstance(spec, BaseMetric):
-                if self.llm_config and (
-                    not hasattr(spec, "llm_config") or spec.llm_config is None
+                if (
+                    self.llm_config is not None
+                    and hasattr(spec, "llm_config")
+                    and spec.llm_config is None
                 ):
                     spec.llm_config = self.llm_config
                 resolved.append(spec)
@@ -93,9 +94,7 @@ class AgentEvaluation:
                     provider, metric_id = spec.split(":", 1)
                 else:
                     metric_id = spec
-                    provider = self._registry.resolve_best(
-                        metric_id, self.default_provider
-                    )
+                    provider = self._registry.resolve_best(metric_id, self.default_provider)
                 metric = self._create_metric(provider, metric_id, params={})
                 resolved.append(metric)
                 continue
@@ -129,13 +128,16 @@ class AgentEvaluation:
         - llm_config: when metric accepts it and not in merged
         - llm_provider: when metric accepts it, not in merged, and we have llm_config
         """
-        metric_cls = self._registry.get_class(provider, metric_id)
-        if metric_cls is None:
+        metric_factory = self._registry.get_class(provider, metric_id)
+        if metric_factory is None:
             return merged
 
         try:
-            sig = inspect.signature(metric_cls.__init__)
-        except (TypeError, ValueError):
+            if callable(metric_factory) and not isinstance(metric_factory, type):
+                sig = inspect.signature(metric_factory)
+            else:
+                sig = inspect.signature(metric_factory.__init__)
+        except (TypeError, ValueError, AttributeError):
             return merged
 
         if self.llm_config is None:
@@ -163,8 +165,8 @@ class AgentEvaluation:
             return self._registry.create(provider, metric_id, **merged)
         except TypeError as e:
             if "llm_config" in merged or "llm_provider" in merged or "adapter" in merged:
-                fallback = {k: v for k, v in merged.items()
-                            if k not in ("llm_config", "llm_provider", "adapter")}
+                fallback = {k: v for k, v in merged.items() if k not in ("llm_config", "llm_provider", "adapter")
+                }
                 try:
                     return self._registry.create(provider, metric_id, **fallback)
                 except TypeError:
@@ -201,15 +203,57 @@ class AgentEvaluation:
             "Pass agent (callable) for Mode 2 or agent_runner for Mode 4."
         )
 
+    async def _ensure_full_samples_async(self) -> list[AgentSample]:
+        """Async variant: run agent/runner without nesting asyncio.run()."""
+        if not self.dataset.is_partial:
+            return self.dataset.all_full
+
+        partial = self.dataset.all_partial
+        if not partial:
+            return []
+
+        if self.agent_runner is not None:
+            runner = self.agent_runner
+            if hasattr(runner, "run_on_dataset_async"):
+                return await runner.run_on_dataset_async(partial)
+            if hasattr(runner, "run_on_dataset"):
+                # Sync run_on_dataset uses asyncio.run() internally; we're already in a loop.
+                # Run it in a thread so asyncio.run() gets a fresh loop in that thread.
+                loop = asyncio.get_running_loop()
+                return await loop.run_in_executor(
+                    None, lambda: runner.run_on_dataset(partial)
+                )
+            full = []
+            for p in partial:
+                text = _to_display_str(p.user_input)
+                if hasattr(runner, "arun") and asyncio.iscoroutinefunction(runner.arun):
+                    trace = await runner.arun(text)
+                else:
+                    loop = asyncio.get_running_loop()
+                    trace = await loop.run_in_executor(None, lambda t=text: runner.run(t))
+                full.append(AgentSample.from_partial(p, trace))
+            return full
+
+        if self.agent is not None:
+            from floeval.utils.agent_trace import TraceCollector
+
+            collector = TraceCollector(self.agent)
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(None, lambda: collector.collect(partial))
+
+        raise ValueError(
+            "Dataset has partial samples but no agent or agent_runner provided. "
+            "Pass agent (callable) for Mode 2 or agent_runner for Mode 4."
+        )
+
     def run(self) -> AgentEvaluationResult:
         """Run evaluation synchronously."""
         return asyncio.run(self.arun())
 
     async def arun(self) -> AgentEvaluationResult:
         """Run evaluation asynchronously."""
-        full_samples = self._ensure_full_samples()
+        full_samples = await self._ensure_full_samples_async()
 
-        # Print captured traces (from partial -> full) for debugging/verification
         if full_samples and self.dataset.is_partial:
             captured = [
                 {
@@ -221,8 +265,10 @@ class AgentEvaluation:
                 }
                 for s in full_samples
             ]
-            print("Captured traces (full dataset for evaluation):")
-            print(json.dumps(captured, indent=2, default=str))
+            logger.debug(
+                "Captured traces (full dataset for evaluation): %s",
+                json.dumps(captured, indent=2, default=str),
+            )
 
         if not full_samples:
             return AgentEvaluationResult(

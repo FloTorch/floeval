@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, AsyncGenerator, Dict, List, Optional, Type
+from typing import Any, AsyncGenerator, Dict, List, Type
 
 from google.adk.models.base_llm import BaseLlm
 from google.adk.models.llm_request import LlmRequest
@@ -66,9 +66,7 @@ class FlotorchADKLLM(BaseLlm):
             tools = tools_to_openai_format(llm_request.tools_dict.values())
 
         response_format = None
-        if hasattr(llm_request, "config") and getattr(
-            llm_request.config, "response_schema", None
-        ):
+        if hasattr(llm_request, "config") and getattr(llm_request.config, "response_schema", None):
             response_format = _convert_pydantic_to_json_schema(
                 llm_request.config.response_schema
             ).get("response_format")
@@ -85,7 +83,11 @@ class FlotorchADKLLM(BaseLlm):
             yield LlmResponse(
                 content=types.Content(
                     role="assistant",
-                    parts=[types.Part(text="I'm experiencing some technical difficulties. Please try again.")],
+                    parts=[
+                        types.Part(
+                            text="I'm experiencing some technical difficulties. Please try again."
+                        )
+                    ],
                 )
             )
             return
@@ -108,9 +110,7 @@ class FlotorchADKLLM(BaseLlm):
                             parts.append(part)
                             function_calls_found = True
                         except Exception as e:
-                            logger.warning(
-                                "Failed to create function call part: %s", e
-                            )
+                            logger.warning("Failed to create function call part: %s", e)
                             parts.append(
                                 types.Part.from_text(
                                     text="I'll help you with that. Let me check..."
@@ -121,16 +121,14 @@ class FlotorchADKLLM(BaseLlm):
                     parts.append(types.Part.from_text(text=part_data["content"]))
 
             if parts:
-                yield LlmResponse(
-                    content=types.Content(role="assistant", parts=parts)
-                )
+                yield LlmResponse(content=types.Content(role="assistant", parts=parts))
                 return
 
         text_content = (
-            response.content if hasattr(response, "content") and response.content else "I'm here to help you."
+            response.content
+            if hasattr(response, "content") and response.content
+            else "I'm here to help you."
         )
         yield LlmResponse(
-            content=types.Content(
-                role="assistant", parts=[types.Part(text=text_content)]
-            )
+            content=types.Content(role="assistant", parts=[types.Part(text=text_content)])
         )
