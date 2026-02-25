@@ -1,8 +1,15 @@
-"""
-RAGAS provider module.
+"""RAGAS provider module.
 
-This module registers RAGAS metrics (answer_relevancy, faithfulness,
-agent_goal_accuracy, tool_call_accuracy) with the global metric registry.
+This module registers RAGAS metrics:
+    - answer_relevancy
+    - faithfulness
+    - context_precision
+    - context_recall
+    - context_entity_recall
+    - noise_sensitivity
+    - agent_goal_accuracy
+    - tool_call_accuracy
+with the global metric registry.
 """
 
 from floeval.api.metrics.registry import MetricRegistry
@@ -13,7 +20,11 @@ from floeval.metric_providers.ragas.agent_metrics import (
 )
 from floeval.metric_providers.ragas.metrics import (
     RAGASAnswerRelevancy,
+    RAGASContextEntityRecall,
+    RAGASContextPrecision,
+    RAGASContextRecall,
     RAGASFaithfulness,
+    RAGASNoiseSensitivity,
 )
 
 # Create a module-level registry instance for registration
@@ -23,12 +34,20 @@ _registry = MetricRegistry()
 # Register RAGAS metrics
 _registry.register("ragas", "answer_relevancy", RAGASAnswerRelevancy)
 _registry.register("ragas", "faithfulness", RAGASFaithfulness)
+_registry.register("ragas", "context_precision", RAGASContextPrecision)
+_registry.register("ragas", "context_recall", RAGASContextRecall)
+_registry.register("ragas", "context_entity_recall", RAGASContextEntityRecall)
+_registry.register("ragas", "noise_sensitivity", RAGASNoiseSensitivity)
 _registry.register("ragas", "agent_goal_accuracy", RAGASAgentGoalAccuracy)
 _registry.register("ragas", "tool_call_accuracy", RAGASToolCallAccuracy)
 
 __all__ = [
     "RAGASAnswerRelevancy",
     "RAGASFaithfulness",
+    "RAGASContextPrecision",
+    "RAGASContextRecall",
+    "RAGASContextEntityRecall",
+    "RAGASNoiseSensitivity",
     "RAGASAgentGoalAccuracy",
     "RAGASToolCallAccuracy",
     "RAGASAdapter",
