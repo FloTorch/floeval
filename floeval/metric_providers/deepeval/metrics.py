@@ -6,18 +6,23 @@ import logging
 from typing import Any, Dict
 
 from deepeval.evaluate import evaluate
-from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
+from deepeval.metrics import (
+    AnswerRelevancyMetric,
+    ContextualPrecisionMetric,
+    ContextualRecallMetric,
+    ContextualRelevancyMetric,
+    FaithfulnessMetric,
+)
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.config.schemas.io.dataset import Sample
 from floeval.config.schemas.io.llm import LLMProviderConfig
-from floeval.metric_providers.deepeval.adapter import DeepEvalAdapter, DeepEvalLLMAdapter
+from floeval.metric_providers.deepeval.adapter import (
+    DeepEvalAdapter,
+    DeepEvalLLMAdapter,
+)
 
 logger = logging.getLogger(__name__)
-
-__VALID_DEEPEVAL_METRICS__ = {
-    "faithfulness": FaithfulnessMetric,
-}
 
 
 class DeepEvalMetric(BaseMetric):
@@ -126,7 +131,7 @@ class DeepEvalMetric(BaseMetric):
                         "passed": False,
                         "provider": "deepeval",
                         "metric_name": metric_name,
-                        "error": f"Multiple metric results ({len(result.metrics_data)}); only single metric expected."
+                        "error": f"Multiple metric results ({len(result.metrics_data)}); only single metric expected.",
                     },
                 )
 
@@ -236,3 +241,99 @@ class AnswerRelevancyDeepEvalMetric(DeepEvalMetric):
         )
         result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
         return self._extract_metric_result(result, "answer_relevancy")
+
+
+class ContextualPrecisionDeepEvalMetric(DeepEvalMetric):
+    """Contextual Precision metric implementation using DeepEval."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="contextual_precision", **kwargs)
+
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
+        """Compute contextual precision metric score using DeepEval.
+
+        Args:
+            sample: Sample to evaluate
+            **kwargs: Additional arguments (unused, kept for interface consistency)
+
+        Returns:
+            MetricResult: The result of the contextual precision metric computation
+        """
+        # Use internal adapter (initialized in __init__)
+        if self._llm_adapter is None:
+            raise ValueError(
+                "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
+            )
+        # Create metric instance with internal adapter and all metric params
+        metric_kwargs = self._metric_params | {"model": self._llm_adapter}
+        metric_instance = ContextualPrecisionMetric(**metric_kwargs)
+        test_case = self.adapter.transform_test_case(
+            metric_name="contextual_precision",
+            test_case_dict=sample.model_dump(),
+        )
+        result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+        return self._extract_metric_result(result, "contextual_precision")
+
+
+class ContextualRecallDeepEvalMetric(DeepEvalMetric):
+    """Contextual Recall metric implementation using DeepEval."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="contextual_recall", **kwargs)
+
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
+        """Compute contextual recall metric score using DeepEval.
+
+        Args:
+            sample: Sample to evaluate
+            **kwargs: Additional arguments (unused, kept for interface consistency)
+
+        Returns:
+            MetricResult: The result of the contextual recall metric computation
+        """
+        # Use internal adapter (initialized in __init__)
+        if self._llm_adapter is None:
+            raise ValueError(
+                "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
+            )
+        # Create metric instance with internal adapter and all metric params
+        metric_kwargs = self._metric_params | {"model": self._llm_adapter}
+        metric_instance = ContextualRecallMetric(**metric_kwargs)
+        test_case = self.adapter.transform_test_case(
+            metric_name="contextual_recall",
+            test_case_dict=sample.model_dump(),
+        )
+        result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+        return self._extract_metric_result(result, "contextual_recall")
+
+
+class ContextualRelevancyDeepEvalMetric(DeepEvalMetric):
+    """Contextual Relevancy metric implementation using DeepEval."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="contextual_relevancy", **kwargs)
+
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
+        """Compute contextual relevancy metric score using DeepEval.
+
+        Args:
+            sample: Sample to evaluate
+            **kwargs: Additional arguments (unused, kept for interface consistency)
+
+        Returns:
+            MetricResult: The result of the contextual relevancy metric computation
+        """
+        # Use internal adapter (initialized in __init__)
+        if self._llm_adapter is None:
+            raise ValueError(
+                "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
+            )
+        # Create metric instance with internal adapter and all metric params
+        metric_kwargs = self._metric_params | {"model": self._llm_adapter}
+        metric_instance = ContextualRelevancyMetric(**metric_kwargs)
+        test_case = self.adapter.transform_test_case(
+            metric_name="contextual_relevancy",
+            test_case_dict=sample.model_dump(),
+        )
+        result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+        return self._extract_metric_result(result, "contextual_relevancy")
