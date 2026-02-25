@@ -19,6 +19,8 @@ class DatasetGenConfig(BaseModel):
     """Configuration for dataset generation from partial datasets."""
 
     generator_model: str
+    batch_size: int = 20
+    max_concurrency: int = 10
 
 
 class CLIGenerationConfig(BaseModel):

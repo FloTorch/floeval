@@ -81,7 +81,9 @@ class OpenAIProvider(BaseLLMProvider):
         messages.append({"role": "user", "content": prompt})
         return messages
 
-    def generate(self, prompt: str, system_prompt: str | None = None, **kwargs: Any) -> str:
+    def generate(
+        self, prompt: str, system_prompt: str | None = None, **kwargs: Any
+    ) -> str:
         """Sync generation using openai.OpenAI (no threads, no event loops).
 
         Args:
@@ -94,7 +96,9 @@ class OpenAIProvider(BaseLLMProvider):
             Generated response text.
         """
         messages = self._build_messages(prompt, system_prompt)
-        logger.debug("LLM request: model=%s, messages=%d", self._chat_model, len(messages))
+        logger.debug(
+            "LLM request: model=%s, messages=%d", self._chat_model, len(messages)
+        )
 
         params: dict[str, Any] = {
             "model": self._chat_model,
@@ -107,7 +111,9 @@ class OpenAIProvider(BaseLLMProvider):
         logger.debug("LLM response: %s chars", len(content) if content else 0)
         return content or ""
 
-    async def agenerate(self, prompt: str, system_prompt: str | None = None, **kwargs: Any) -> str:
+    async def agenerate(
+        self, prompt: str, system_prompt: str | None = None, **kwargs: Any
+    ) -> str:
         """Async generation using openai.AsyncOpenAI (natively awaitable).
 
         Args:
