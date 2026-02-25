@@ -1,6 +1,4 @@
-"""
-Public API for Floeval - Evaluation Framework
-"""
+"""Public API for Floeval - Evaluation Framework."""
 
 from floeval.api.dataset import DatasetLoader
 from floeval.api.evaluation import Evaluation

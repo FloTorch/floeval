@@ -135,8 +135,7 @@ class AgentDatasetLoader:
                 )
             elif role == "ai":
                 tool_calls = [
-                    ToolCall(**tc)
-                    for tc in msg_data.get("tool_calls", [])
+                    ToolCall(**tc) for tc in msg_data.get("tool_calls", [])
                 ]
                 messages.append(
                     AIMessage(

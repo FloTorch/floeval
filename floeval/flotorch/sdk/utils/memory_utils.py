@@ -3,10 +3,7 @@
 from typing import Any, Dict, List, Optional, Union
 
 from floeval.flotorch.sdk.utils.http_utils import (
-    async_http_delete,
-    async_http_get,
     async_http_post,
-    async_http_put,
     http_delete,
     http_get,
     http_post,

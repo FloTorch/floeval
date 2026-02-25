@@ -45,11 +45,11 @@ class MetricContext:
     def get_input(self, key: str, default: Any = None) -> Any:
         """
         Get input value with default.
-        
+
         Args:
             key: Input key to retrieve (user_input, llm_response, contexts)
             default: Default value if key not found
-        
+
         Returns:
             Value from sample or default
         """
@@ -64,11 +64,11 @@ class MetricContext:
     def get_ground_truth(self, key: str, default: Any = None) -> Any:
         """
         Get ground truth value with default.
-        
+
         Args:
             key: Ground truth key (ignored, ground_truth is a string)
             default: Default value if ground_truth not found
-        
+
         Returns:
             Value from sample.ground_truth or default
         """

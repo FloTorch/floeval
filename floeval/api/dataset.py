@@ -1,4 +1,5 @@
 """Dataset and Sample classes.
+
 The RAGAS adapter supports Pydantic models via `model_dump()`.
 """
 
@@ -83,11 +84,11 @@ def dataset_from_samples(
     """Convenience helper: build dataset from Sample objects or flat dicts.
 
     Args:
-        samples: A sequence of Sample/PartialSample objects or dicts that can be converted to Sample/PartialSample.
-        partial_dataset: If True, will convert to PartialSample and return PartialDataset; otherwise returns Dataset.
+        samples: Sequence of Sample/PartialSample objects or dicts convertible to Sample.
+        partial_dataset: If True, convert to PartialSample and return PartialDataset.
 
     Returns:
-        Dataset | PartialDataset: A Dataset or PartialDataset object containing the provided samples.
+        Dataset or PartialDataset containing the provided samples.
     """
     if partial_dataset:
         normalized_samples = []

@@ -47,9 +47,7 @@ class FlotorchADKVectorMemoryService(BaseMemoryService):
         """Search using vector store."""
         try:
             if not self.vector_store:
-                logger.warning(
-                    "Vector store not configured for FlotorchADKVectorMemoryService"
-                )
+                logger.warning("Vector store not configured for FlotorchADKVectorMemoryService")
                 return SearchMemoryResponse(memories=[])
 
             search_params: Dict[str, Any] = {"query": query}
@@ -101,9 +99,7 @@ class FlotorchMemoryService(BaseMemoryService):
         self._base_url = base_url or os.getenv("FLOTORCH_BASE_URL")
         self._api_key = api_key or os.getenv("FLOTORCH_API_KEY")
         if not self._base_url:
-            raise ValueError(
-                "FLOTORCH_BASE_URL env or base_url parameter is required"
-            )
+            raise ValueError("FLOTORCH_BASE_URL env or base_url parameter is required")
         if not self._api_key:
             raise ValueError("FLOTORCH_API_KEY env or api_key parameter is required")
         self._memory = FlotorchMemory(
@@ -180,9 +176,7 @@ class FlotorchMemoryService(BaseMemoryService):
     async def add_session_to_memory(self, session: Session) -> None:
         """Add session events to FloTorch memory."""
         try:
-            events = getattr(session, "events", None) or getattr(
-                session, "messages", []
-            )
+            events = getattr(session, "events", None) or getattr(session, "messages", [])
             messages = [
                 {"role": self._extract_role(e), "content": self._extract_content_text(e)}
                 for e in events
@@ -222,11 +216,7 @@ class FlotorchMemoryService(BaseMemoryService):
 
             entries = []
             for mem in raw:
-                text = (
-                    mem.get("memory")
-                    or mem.get("content")
-                    or mem.get("text")
-                )
+                text = mem.get("memory") or mem.get("content") or mem.get("text")
                 if not text and isinstance(mem.get("messages"), list) and mem["messages"]:
                     m0 = mem["messages"][0]
                     if isinstance(m0, dict):

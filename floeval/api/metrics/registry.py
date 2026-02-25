@@ -2,85 +2,90 @@
 
 from __future__ import annotations
 
+import threading
 from collections import defaultdict
-from typing import Any
+from typing import Any, Callable
 
 from floeval.api.metrics.base import BaseMetric
+
+MetricFactory = type[BaseMetric] | Callable[..., BaseMetric]
 
 
 class MetricRegistry:
     """
-    Two-level registry for metrics: provider -> metric_name -> metric_class
-    
-    This class uses a singleton pattern to ensure all registrations
-    are stored in a shared registry instance.
-    """
-    
-    _instance: MetricRegistry | None = None
-    _registry: defaultdict[str, dict[str, type[BaseMetric]]] = defaultdict(dict)
+    Two-level registry for metrics: provider -> metric_name -> metric_class_or_factory
 
-    def __new__(cls):
-        """Singleton pattern - return the same instance."""
+    Supports both classes (e.g. RAGASAnswerRelevancy) and factory callables
+    (e.g. for custom metrics). Thread-safe.
+    """
+
+    _instance: MetricRegistry | None = None
+    _registry: defaultdict[str, dict[str, MetricFactory]] = defaultdict(dict)
+    _lock: threading.RLock = threading.RLock()
+
+    def __new__(cls) -> MetricRegistry:
+        """Singleton pattern - return the same instance (thread-safe)."""
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize instance (only runs once due to singleton)."""
-        # Use class-level _registry to ensure all instances share the same data
         if not hasattr(self, "_initialized"):
             self._initialized = True
 
     @classmethod
-    def register(cls, provider: str, metric_name: str, metric_class: type, allow_override: bool = False):
+    def register(
+        cls,
+        provider: str,
+        metric_name: str,
+        metric_class: MetricFactory,
+        allow_override: bool = False,
+    ) -> None:
         """
-        Register a metric class under a provider and metric name.
-        
+        Register a metric class or factory under a provider and metric name.
+
         Args:
             provider: The provider name (e.g., 'builtin', 'ragas', 'deepeval', 'custom')
             metric_name: The name of the metric
-            metric_class: The metric class to register
+            metric_class: The metric class or factory callable (invoked with **params)
             allow_override: If True, allow overriding existing metrics (for custom metrics)
-        
+
         Raises:
             ValueError: If metric exists and allow_override=False (except for custom provider)
         """
-        # Check for duplicates
-        if metric_name in cls._registry[provider]:
-            existing_class = cls._registry[provider][metric_name]
-            
-            # If same class, ignore (re-import scenario)
-            if existing_class is metric_class:
-                return
-            
-            # Different class - handle based on provider
-            if provider == "custom":
-                # Allow override for custom metrics with warning
-                import warnings
-                warnings.warn(
-                    f"Metric '{metric_name}' already registered in 'custom' namespace. "
-                    f"Overriding with new definition. "
-                    f"To avoid this, use unique metric names.",
-                    UserWarning
-                )
-            elif allow_override:
-                pass
-            else:
-                raise ValueError(
-                    f"Metric '{provider}:{metric_name}' is already registered. "
-                    f"Cannot override provider metrics."
-                )
-        
-        cls._registry[provider][metric_name] = metric_class
+        with cls._lock:
+            if metric_name in cls._registry[provider]:
+                existing_class = cls._registry[provider][metric_name]
+                if existing_class is metric_class:
+                    return
+                if provider == "custom":
+                    import warnings
+
+                    warnings.warn(
+                        f"Metric '{metric_name}' already registered in 'custom' namespace. "
+                        "Overriding with new definition. "
+                        "To avoid this, use unique metric names.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                elif not allow_override:
+                    raise ValueError(
+                        f"Metric '{provider}:{metric_name}' is already registered. "
+                        "Cannot override provider metrics."
+                    )
+            cls._registry[provider][metric_name] = metric_class
 
     @classmethod
-    def get_class(cls, provider: str, metric_name: str) -> type[BaseMetric] | None:
-        """Return the metric class for provider and metric name, or None if not registered."""
-        if provider not in cls._registry:
-            return None
-        return cls._registry[provider].get(metric_name)
+    def get_class(cls, provider: str, metric_name: str) -> MetricFactory | None:
+        """Return the metric class or factory for provider and metric name, or None."""
+        with cls._lock:
+            if provider not in cls._registry:
+                return None
+            return cls._registry[provider].get(metric_name)
 
-    
     def get(self, provider: str, metric_name: str, **params: Any) -> Any:
         return self.create(provider, metric_name, **params)
 
@@ -97,11 +102,11 @@ class MetricRegistry:
         Raises:
             KeyError if provider/metric not found.
         """
-        metric_cls = cls.get_class(provider, metric_name)
-        if metric_cls is None:
+        factory = cls.get_class(provider, metric_name)
+        if factory is None:
             available = cls.list_metrics(provider) if provider in cls._registry else []
             raise KeyError(f"Unknown metric: {provider}:{metric_name}. Available: {available}")
-        return metric_cls(**params)
+        return factory(**params)
 
     @classmethod
     def resolve_best(cls, metric_name: str, default_provider: str | None = None) -> str:
@@ -130,25 +135,25 @@ class MetricRegistry:
             f"'{metric_name}' is ambiguous across providers: {providers}. "
             f"Use 'provider:metric_name' or set default_provider."
         )
-    
+
     @classmethod
     def list_providers(cls):
         """
         List all registered providers.
-        
+
         Returns:
             List of provider names
         """
         return list(cls._registry.keys())
-    
+
     @classmethod
     def list_metrics(cls, provider: str):
         """
         List all metrics for a given provider.
-        
+
         Args:
             provider: The provider name
-            
+
         Returns:
             List of metric names for the provider
         """
@@ -159,8 +164,7 @@ class MetricRegistry:
     @classmethod
     def list_all_metrics(cls) -> list[str]:
         """List all metric names across all providers."""
-        all_metrics = set()
+        all_metrics: set[str] = set()
         for provider_metrics in cls._registry.values():
             all_metrics.update(provider_metrics.keys())
         return sorted(all_metrics)
-

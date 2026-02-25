@@ -1,4 +1,4 @@
-"""RAGAS metric implementations with custom llm providers support.
+"""RAGAS metric implementations with custom LLM provider support.
 
 This module provides RAGAS metrics (answer_relevancy, faithfulness)
 that can be configured with custom LLM providers.
@@ -9,48 +9,13 @@ import copy
 import logging
 from typing import Any, Dict, Optional
 
-from floeval.config.schemas.io.llm import LLMProviderConfig
-
-try:
-    import nest_asyncio
-    nest_asyncio.apply()
-except ImportError:
-    pass
-
 from ragas.metrics import answer_relevancy, faithfulness
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
+from floeval.config.schemas.io.llm import LLMProviderConfig
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
 
 logger = logging.getLogger(__name__)
-
-def _run_async(coro: Any) -> Any:
-    try:
-        running = asyncio.get_running_loop()
-        if running.is_running():
-            try:
-                import nest_asyncio
-                nest_asyncio.apply()
-                return running.run_until_complete(coro)
-            except ImportError:
-                raise RuntimeError(
-                    "RAGAS metric called inside a running event loop. "
-                    "Install `nest_asyncio` or use an async execution path."
-                )
-    except RuntimeError:
-        pass
-
-    try:
-        return asyncio.run(coro)
-    except RuntimeError as e:
-        error_msg = str(e).lower()
-        if "event loop is closed" in error_msg or "bound to a different event loop" in error_msg:
-            logger.debug(f"Suppressed event loop cleanup error: {e}")
-            raise RuntimeError(
-                "Event loop cleanup error occurred. "
-                "This is usually harmless - the evaluation may have completed successfully."
-            ) from e
-        raise
 
 
 class RAGASMetric(BaseMetric):
@@ -122,7 +87,7 @@ class RAGASMetric(BaseMetric):
 
 
 class RAGASAnswerRelevancy(RAGASMetric):
-    """RAGAS Answer Relevancy metric with custom gateway support.
+    """RAGAS Answer Relevancy metric with custom LLM provider support.
 
     Measures how relevant the generated answer is to the given question.
     Higher scores indicate more relevant answers.
@@ -154,7 +119,9 @@ class RAGASAnswerRelevancy(RAGASMetric):
         )
 
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
-        """Compute answer relevancy score for a sample.
+        """Compute answer relevancy score for a sample (sync).
+
+        Safe to call from sync context only. Use aevaluate() inside async code.
 
         Args:
             sample: Floeval Sample object with inputs and ground_truth
@@ -165,15 +132,31 @@ class RAGASAnswerRelevancy(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = _run_async(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score = asyncio.run(self.ragas_metric.single_turn_ascore(ragas_sample))
             score_float = float(score)
-
             return MetricResult(
                 score=score_float,
                 metadata=self._build_metadata(score_float),
             )
-        except Exception as e:
-            logger.error(f"Error computing answer relevancy: {e}", exc_info=True)
+        except Exception as e:  # noqa: BLE001
+            logger.error("Error computing answer relevancy: %s", e, exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+    async def aevaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        """Compute answer relevancy score for a sample (async)."""
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = await self.ragas_metric.single_turn_ascore(ragas_sample)
+            score_float = float(score)
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error("Error computing answer relevancy (async): %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -181,7 +164,7 @@ class RAGASAnswerRelevancy(RAGASMetric):
 
 
 class RAGASFaithfulness(RAGASMetric):
-    """RAGAS Faithfulness metric with custom gateway support.
+    """RAGAS Faithfulness metric with custom LLM provider support.
 
     Measures how grounded the generated answer is in the provided context.
     Higher scores indicate answers that are more faithful to the context.
@@ -213,7 +196,9 @@ class RAGASFaithfulness(RAGASMetric):
         )
 
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
-        """Compute faithfulness score for a sample.
+        """Compute faithfulness score for a sample (sync).
+
+        Safe to call from sync context only. Use aevaluate() inside async code.
 
         Args:
             sample: Floeval Sample object with inputs and ground_truth
@@ -224,15 +209,31 @@ class RAGASFaithfulness(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = _run_async(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score = asyncio.run(self.ragas_metric.single_turn_ascore(ragas_sample))
             score_float = float(score)
-
             return MetricResult(
                 score=score_float,
                 metadata=self._build_metadata(score_float),
             )
-        except Exception as e:
-            logger.error(f"Error computing faithfulness: {e}", exc_info=True)
+        except Exception as e:  # noqa: BLE001
+            logger.error("Error computing faithfulness: %s", e, exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+    async def aevaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        """Compute faithfulness score for a sample (async)."""
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = await self.ragas_metric.single_turn_ascore(ragas_sample)
+            score_float = float(score)
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error("Error computing faithfulness (async): %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
