@@ -230,7 +230,23 @@ class RAGASFaithfulness(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:
-            logger.error(f"Error computing context entity recall: {e}", exc_info=True)
+            logger.error(f"Error computing faithfulness: {e}", exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+    async def aevaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = await self.ragas_metric.single_turn_ascore(ragas_sample)
+            score_float = float(score)
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:
+            logger.error(f"Error computing faithfulness (async): {e}", exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -295,6 +311,22 @@ class RAGASContextPrecision(RAGASMetric):
                 metadata=self._build_metadata(0.0, error=str(e)),
             )
 
+    async def aevaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = await self.ragas_metric.single_turn_ascore(ragas_sample)
+            score_float = float(score)
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:
+            logger.error(f"Error computing context precision (async): {e}", exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
 
 class RAGASContextRecall(RAGASMetric):
     """RAGAS Context Recall metric with custom gateway support.
@@ -349,6 +381,22 @@ class RAGASContextRecall(RAGASMetric):
             )
         except Exception as e:
             logger.error(f"Error computing context recall: {e}", exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+    async def aevaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = await self.ragas_metric.single_turn_ascore(ragas_sample)
+            score_float = float(score)
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:
+            logger.error(f"Error computing context recall (async): {e}", exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -413,6 +461,22 @@ class RAGASContextEntityRecall(RAGASMetric):
                 metadata=self._build_metadata(0.0, error=str(e)),
             )
 
+    async def aevaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = await self.ragas_metric.single_turn_ascore(ragas_sample)
+            score_float = float(score)
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:
+            logger.error(f"Error computing context entity recall (async): {e}", exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
 
 class RAGASNoiseSensitivity(RAGASMetric):
     """RAGAS Noise Sensitivity metric with custom gateway support.
@@ -467,6 +531,22 @@ class RAGASNoiseSensitivity(RAGASMetric):
             )
         except Exception as e:
             logger.error(f"Error computing noise sensitivity: {e}", exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+    async def aevaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = await self.ragas_metric.single_turn_ascore(ragas_sample)
+            score_float = float(score)
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:
+            logger.error(f"Error computing noise sensitivity (async): {e}", exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
