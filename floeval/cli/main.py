@@ -1,4 +1,5 @@
 import argparse
+from importlib.metadata import version
 
 from floeval.cli import parse_evaluate, parse_generate
 
@@ -14,7 +15,7 @@ def handle_command(args: argparse.Namespace):
 
 def main():
     parser = argparse.ArgumentParser(description="floeval cli")
-    parser.add_argument("--version", action="version", version="floeval 0.1.0")
+    parser.add_argument("--version", action="version", version=f"floeval {version('floeval')}")
 
     sub_parsers = parser.add_subparsers(
         description="Run evaluations with floeval", dest="command"

@@ -6,6 +6,43 @@ Evaluation framework for LLM and RAG systems.
 
 Floeval is a flexible evaluation framework designed to support multiple metric providers and execution backends.
 
+## Features
+
+- **Multi-backend metrics**: RAGAS, DeepEval, and built-in metrics
+- **LLM and RAG evaluation**: Evaluate responses, faithfulness, answer relevancy, and more
+- **Agent evaluation**: Optional Flotorch integration for agent-based evaluation
+- **CLI and Python API**: Run evaluations from config files or programmatically
+
+## Installation
+
+### Stable (production)
+
+```bash
+pip install floeval
+```
+
+### Beta / Pre-release (for testing)
+
+```bash
+pip install --pre floeval
+# Or specific version: pip install --pre floeval==0.1.0b1
+```
+
+**Note**: The `--pre` flag is required to install beta versions. Without it, pip installs only stable releases.
+
+### With optional Flotorch support (agent evaluation)
+
+```bash
+pip install floeval[flotorch]
+```
+
+### Development
+
+```bash
+pip install -e .
+pip install -e .[dev]
+```
+
 ## Structure
 
 - [api/](https://github.com/FloTorch/Floeval/tree/dev/floeval/api) - Public API (Evaluation, Dataset, Sample, Metrics)
@@ -14,18 +51,6 @@ Floeval is a flexible evaluation framework designed to support multiple metric p
 - [config/schemas/](https://github.com/FloTorch/Floeval/tree/dev/floeval/config/schemas) - Configuration schemas and data models
 - [cli/](https://github.com/FloTorch/Floeval/tree/dev/floeval/cli) - Command-line interface
 - [utils/](https://github.com/FloTorch/Floeval/tree/dev/floeval/utils) - Utility functions (loaders, gateways, etc.)
-
-## Installation
-
-```bash
-pip install floeval
-```
-
-Or from source:
-
-```bash
-pip install -e .
-```
 
 ## Quick Start
 
