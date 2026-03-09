@@ -1,5 +1,5 @@
 site_name: Floeval
-site_url: https://github.com/FloTorch/Floeval
+site_url: https://github.com/FloTorch/floeval
 site_description: Multi-backend evaluation framework for LLM and RAG systems
 
 theme:
