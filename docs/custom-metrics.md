@@ -8,7 +8,7 @@ Create your own evaluation logic when built-in metrics don't cover your needs.
 
 ### 1. @custom_metric decorator
 
-Function-based metric. Supports params: `response`, `question`, `contexts`, `context` (MetricContext), `llm` (SimpleLLMHelper), `sample`.
+Use `@custom_metric` for function-based metrics. Supported parameters include `response`, `question`, `contexts`, `context` (`MetricContext`), `llm` (`SimpleLLMHelper`), and `sample`.
 
 ```python
 from floeval.api.metrics.custom import custom_metric
@@ -20,7 +20,7 @@ def response_length(response: str) -> float:
 
 ### 2. criteria() — LLM-as-judge
 
-Natural language description. LLM evaluates.
+Use `criteria()` to define an evaluation criterion in natural language and have an LLM score responses against it.
 
 ```python
 from floeval.api.metrics.custom import criteria
@@ -34,7 +34,7 @@ empathy = criteria(
 
 ---
 
-## @custom_metric options
+## `@custom_metric` options
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
@@ -42,9 +42,9 @@ empathy = criteria(
 | `execute_via` | Route to "ragas" or "deepeval" provider. Default: standalone (no provider needed) | `@custom_metric(execute_via="ragas")` |
 | `name` | Custom metric name. Default: function name | `@custom_metric(name="my_metric")` |
 
-### execute_via: Running metrics through providers
+### `execute_via`
 
-By default, custom metrics run standalone (no API calls). Use `execute_via` to integrate with RAGAS or DeepEval:
+By default, custom metrics run standalone and do not depend on provider execution. Use `execute_via` to route a custom metric through RAGAS or DeepEval:
 
 ```python
 @custom_metric(execute_via="ragas", threshold=0.6)
@@ -74,7 +74,7 @@ Custom metric functions can access these parameters (pass only what you need):
 | `llm` | SimpleLLMHelper | LLM interface for calling the model |
 | `sample` | dict | Full sample data |
 
-### Example: Using various parameters
+### Parameter examples
 
 ```python
 from floeval.api.metrics.custom import custom_metric
@@ -220,6 +220,6 @@ evaluation = Evaluation(
 
 ## Next steps
 
-- **[Copy & Run](copy-run.md)** — Copy-paste full examples
+- **[Minimal Examples](copy-run.md)** — Compact runnable examples
 - **[Metrics](metrics.md)** — Built-in metrics reference
 - **[Examples](examples.md)** — All usage patterns

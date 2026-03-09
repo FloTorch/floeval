@@ -1,165 +1,104 @@
 # Available Metrics
 
-Built-in metrics from RAGAS and DeepEval, plus guidance on choosing metrics for your use case.
+Floeval currently registers metrics across `ragas`, `deepeval`, and `builtin`, plus any `custom` metrics you define at runtime.
 
 ---
 
-## Built-in metrics
+## How to specify metrics
 
-| Metric | Provider | Required fields | What it measures |
-|--------|----------|----------------|------------------|
-| answer_relevancy | RAGAS, DeepEval | user_input, llm_response | How relevant is the answer to the question? |
-| faithfulness | RAGAS, DeepEval | user_input, llm_response, **contexts** | Does the answer stay grounded in the provided contexts? |
+You can reference metrics in four ways:
 
-### Metric details
+| Format | Example | When to use it |
+|--------|---------|----------------|
+| Plain string | `"answer_relevancy"` | Use with `default_provider` |
+| Provider-qualified string | `"deepeval:faithfulness"` | Use when the metric exists in multiple providers |
+| Dict spec | `{"id": "faithfulness", "provider": "deepeval", "params": {"threshold": 0.8}}` | Use when you need per-metric params |
+| Metric instance | `my_metric` | Use with custom programmatic metrics |
 
-#### answer_relevancy
-
-- **What it does**: Measures how well the LLM's response answers the user's question
-- **Score range**: 0–1 (higher is better)
-- **Use case**: All evaluations (both retrieval-augmented and standalone LLM)
-- **Example**: Question: "What is Python?" Answer: "Python is a programming language" → High relevancy score
-
-#### faithfulness
-
-- **What it does**: Measures whether the LLM's response is supported by the provided context
-- **Score range**: 0–1 (higher is better)  
-- **Use case**: RAG systems, where you want to verify the LLM doesn't hallucinate
-- **Requires**: `contexts` field in your dataset (list of reference documents)
-- **Example**: Context: "The capital of France is Paris." Answer: "The capital of France is Paris." → High faithfulness
-- **Counter-example**: Context: "Python is a programming language." Answer: "Python was created in 1992." → Low faithfulness (info not in context)
+If the same metric ID exists in more than one provider and you do not set `default_provider`, use the `provider:metric` form.
 
 ---
 
-## Full vs. Partial datasets
+## Standard LLM and RAG metrics
 
-Understanding when to use each dataset type helps optimize your evaluation workflow.
+### RAGAS
 
-### Full dataset
+| Metric | Best for | Notes |
+|--------|----------|-------|
+| `answer_relevancy` | General LLM answer quality | Works on standard evaluation datasets |
+| `faithfulness` | Grounding against retrieved context | Use when samples include `contexts` |
+| `context_precision` | Retrieval ranking quality | Retrieval-focused metric |
+| `context_recall` | Coverage of relevant information | Retrieval-focused metric |
+| `context_entity_recall` | Entity-level recall from context | Useful when preserving entities matters |
+| `noise_sensitivity` | Robustness to noisy or irrelevant context | Retrieval-focused stress metric |
 
-**Use when**: You have pre-generated LLM responses ready to evaluate.
+### DeepEval
 
-```json
-{
-  "samples": [
-    {
-      "user_input": "What is Python?",
-      "llm_response": "Python is a programming language.",
-      "contexts": ["Python is widely used in data science."]
-    }
-  ]
-}
-```
-
-**Workflow**:
-
-1. Generate responses from your LLM offline
-2. Save to JSON/JSONL
-3. Run evaluation: `floeval evaluate -c config.yaml -d dataset.json`
-
-**Pros**:
-
-- Faster evaluation (no LLM calls during evaluation)
-- Good for batch processing
-- Can generate responses in parallel
-
-**Cons**:
-
-- Requires pre-generated responses
-- Takes up more disk space
-
-### Partial dataset
-
-**Use when**: You only have questions and want Floeval to generate responses on-the-fly.
-
-```json
-{
-  "samples": [
-    {
-      "user_input": "What is Python?"
-    },
-    {
-      "user_input": "How does RAG work?",
-      "contexts": ["RAG combines retrieval with generation."]
-    }
-  ]
-}
-```
-
-**Requires** in config:
-
-```yaml
-dataset_generation_config:
-  generator_model: "gpt-4o-mini"
-```
-
-**Workflow**:
-
-1. Save questions to JSON/JSONL (no responses needed)
-2. Run evaluation: `floeval evaluate -c config.yaml -d dataset.json`
-3. Floeval automatically generates responses using the specified model
-
-**Pros**:
-
-- Simpler setup; no need to pre-generate
-- Single command; generates and evaluates in one pass
-- Good for quick iterations
-
-**Cons**:
-
-- Slower (LLM calls happen during evaluation)
-- Higher API costs
-
-### Generating then saving (advanced)
-
-Generate responses separately, then reuse them:
-
-```bash
-floeval generate -c config.yaml -d partial.json -o complete.json
-floeval evaluate -c config.yaml -d complete.json
-```
-
-This way, you generate responses once and can evaluate them multiple times.
+| Metric | Best for | Notes |
+|--------|----------|-------|
+| `answer_relevancy` | General LLM answer quality | Alternate implementation to RAGAS |
+| `faithfulness` | Grounding against context | Uses DeepEval's test-case flow |
+| `contextual_precision` | Retrieval precision | Typically uses `contexts` and `ground_truth` |
+| `contextual_recall` | Retrieval recall | Typically uses `contexts` and `ground_truth` |
+| `contextual_relevancy` | Whether retrieved context is relevant | Typically uses `contexts` |
 
 ---
 
-## Sample fields reference
+## Agent metrics
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| user_input | Yes | Question or prompt |
-| llm_response | Yes | LLM's answer |
-| contexts | For faithfulness | List of retrieved documents |
-| ground_truth | Optional | Expected answer |
-| metadata | Optional | Extra metadata |
+These metrics are intended for `AgentEvaluation`, not standard `Evaluation`.
 
----
+### Builtin
 
-## Quick decision guide
+| Metric | Best for | Notes |
+|--------|----------|-------|
+| `goal_achievement` | Did the agent satisfy the request? | Uses an LLM judge; `reference_outcome` helps |
+| `response_coherence` | Is the final answer consistent with the trace? | Uses the conversation trace and final response |
 
-**Step 1: Do you have a RAG system?**
+### RAGAS
 
-```
-Do you have retrieved contexts to include?
-│
-├─ NO  → Use: answer_relevancy only
-│
-└─ YES → Use: answer_relevancy + faithfulness
-```
-
-**Step 2: Do you have LLM responses ready?**
-
-| Scenario | Dataset type | Command |
-|----------|--------------|---------|
-| You have pre-generated responses | Full dataset | `floeval evaluate -c config.yaml -d dataset.json` |
-| You only have questions; want Floeval to generate responses | Partial dataset | `floeval evaluate -c config.yaml -d dataset.json` (auto-detected) |
-| You want to generate & save responses separately | Partial dataset | `floeval generate -c config.yaml -d dataset.json -o complete.json` |
+| Metric | Best for | Notes |
+|--------|----------|-------|
+| `agent_goal_accuracy` | Compare the agent's result to an expected outcome | Best with `reference_outcome` |
+| `tool_call_accuracy` | Compare actual tool use to expected tool use | Requires `reference_tool_calls` |
 
 ---
 
-## Using both metrics
+## Field guidance
 
-### Configuration (YAML)
+### Standard evaluation datasets
+
+| Field | Commonly used by |
+|-------|------------------|
+| `user_input` | All standard metrics |
+| `llm_response` | All standard metrics |
+| `contexts` | `faithfulness`, retrieval-focused metrics, contextual metrics |
+| `ground_truth` | Recall and precision style metrics, especially DeepEval contextual metrics |
+| `prompt_id` | Generated datasets that came from prompt expansion |
+
+### Agent evaluation datasets
+
+| Field | Commonly used by |
+|-------|------------------|
+| `trace.messages` | All agent metrics |
+| `trace.final_response` | All agent metrics |
+| `reference_outcome` | `goal_achievement`, `agent_goal_accuracy` |
+| `reference_tool_calls` | `tool_call_accuracy` |
+
+If a metric needs fields that are missing from your samples, it will fail at evaluation time and the failure will be recorded in that sample's metric metadata.
+
+---
+
+## Choosing a provider
+
+### Provider selection
+
+- Use `ragas` when you want the default provider for common answer and retrieval metrics.
+- Use `deepeval` when you want its contextual metrics or prefer its scoring behavior.
+- Use `builtin` for agent-specific judge metrics.
+- Use `custom` for domain-specific checks you write yourself.
+
+### Example configurations
 
 ```yaml
 evaluation_config:
@@ -169,70 +108,29 @@ evaluation_config:
     - "faithfulness"
 ```
 
-### Configuration (Python)
+```yaml
+evaluation_config:
+  metrics:
+    - "ragas:answer_relevancy"
+    - "deepeval:contextual_relevancy"
+```
 
 ```python
 evaluation = Evaluation(
     dataset=dataset,
     llm_config=llm_config,
-    metrics=["answer_relevancy", "faithfulness"],
-    default_provider="ragas"
-)
-```
-
----
-
-## Providers: RAGAS vs DeepEval
-
-Both providers implement the same metrics but use different underlying implementations.
-
-| Aspect | RAGAS | DeepEval |
-|--------|-------|----------|
-| **Default** | Yes | Available as alternative |
-| **Speed** | Generally faster | Slightly slower |
-| **Accuracy** | Good; research-backed | Good; industry-standard |
-| **Use case** | RAG evaluation | General-purpose LLM evaluation |
-| **Setup** | `default_provider: "ragas"` | `"deepeval:answer_relevancy"` |
-
-### Selecting a provider
-
-```yaml
-# Use RAGAS (default)
-evaluation_config:
-  default_provider: "ragas"
-  metrics:
-    - "answer_relevancy"
-    - "faithfulness"
-```
-
-```yaml
-# Mix providers
-evaluation_config:
-  metrics:
-    - "ragas:answer_relevancy"      # From RAGAS
-    - "deepeval:faithfulness"        # From DeepEval
-```
-
-```python
-# Python: specify in metric dict
-evaluation = Evaluation(
-    dataset=dataset,
     metrics=[
+        {"id": "faithfulness", "provider": "deepeval", "params": {"threshold": 0.8}},
         "ragas:answer_relevancy",
-        "deepeval:faithfulness"
-    ]
+    ],
 )
 ```
 
-**Recommendation**: Start with RAGAS (default). Switch to DeepEval if you need specific features or different evaluation behavior.
-
 ---
 
-## Setting thresholds
+## Thresholds and params
 
-Thresholds define the score boundary for pass/fail decisions.
-
-### YAML configuration
+Set thresholds through `metric_params` or through metric dict specs.
 
 ```yaml
 evaluation_config:
@@ -246,84 +144,58 @@ evaluation_config:
       threshold: 0.8
 ```
 
-### Python configuration
-
-```python
-evaluation = Evaluation(
-    dataset=dataset,
-    llm_config=llm_config,
-    metrics=["answer_relevancy", "faithfulness"],
-    metric_params={
-        "answer_relevancy": {"threshold": 0.7},
-        "faithfulness": {"threshold": 0.8}
-    }
-)
-```
-
-### Threshold recommendations
-
-| Environment | Threshold | Notes |
-|-------------|-----------|-------|
-| Development | 0.5 | Lenient; use for iteration |
-| Staging | 0.7 | Moderate; ensures basic quality |
-| Production | 0.8–0.9 | Strict; high-quality outputs |
-
-- **Sample pass rate**: If 80% of samples exceed threshold, evaluation passes
-- **Adjust based on your domain**: Customer-facing tasks may need higher thresholds
-
----
-
-## Understanding scores
-
-All built-in metrics return scores between 0 and 1.
-
-| Score range | Interpretation | Action |
-|---|---|---|
-| 0.9–1.0 | Excellent ✅ | Production-ready |
-| 0.7–0.9 | Good ✅ | Acceptable for most use cases |
-| 0.5–0.7 | Needs improvement ⚠️ | Iterate; investigate failure patterns |
-| 0.0–0.5 | Poor ❌ | Critical; requires redesign |
-
-### Interpreting sample results
-
-```python
-results = evaluation.run()
-
-# Check individual sample scores
-for sample in results.sample_results:
-    print(f"Question: {sample['user_input']}")
-    print(f"Answer: {sample['llm_response']}")
-    print(f"Metrics: {sample['metrics']}")
-    # Output: {"answer_relevancy": 0.92, "faithfulness": 0.87}
-```
-
-### Aggregate vs. sample scores
-
-- **Aggregate scores**: Average across all samples (e.g., 0.89 = 89% average relevancy)
-- **Sample scores**: Score for each individual evaluation sample
-- **Use aggregate** for overall system performance
-- **Use sample scores** to identify problematic responses and improve your system
-
----
-
-## Common issues
-
-### "Field required: contexts"
-
-**Problem:** Using `faithfulness` without contexts in dataset.
-
-**Solution:** Either add contexts to your dataset, or use only `answer_relevancy`:
+Provider-qualified keys also work:
 
 ```yaml
 evaluation_config:
   metrics:
-    - "answer_relevancy"  # Remove faithfulness
+    - "ragas:answer_relevancy"
+    - "deepeval:faithfulness"
+  metric_params:
+    ragas:answer_relevancy:
+      threshold: 0.7
+    deepeval:faithfulness:
+      threshold: 0.8
 ```
+
+---
+
+## Understanding results
+
+All built-in provider scores are normalized to the `0.0` to `1.0` range.
+
+| Score range | Typical interpretation |
+|-------------|------------------------|
+| `0.9 - 1.0` | Strong |
+| `0.7 - 0.9` | Good |
+| `0.5 - 0.7` | Mixed |
+| `0.0 - 0.5` | Weak |
+
+Use:
+
+- aggregate scores for overall system quality
+- per-sample scores to inspect failure patterns
+- metric metadata to understand thresholds, provider, and recorded errors
+
+---
+
+## Discover metrics programmatically
+
+```python
+from floeval.api.metrics.registry import MetricRegistry
+
+print(MetricRegistry.list_providers())
+print(MetricRegistry.list_metrics("ragas"))
+print(MetricRegistry.list_metrics("deepeval"))
+print(MetricRegistry.list_metrics("builtin"))
+```
+
+`custom` metrics appear in the registry after you define them.
 
 ---
 
 ## Next steps
 
-- **[Custom Metrics](custom-metrics.md)** — Create your own evaluation logic
-- **[Examples](examples.md)** — See all usage examples
-- **[Copy & Run](copy-run.md)** — Copy-paste examples
+- [Examples](examples.md) for provider-routing examples
+- [Agent Evaluation](agent-evaluation.md) for agent-only metrics
+- [Custom Metrics](custom-metrics.md) for user-defined scoring

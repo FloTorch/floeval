@@ -1,14 +1,31 @@
 # API Reference
 
-Complete reference for config, CLI, and API.
+Reference for Floeval's user-facing config, CLI, and Python API surface.
 
 ---
 
-## LLM config
+## Public Python entry points
 
-### Python: OpenAIProviderConfig
+Top-level imports from `floeval`:
 
-Use `OpenAIProviderConfig` from a dict. Pass to `Evaluation` as `llm_config`:
+```python
+from floeval import Evaluation, Dataset, DatasetLoader, MetricRegistry
+```
+
+Additional public imports commonly used:
+
+```python
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.api.metrics.custom import custom_metric, criteria
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.utils.agent_trace import capture_trace, log_turn, log_tool_result, wrap_langchain_agent
+```
+
+---
+
+## `llm_config`
+
+Use `OpenAIProviderConfig` for OpenAI-compatible providers.
 
 ```python
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
@@ -17,331 +34,340 @@ llm_config = OpenAIProviderConfig(
     base_url="https://api.openai.com/v1",
     api_key="your-api-key",
     chat_model="gpt-4o-mini",
+    chat_endpoint="chat/completions",
     embedding_model="text-embedding-3-small",
-    system_prompt="You are a helpful assistant."  # optional, for partial dataset generation
+    embedding_endpoint="embeddings",
+    system_prompt="You are a helpful assistant.",  # optional
+    extra_kwargs=None,                             # optional
 )
 ```
 
-Or from a dict:
+### Fields
 
-```python
-LLM_CONFIG = {
-    "base_url": "https://api.openai.com/v1",
-    "api_key": "your-api-key",
-    "chat_model": "gpt-4o-mini",
-    "embedding_model": "text-embedding-3-small",
-    "system_prompt": "You are a helpful assistant.",  # optional
-}
-llm_config = OpenAIProviderConfig(**LLM_CONFIG)
-```
-
-### Config file keys (CLI)
-
-Under `llm_config`:
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| base_url | Yes | API endpoint (e.g. https://api.openai.com/v1) |
-| api_key | Yes | Your API key |
-| chat_model | Yes | LLM model name (e.g. gpt-4o-mini) |
-| embedding_model | Yes | Embedding model (e.g. text-embedding-3-small) |
-| system_prompt | No | Optional. Used when generating responses for partial datasets |
+| Field | Required | Notes |
+|-------|----------|-------|
+| `provider_type` | No | Defaults to `"openai"` |
+| `base_url` | Yes | Base API URL |
+| `api_key` | Yes | Provider credential |
+| `chat_model` | Yes | Model used for chat/completions |
+| `chat_endpoint` | No | Defaults to `chat/completions` |
+| `embedding_model` | No | Optional in the schema, but commonly needed for provider-backed evaluation metrics |
+| `embedding_endpoint` | No | Optional embedding endpoint |
+| `system_prompt` | No | Used during response generation when provided |
+| `extra_kwargs` | No | Provider-specific keyword args |
 
 ---
 
-## Evaluation constructor
+## Config file structure
 
-| Parameter | Description |
-|-----------|-------------|
-| dataset | Dataset or PartialDataset (required) |
-| llm_config | Config for RAGAS/DeepEval/criteria metrics and partial dataset generation |
-| metrics | List of metric specs (required) |
-| default_provider | "ragas" or "deepeval" when using string metric names |
-| metric_params | Dict of metric_name → params (e.g. `{"answer_relevancy": {"threshold": 0.8}}`) |
-| dataset_generator_model | Required when using PartialDataset (samples without llm_response). Label for the provider. |
+Floeval's CLI reads YAML, YML, or JSON config files.
 
-```python
-from floeval import Evaluation, DatasetLoader
-from floeval.config.schemas.io.llm import OpenAIProviderConfig
+### `evaluation_config`
 
-llm_config = OpenAIProviderConfig(**LLM_CONFIG)
+| Field | Required | Notes |
+|-------|----------|-------|
+| `metrics` | Yes | List of metric specs |
+| `default_provider` | No | Used when metric IDs are ambiguous |
+| `metric_params` | No | Mapping of metric name or `provider:metric` to params |
+| `prompts_file` | No | Prompt file used for prompt-aware partial generation |
+| `agent_name` | No | Required for CLI partial agent evaluation |
+| `dataset_generator_model` | No | Fallback location for partial-dataset generation model |
 
-evaluation = Evaluation(
-    dataset=dataset,
-    llm_config=llm_config,
-    metrics=["answer_relevancy", "faithfulness"],
-    default_provider="ragas",
-    metric_params={"answer_relevancy": {"threshold": 0.8}},
-    dataset_generator_model="gpt-4o-mini",  # only for partial datasets
-)
-```
+### `dataset_generation_config`
 
----
+| Field | Required | Notes |
+|-------|----------|-------|
+| `generator_model` | Yes for generation flows | Model used to populate missing `llm_response` values |
+| `batch_size` | No | Defaults are handled in the generation layer |
+| `max_concurrency` | No | Controls async generation fan-out |
 
-## Results structure
+### Example config
 
-```python
-results = evaluation.run()
+```yaml
+llm_config:
+  base_url: "https://api.openai.com/v1"
+  api_key: "your-api-key"
+  chat_model: "gpt-4o-mini"
+  chat_endpoint: "chat/completions"
+  embedding_model: "text-embedding-3-small"
+  embedding_endpoint: "embeddings"
+  system_prompt: "You are a concise assistant."
 
-# Aggregate scores per metric
-results.aggregate_scores   # {"ragas:answer_relevancy": 0.91, ...}
+evaluation_config:
+  default_provider: "ragas"
+  metrics:
+    - "answer_relevancy"
+    - "faithfulness"
+  metric_params:
+    answer_relevancy:
+      threshold: 0.7
+  prompts_file: "prompts.yaml"
 
-# Per-sample results
-results.sample_results     # List of {user_input, llm_response, metrics: {...}}
-
-# Summary
-results.summary            # {total_samples, providers_used, pass_rates, aggregate_scores}
+dataset_generation_config:
+  generator_model: "gpt-4o-mini"
+  batch_size: 20
+  max_concurrency: 10
 ```
 
 ---
 
-## MetricRegistry
+## CLI reference
 
-Discover available metrics and their providers programmatically.
-
-```python
-from floeval.api.metrics.registry import MetricRegistry
-
-# List all available providers
-providers = MetricRegistry.list_providers()
-# Returns: ['ragas', 'deepeval', 'custom']
-
-# List metrics for a specific provider
-ragas_metrics = MetricRegistry.list_metrics("ragas")
-# Returns: ['answer_relevancy', 'faithfulness']
-
-# Get all available metrics
-all_metrics = MetricRegistry.list_all_metrics()
-# Returns: ['answer_relevancy', 'faithfulness', 'custom_metric_name', ...]
-```
-
-### MetricRegistry methods
-
-| Method | Parameters | Returns | Description |
-|--------|-----------|---------|-------------|
-| `list_providers()` | None | list[str] | Get all registered metric providers |
-| `list_metrics(provider: str)` | provider name | list[str] | Get metrics available for a provider |
-| `list_all_metrics()` | None | list[str] | Get all registered metric names |
-
-### Available providers
-
-| Provider | Metrics | Description |
-|----------|---------|-------------|
-| `ragas` | answer_relevancy, faithfulness | RAGAS framework metrics for RAG evaluation |
-| `deepeval` | answer_relevancy, faithfulness | DeepEval metrics (alternative provider) |
-| `custom` | user-defined | Custom metrics defined with `@custom_metric` or `criteria()` |
-
----
-
-## Usage flows summary
-
-| Flow | Description |
-|------|-------------|
-| **Flow A: CLI (full dataset)** | Config YAML/JSON + dataset JSON/JSONL → `floeval evaluate -c config.yaml -d dataset.json` |
-| **Flow B: CLI (partial dataset)** | Same, but dataset has no llm_response. CLI auto-detects and generates. Requires `dataset_generation_config` in config. |
-| **Flow C: Python (from samples)** | DatasetLoader.from_samples([dicts]) + OpenAIProviderConfig + Evaluation |
-| **Flow D: Python (from file)** | DatasetLoader.from_file() / from_json() + Evaluation |
-| **Flow E: Custom metrics** | @custom_metric or criteria() + mix with built-in metrics |
-
----
-
-## CLI commands
-
-### evaluate
-
-```bash
-floeval evaluate -c CONFIG -d DATASET [-o OUTPUT]
-```
-
-| Option | Required | Description |
-|--------|----------|-------------|
-| `-c, --config` | Yes | Path to config file (YAML or JSON) |
-| `-d, --dataset` | Yes | Path to dataset file (JSON or JSONL). Full or partial (auto-detected). |
-| `-o, --output` | No | Save results to JSON file |
-
-### generate
-
-Generate `llm_response` for partial datasets and save to file. Useful when you want to generate responses separately from evaluation.
-
-```bash
-floeval generate -c CONFIG -d PARTIAL_DATASET -o OUTPUT
-```
-
-#### Parameters
-
-| Option | Required | Description |
-|--------|----------|-------------|
-| `-c, --config` | Yes | Path to config file (YAML or JSON). Must include `llm_config` and `dataset_generation_config` |
-| `-d, --dataset` | Yes | Path to partial dataset file (JSON or JSONL).  Samples should only have `user_input` and optional `contexts` |
-| `-o, --output` | Yes | Path to save complete dataset with generated `llm_response` for each sample |
-
-#### Use cases
-
-| Use case | Flow |
-|----------|------|
-| **Generate once, evaluate multiple times** | `floeval generate ...` → `floeval evaluate ... (multiple times)` |
-| **Audit generated responses** | `floeval generate ...` → inspect output → `floeval evaluate ...` |
-| **Parallelize generation and evaluation** | Generate responses in batch, then evaluate separately |
-| **Build reusable evaluation dataset** | Generate and save, then version control or share the dataset |
-
-#### Example: Two-step workflow
-
-**Step 1: Generate responses**
-
-```bash
-floeval generate -c config.yaml -d partial_questions.json -o generated_dataset.json
-```
-
-Input (`partial_questions.json`):
-
-```json
-{"samples": [{"user_input": "What is Python?"}, {"user_input": "What is RAG?"}]}
-```
-
-Output (`generated_dataset.json`):
-
-```json
-{"samples": [{"user_input": "What is Python?", "llm_response": "Python is..."}, {"user_input": "What is RAG?", "llm_response": "RAG is..."}]}
-```
-
-**Step 2: Evaluate the complete dataset**
-
-```bash
-floeval evaluate -c config.yaml -d generated_dataset.json -o results.json
-```
-
-#### Config requirements
-
-Both `llm_config` and `dataset_generation_config` are required:
-
-```json
-{
-  "llm_config": {
-    "base_url": "https://api.openai.com/v1",
-    "api_key": "your-api-key",
-    "chat_model": "gpt-4o-mini",
-    "embedding_model": "text-embedding-3-small"
-  },
-  "dataset_generation_config": {
-    "generator_model": "gpt-4o-mini"
-  }
-}
-```
-
-### --version
+### `floeval --version`
 
 ```bash
 floeval --version
 ```
 
+### `floeval evaluate`
+
+```bash
+floeval evaluate -c CONFIG -d DATASET [-o OUTPUT] [--agent]
+```
+
+| Option | Required | Notes |
+|--------|----------|-------|
+| `-c, --config` | Yes | YAML, YML, or JSON config file |
+| `-d, --dataset` | Yes | `.json` or `.jsonl` dataset |
+| `-o, --output` | No | Saves results to JSON |
+| `--agent` | No | Switches into agent-evaluation mode |
+
+Behavior:
+
+- standard mode auto-detects partial datasets by checking whether samples are missing `llm_response`
+- agent mode loads agent datasets and uses `AgentEvaluation`
+- partial agent datasets in CLI mode require `evaluation_config.agent_name`
+
+### `floeval generate`
+
+```bash
+floeval generate -c CONFIG -d DATASET -o OUTPUT
+```
+
+| Option | Required | Notes |
+|--------|----------|-------|
+| `-c, --config` | Yes | Must include `llm_config` and `dataset_generation_config` |
+| `-d, --dataset` | Yes | Partial standard dataset in `.json` or `.jsonl` |
+| `-o, --output` | Yes | Output must use `.json` or `.jsonl` |
+
+Behavior:
+
+- fills missing `llm_response` values
+- supports prompt-driven expansion when samples contain `prompt_ids`
+- chooses export format from the output file extension
+
 ---
 
-## DatasetLoader
+## `Evaluation`
 
-Load datasets from various sources for evaluation.
+Use `Evaluation` for standard LLM and RAG evaluation.
+
+### Constructor
+
+| Parameter | Required | Notes |
+|-----------|----------|-------|
+| `dataset` | Yes | `Dataset` or `PartialDataset` |
+| `metrics` | Yes | Metric specs in string, dict, or instance form |
+| `default_provider` | No | Helps resolve ambiguous metric names |
+| `llm_config` | No | Needed for provider-backed metrics and partial generation |
+| `metric_params` | No | Shared params keyed by metric name |
+| `dataset_generator_model` | No | Required when `dataset` is partial |
+| `prompts_file` | No | Prompt file path used for prompt-aware generation |
+
+### Example
+
+```python
+from floeval import Evaluation, DatasetLoader
+
+dataset = DatasetLoader.from_file("dataset.json", partial_dataset=False)
+
+evaluation = Evaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    default_provider="ragas",
+    metrics=["answer_relevancy", "faithfulness"],
+    metric_params={"answer_relevancy": {"threshold": 0.8}},
+)
+
+results = evaluation.run()
+```
+
+### Async
+
+```python
+results = await evaluation.arun()
+```
+
+---
+
+## `AgentEvaluation`
+
+Use `AgentEvaluation` for agent traces and partial agent datasets.
+
+### Constructor
+
+| Parameter | Required | Notes |
+|-----------|----------|-------|
+| `dataset` | Yes | `AgentDataset` |
+| `metrics` | Yes | Builtin and provider-qualified agent metrics |
+| `llm_config` | No | Needed for LLM-judged agent metrics |
+| `agent` | No | Python callable for Mode 2 |
+| `agent_runner` | No | Runner object for Mode 4 |
+| `default_provider` | No | Defaults to `"builtin"` |
+| `metric_params` | No | Shared params keyed by metric name |
+
+### Example
+
+```python
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset
+
+dataset = AgentDataset.from_file("agent_dataset.json")
+
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    metrics=["goal_achievement", "ragas:tool_call_accuracy"],
+)
+
+results = evaluation.run()
+```
+
+### Async
+
+```python
+results = await evaluation.arun()
+```
+
+---
+
+## `DatasetLoader`
+
+Load standard evaluation datasets from files, lists, or dicts.
 
 ```python
 from floeval import DatasetLoader
 
-# From file (auto-detect JSON/JSONL)
-dataset = DatasetLoader.from_file("dataset.json", partial_dataset=False)
-partial_ds = DatasetLoader.from_file("partial.json", partial_dataset=True)
+full_dataset = DatasetLoader.from_file("dataset.json", partial_dataset=False)
+partial_dataset = DatasetLoader.from_file("partial.json", partial_dataset=True)
 
-# From JSON file explicitly
-dataset = DatasetLoader.from_json("dataset.json", partial_dataset=False)
-
-# From Python list of dicts
-dataset = DatasetLoader.from_samples([
-    {"user_input": "Q?", "llm_response": "A."}
-], partial_dataset=False)
-
-# From dict with "samples" key
-dataset = DatasetLoader.from_dict({"samples": [...]}, partial_dataset=False)
+dataset = DatasetLoader.from_samples(
+    [{"user_input": "Q?", "llm_response": "A."}],
+    partial_dataset=False,
+)
 ```
 
-### DatasetLoader methods
+### Common methods
 
-| Method | Parameters | Returns | Description |
-|--------|-----------|---------|-------------|
-| `from_file()` | `path: str`, `partial_dataset: bool` | Dataset \| PartialDataset | Auto-detect JSON/JSONL and load |
-| `from_json()` | `path: str`, `partial_dataset: bool` | Dataset \| PartialDataset | Load from JSON file |
-| `from_samples()` | `samples: list[dict]`, `partial_dataset: bool` | Dataset \| PartialDataset | Create from Python list |
-| `from_dict()` | `data: dict`, `partial_dataset: bool` | Dataset \| PartialDataset | Create from dict with "samples" key |
-
-### When to use full vs. partial datasets
-
-| Scenario | Use | Dataset type |
-|----------|-----|--------------|
-| You have pre-generated LLM responses | Full dataset | `partial_dataset=False` |
-| You only have questions; want Floeval to generate responses | Partial dataset | `partial_dataset=True` |
-| Evaluating existing outputs | Full dataset | `partial_dataset=False` |
-| Building evaluation dataset; generating responses on-the-fly | Partial dataset | `partial_dataset=True` |
-
-**Note**: Partial datasets require `dataset_generation_config` in your config or `llm_config` in Python.
+| Method | Returns | Notes |
+|--------|---------|-------|
+| `from_file(path, partial_dataset=...)` | `Dataset` or `PartialDataset` | Supports `.json` and `.jsonl` |
+| `from_json(path, partial_dataset=...)` | `Dataset` or `PartialDataset` | JSON only |
+| `from_samples(samples, partial_dataset=...)` | `Dataset` or `PartialDataset` | Build from Python objects |
+| `from_dict(data, partial_dataset=...)` | `Dataset` or `PartialDataset` | Build from a dict with `samples` |
 
 ---
 
-## Data models
+## Dataset models
 
-### Sample (full dataset)
+### Standard datasets
 
-| Field | Type | Required |
-|-------|------|----------|
-| user_input | str | Yes |
-| llm_response | str | Yes |
-| contexts | list[str] | For faithfulness |
-| ground_truth | str | Optional |
-| metadata | dict | Optional |
+#### `Sample`
 
-### PartialSample (partial dataset)
+| Field | Notes |
+|-------|-------|
+| `user_input` | Required |
+| `llm_response` | Required for full datasets |
+| `contexts` | Optional, used by grounding and retrieval metrics |
+| `ground_truth` | Optional, used by some recall and precision metrics |
+| `metadata` | Optional |
+| `prompt_id` | Present after prompt-driven generation |
 
-Same as Sample, but `llm_response` can be omitted or empty. Used when generating responses.
+#### `PartialSample`
 
----
+Same as `Sample`, but `llm_response` can be empty or omitted. Partial samples also support:
 
-## Config file schema (evaluate)
+| Field | Notes |
+|-------|-------|
+| `prompt_ids` | Optional list of prompt IDs that expands one sample into multiple generated outputs |
 
-```json
-{
-  "llm_config": {
-    "base_url": "...",
-    "api_key": "...",
-    "chat_model": "...",
-    "embedding_model": "...",
-    "system_prompt": "..."
-  },
-  "evaluation_config": {
-    "metrics": ["ragas:answer_relevancy", "ragas:faithfulness"],
-    "default_provider": "ragas",
-    "metric_params": { "answer_relevancy": { "threshold": 0.6 } }
-  },
-  "dataset_generation_config": {
-    "generator_model": "gpt-4o-mini"
-  }
-}
-```
+### Agent datasets
 
-`dataset_generation_config` is required only when evaluating a partial dataset.
+| Model | Notes |
+|-------|-------|
+| `AgentDataset` | Collection of full or partial agent samples |
+| `AgentSample` | Full sample with `trace` |
+| `PartialAgentSample` | Sample without `trace` yet |
+| `AgentTrace` | Trace with `messages`, `final_response`, and optional `metadata` |
+
+Agent trace message roles in saved datasets must be:
+
+- `human`
+- `ai`
+- `tool`
 
 ---
 
-## Error handling
+## Results objects
+
+### `EvaluationResult`
 
 ```python
-try:
-    results = evaluation.run()
-except FileNotFoundError:
-    print("Config or dataset file not found")
-except ValueError:
-    print("Invalid configuration or dataset")
-except Exception as e:
-    print(f"Evaluation failed: {e}")
+results = evaluation.run()
+
+results.sample_results
+results.aggregate_scores
+results.summary
 ```
+
+`summary` includes:
+
+- `total_samples`
+- `providers_used`
+- `pass_rates`
+- `aggregate_scores`
+
+### `AgentEvaluationResult`
+
+```python
+agent_results = agent_evaluation.run()
+
+agent_results.sample_results
+agent_results.summary
+```
+
+Agent summaries currently contain per-metric averages for successful metric runs.
 
 ---
 
-## Next steps
+## `MetricRegistry`
 
-- **[Copy & Run](copy-run.md)** — Copy-paste examples
-- **[Examples](examples.md)** — Usage patterns
-- **[Troubleshooting](troubleshooting.md)** — Common issues
+Use `MetricRegistry` to inspect what is currently registered.
+
+```python
+from floeval.api.metrics.registry import MetricRegistry
+
+print(MetricRegistry.list_providers())
+print(MetricRegistry.list_metrics("ragas"))
+print(MetricRegistry.list_metrics("deepeval"))
+print(MetricRegistry.list_metrics("builtin"))
+print(MetricRegistry.list_all_metrics())
+```
+
+### Common providers
+
+| Provider | Notes |
+|----------|-------|
+| `ragas` | Standard and agent metrics |
+| `deepeval` | Standard LLM and retrieval metrics |
+| `builtin` | Agent judge metrics |
+| `custom` | Appears after custom metrics are defined |
+
+---
+
+## Related references
+
+- [Examples](examples.md)
+- [Agent Evaluation](agent-evaluation.md)
+- [Metrics](metrics.md)
+- [Troubleshooting](troubleshooting.md)

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "floeval"
 version = "0.1.0b1"
-description = "Multi-backend evaluation framework for LLM and RAG systems"
+description = "A multi-backend evaluation framework for LLM, RAG, and agentic systems."
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -33,8 +33,10 @@ dependencies = [
 [dependency-groups]
 dev = [
     "build>=1.4.0",
+    "mkdocs>=1.6.1",
     "mypy>=1.19.1",
     "pylint>=4.0.4",
+    "pymdown-extensions>=10.21",
     "ruff>=0.14.14",
     "twine>=6.2.0",
 ]

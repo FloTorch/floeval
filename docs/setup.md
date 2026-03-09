@@ -1,29 +1,55 @@
 # Prerequisites & Setup
 
-What you need before starting. Complete these steps once.
+Complete these steps once before using Floeval.
 
 ---
 
-## Checklist
+## Prerequisites
 
-### Python 3.11 or higher
+### Python
 
-Check: `python --version`
+Floeval requires Python 3.11 or newer.
 
-### LLM API key (OpenAI or compatible)
-
-Get from OpenAI Platform or your provider. You pass it in your **config file** or **Python script**—not via environment variables by default.
-
-### Install Floeval
+Check your version:
 
 ```bash
-pip install floeval
+python --version
 ```
 
-Or from source:
+### API access
+
+Most built-in provider-backed metrics require an OpenAI or OpenAI-compatible endpoint plus an API key.
+
+Examples in this docs site use placeholder keys. In real projects, prefer loading secrets from environment variables or a secrets manager and injecting them into your config or Python code at runtime.
+
+### Optional FloTorch support
+
+Install the `flotorch` extra only if you need Mode 4 agent evaluation:
+
+```bash
+pip install "floeval[flotorch]"
+```
+
+---
+
+## Install Floeval
+
+Package version `0.1.0b1` is a pre-release, so installation from PyPI may require `--pre`:
+
+```bash
+pip install --pre floeval
+```
+
+From local source:
 
 ```bash
 pip install -e .
+```
+
+Development dependencies:
+
+```bash
+pip install -e .[dev]
 ```
 
 ### Verify installation
@@ -32,70 +58,77 @@ pip install -e .
 floeval --version
 ```
 
-Should show `floeval 0.1.0`.
+You should see a beta version such as `floeval 0.1.0b1`.
 
 ---
 
-## How to provide credentials
+## Recommended setup commands
 
-### Option 1: Config file (CLI)
+### Linux or macOS
 
-Put your API key and endpoint in the config file:
-
-```json
-{
-  "llm_config": {
-    "base_url": "https://api.openai.com/v1",
-    "api_key": "sk-your-api-key-here",
-    "chat_model": "gpt-4o-mini",
-    "embedding_model": "text-embedding-3-small"
-  },
-  "evaluation_config": { ... }
-}
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install --pre floeval
 ```
 
-### Option 2: Python script
+### Windows PowerShell
 
-Build an `OpenAIProviderConfig` from a dict:
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install --pre floeval
+```
+
+---
+
+## Provide credentials
+
+Floeval accepts credentials through the `llm_config` object you pass in a config file or Python code.
+
+### CLI config example
+
+```yaml
+llm_config:
+  base_url: "https://api.openai.com/v1"
+  api_key: "your-api-key"
+  chat_model: "gpt-4o-mini"
+  chat_endpoint: "chat/completions"
+  embedding_model: "text-embedding-3-small"
+  embedding_endpoint: "embeddings"
+```
+
+### Python example
 
 ```python
+import os
+
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
 
-LLM_CONFIG = {
-    "base_url": "https://api.openai.com/v1",
-    "api_key": "sk-your-api-key-here",
-    "chat_model": "gpt-4o-mini",
-    "embedding_model": "text-embedding-3-small",
-    "system_prompt": "You are a helpful assistant."  # optional
-}
-
-llm_config = OpenAIProviderConfig(**LLM_CONFIG)
+llm_config = OpenAIProviderConfig(
+    base_url="https://api.openai.com/v1",
+    api_key=os.environ["OPENAI_API_KEY"],
+    chat_model="gpt-4o-mini",
+    embedding_model="text-embedding-3-small",
+    system_prompt="You are a helpful assistant.",  # optional
+)
 ```
 
-You can load the dict from env vars, a secrets file, or any source—Floeval just needs the dict structure.
+### Agent evaluation with FloTorch
+
+When you use Mode 4 agent evaluation, FloTorch can also read:
+
+- `FLOTORCH_BASE_URL`
+- `FLOTORCH_API_KEY`
+
+If you already pass `llm_config` with the gateway base URL and key, you may not need separate FloTorch environment variables.
 
 ---
 
-## Setup commands
+## Next steps
 
-### Linux / macOS
-
-```bash
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate
-
-# Install
-pip install floeval
-```
-
-### Windows
-
-```bash
-# Create virtual environment (recommended)
-python -m venv venv
-venv\Scripts\activate
-
-# Install
-pip install floeval
-```
+- [Examples](examples.md) for CLI, Python, prompt expansion, and agent workflows
+- [Agent Evaluation](agent-evaluation.md) for trace-based scoring
+- [API Reference](api-reference.md) for the full config surface

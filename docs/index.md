@@ -1,64 +1,67 @@
 # Floeval User Guide
 
-Set up and start evaluating your LLM responses using Floeval. All functionalities, flows, and usage options in one place.
+Floeval supports evaluation workflows for LLM, RAG, and agent systems.
 
 ---
 
-## What is Floeval?
+## Supported workflows
 
-Floeval evaluates LLM and RAG system responses using metrics like `answer_relevancy` and `faithfulness`.
+Floeval supports the following workflows:
 
-### What it solves
-
-- Measures how relevant and accurate your LLM answers are
-- Helps you verify RAG systems stay grounded in context
-
-### Two ways to use
-
-| Way | Description |
-|-----|-------------|
-| **Flow 1: CLI** | Run evaluations from command line |
-| **Flow 2: Python** | Integrate into your code |
-
-### Built-in metrics
-
-- **RAGAS & DeepEval**: `answer_relevancy`, `faithfulness`
-- Plus create your own custom metrics
+| Workflow | Best for | Main entry point |
+|----------|----------|------------------|
+| Standard CLI evaluation | Evaluation from config and dataset files | `floeval evaluate` |
+| Standard Python evaluation | App integration and programmatic control | `Evaluation(...)` |
+| Agent evaluation | Scoring traces, tool use, and final outcomes | `AgentEvaluation(...)` or `floeval evaluate --agent` |
+| Trace capture | Turning agent runs into evaluation-ready traces | `floeval.utils.agent_trace` |
 
 ---
 
-## Quick decision
+## Core capabilities
 
-| I want to... | Use |
-|--------------|-----|
-| Run evaluations quickly | CLI (Flow 1) |
-| Integrate into my app | Python (Flow 2) |
-| Check answer relevancy | `answer_relevancy` metric |
-| Check RAG accuracy | `faithfulness` metric |
-| Create my own check | Custom metrics |
-
----
-
-## Quick start
-
-1. `pip install floeval`
-2. Create config file (YAML/JSON) with `llm_config` (base_url, api_key, chat_model, embedding_model)
-3. Create dataset (JSON/JSONL) with samples
-4. `floeval evaluate -c config.yaml -d dataset.json`
-
-!!! note "API credentials"
-    Pass your API key in the config file (`llm_config.api_key`) or in your Python script. See [Setup](setup.md) and [Examples](examples.md) for details.
+- Run `ragas`, `deepeval`, builtin, and custom metrics in the same project
+- Evaluate full datasets that already contain `llm_response`
+- Evaluate partial datasets and let Floeval generate missing responses automatically
+- Expand partial datasets across prompt variants with `prompt_ids` and `prompts_file`
+- Score agent traces with agent-specific metrics
+- Capture traces from Python callables, LangChain-style agents, or optional FloTorch runners
 
 ---
 
-## What's next?
+## Documentation map
 
-| Section | Content |
-|---------|---------|
-| [Prerequisites & Setup](setup.md) | Python, API key, install, verify |
-| [Quick Copy & Run](copy-run.md) | Copy-paste ready examples (no reading required!) |
-| [Flow 1: CLI](examples.md#flow-1-using-cli) | Run from command line |
-| [Flow 2: Python](examples.md#flow-2-using-python) | Integrate into your app |
-| [Metrics & Custom](metrics.md) | Built-in metrics and custom metrics |
-| [API Reference](api-reference.md) | Complete config and API reference |
-| [Troubleshooting](troubleshooting.md) | Common issues and fixes |
+| Task | Reference |
+|------|-----------|
+| Run evaluation from files | [Examples](examples.md#cli-workflows) |
+| Compare providers or metric IDs | [Metrics](metrics.md) |
+| Define custom scoring logic | [Custom Metrics](custom-metrics.md) |
+| Evaluate an agent trace dataset | [Agent Evaluation](agent-evaluation.md) |
+| Add trace capture to an agent | [Agent Tracing](agent-tracing.md) |
+| Check config fields and constructors | [API Reference](api-reference.md) |
+
+---
+
+## Basic workflow
+
+1. Install Floeval. See [Prerequisites & Setup](setup.md) for version and environment details.
+2. Create a config file with `llm_config` and `evaluation_config`
+3. Create a dataset file in `.json` or `.jsonl`
+4. Run `floeval evaluate -c config.yaml -d dataset.json`
+
+!!! note "Credential handling"
+    Examples use placeholder API keys for clarity. In real usage, prefer loading secrets from environment variables or a secrets manager and injecting them into your config or Python code at runtime.
+
+---
+
+## References
+
+| Section | What it covers |
+|---------|----------------|
+| [Prerequisites & Setup](setup.md) | installation, beta versioning, credentials, optional FloTorch setup |
+| [Minimal Examples](copy-run.md) | short copy-paste examples |
+| [Examples](examples.md) | CLI, Python, prompt expansion, mixed providers, and agent flows |
+| [Agent Evaluation](agent-evaluation.md) | dataset shapes, CLI `--agent`, Python callable mode, FloTorch mode |
+| [Agent Tracing](agent-tracing.md) | `capture_trace`, `log_turn`, `log_tool_result`, `wrap_langchain_agent` |
+| [Metrics](metrics.md) | the current metric catalog by provider |
+| [API Reference](api-reference.md) | config keys, dataset models, CLI signatures, and public APIs |
+| [Troubleshooting](troubleshooting.md) | install, config, dataset, generation, and agent-eval fixes |
