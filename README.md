@@ -1,6 +1,6 @@
 # Floeval
 
-Evaluation framework for LLM and RAG systems.
+A multi-backend evaluation framework for LLM, RAG, and agentic systems.
 
 ## Overview
 
