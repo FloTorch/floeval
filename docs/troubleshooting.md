@@ -1,322 +1,275 @@
 # Troubleshooting
 
-Quick fixes for common issues.
+Solutions to common installation, configuration, dataset, and runtime issues.
 
 ---
 
-## Installation Issues
+## Installation issues
 
-### "requires-python = '>=3.11'"
+### Python version is too old
 
-**Problem**: Python version too old
+Symptom:
 
-**Fix**:
+- install errors mentioning `requires-python >=3.11`
+
+Fix:
+
 ```bash
-# Check version
 python --version
-
-# Need Python 3.11 or higher
-# Download from python.org or use:
-# Ubuntu: sudo apt install python3.11
-# macOS: brew install python@3.11
 ```
 
-### "pip install floeval" fails
+Upgrade to Python 3.11 or newer, then reinstall.
 
-**Fix**:
+### Package install fails
+
+Try upgrading pip first:
+
 ```bash
-# Update pip first
-pip install --upgrade pip
+python -m pip install --upgrade pip
+python -m pip install --pre floeval
+```
 
-# Then install
-pip install floeval
+If you are installing from the local repo:
+
+```bash
+python -m pip install -e .
 ```
 
 ---
 
-## Configuration Issues
+## Config issues
 
-### "Authentication failed"
+### Authentication failed
 
-**Problem**: API key not set or wrong
+Check that `llm_config.api_key` and `llm_config.base_url` are correct for your provider.
 
-**Fix**: Ensure your config file has the correct `api_key` in `llm_config`:
-
-```json
-{
-  "llm_config": {
-    "base_url": "https://api.openai.com/v1",
-    "api_key": "sk-your-key-here",
-    "chat_model": "gpt-4o-mini",
-    "embedding_model": "text-embedding-3-small"
-  },
-  ...
-}
+```yaml
+llm_config:
+  base_url: "https://api.openai.com/v1"
+  api_key: "your-api-key"
+  chat_model: "gpt-4o-mini"
+  embedding_model: "text-embedding-3-small"
 ```
 
-Or in Python, pass the key in your `LLM_CONFIG` dict when creating `OpenAIProviderConfig`.
+If you load credentials from environment variables, print or validate them before constructing `OpenAIProviderConfig`.
 
-### "Missing 'llm_config' section"
+### Missing `llm_config`
 
-**Problem**: Config file has wrong structure
+Both `floeval evaluate` and `floeval generate` expect a top-level `llm_config` section.
 
-**Fix**: Use `llm_config` (not `gateway_config`). Required keys: `base_url`, `api_key`, `chat_model`, `embedding_model`.
+### Partial dataset but no generator model
 
-### "dataset_generator_model is required for partial datasets"
+Symptom:
 
-**Problem**: Using a partial dataset (samples without `llm_response`) but config lacks generator model.
+- `dataset_generator_model is required for partial datasets`
+- `No generator_model in dataset_generation_config`
 
-**Fix**: Add `dataset_generation_config` to your config:
+Fix:
 
-```json
-{
-  "dataset_generation_config": {
-    "generator_model": "gpt-4o-mini"
-  }
-}
+```yaml
+dataset_generation_config:
+  generator_model: "gpt-4o-mini"
 ```
 
----
+You can also provide `evaluation_config.dataset_generator_model`, but `dataset_generation_config.generator_model` is the clearest option.
 
-## Dataset Issues
+### Agent CLI mode missing `agent_name`
 
-### "Field required: contexts"
+Symptom:
 
-**Problem**: Using `faithfulness` metric without contexts
+- partial agent evaluation fails with a message that `agent_name` is required
 
-**Fix Option 1** - Add contexts to dataset:
-```json
-{
-  "user_input": "Question?",
-  "llm_response": "Answer.",
-  "contexts": ["Your context here"]
-}
-```
+Fix:
 
-**Fix Option 2** - Remove faithfulness metric:
 ```yaml
 evaluation_config:
+  agent_name: "support-agent"
   metrics:
-    - answer_relevancy  # Only this
+    - "goal_achievement"
 ```
 
-### "Field required: llm_response"
-
-**Problem**: Using full-dataset path with samples that lack `llm_response`
-
-**Fix**: Either ensure every sample has `llm_response` (full dataset), or use a partial dataset and add `dataset_generation_config` so the CLI generates responses.
-
-### "Invalid JSON"
-
-**Problem**: JSON syntax error
-
-**Fix**:
-```bash
-# Validate JSON using Python
-python -c "import json; json.load(open('dataset.json'))"
-```
+This is required for CLI partial agent evaluation with `--agent`.
 
 ---
 
-## Generate Command Issues
+## Dataset issues
 
-### "floeval generate: error: the following arguments are required: -o, --output"
+### `faithfulness` or retrieval metrics fail
 
-**Problem**: Forgot to specify output file for `floeval generate`
+Make sure your samples include the fields those metrics need:
 
-**Fix**: The `generate` command requires an output file to save generated responses:
+- `contexts` for grounding and retrieval checks
+- `ground_truth` for recall and precision style metrics where applicable
 
-```bash
-floeval generate -c config.yaml -d partial.json -o complete.json
-```
-
-### "No generator_model in dataset_generation_config"
-
-**Problem**: Config missing `dataset_generation_config` for generate command
-
-**Fix**: Add to your config:
+Minimal example:
 
 ```json
 {
-  "dataset_generation_config": {
-    "generator_model": "gpt-4o-mini"
-  }
+  "samples": [
+    {
+      "user_input": "What is RAG?",
+      "llm_response": "RAG stands for Retrieval-Augmented Generation.",
+      "contexts": ["RAG combines retrieval with generation."],
+      "ground_truth": "Retrieval-Augmented Generation"
+    }
+  ]
 }
 ```
 
-### "Input dataset has llm_response but shouldn't"
+### Standard dataset missing `llm_response`
 
-**Problem**: Using `floeval generate` on a full dataset (that already has responses)
+If a standard dataset sample has no `llm_response`, treat it as a partial dataset and add generation config.
 
-**Fix**: Use `floeval evaluate` instead, or create a partial dataset without `llm_response`:
+### Agent dataset role errors
 
-```bash
-# Full dataset → evaluate
-floeval evaluate -c config.yaml -d full_dataset.json -o results.json
+In saved agent trace datasets, message roles must be:
 
-# Partial dataset → generate
-floeval generate -c config.yaml -d partial_dataset.json -o complete.json
-```
+- `human`
+- `ai`
+- `tool`
 
-### Generated dataset has incorrect format
+### Invalid JSON
 
-**Problem**: Output from `floeval generate` doesn't match expected format
-
-**Fix**: Check that input partial dataset is valid:
+Validate the file before running Floeval:
 
 ```bash
-# Validate input
-python -c "import json; d = json.load(open('partial.json')); print('Samples:', len(d.get('samples', [])))"
-
-# Generate
-floeval generate -c config.yaml -d partial.json -o complete.json
-
-# Validate output
-python -c "import json; d = json.load(open('complete.json')); s = d['samples'][0]; print('Has response:', 'llm_response' in s)"
+python -m json.tool dataset.json
 ```
 
 ---
 
-## Runtime Issues
+## Generate command issues
 
-### "Rate limit exceeded"
+### Missing output path
 
-**Problem**: Too many API calls too fast
+`floeval generate` always requires `-o` or `--output`:
 
-**Fix**:
-- Wait 30 seconds and retry
-- Use fewer samples for testing
-- Check OpenAI account has credits
+```bash
+floeval generate -c config.yaml -d partial.json -o complete.json
+```
 
-### Evaluation takes too long
+### Wrong output extension
 
-**Fix**:
-- Start with 2-3 samples to test
-- Use `gpt-4o-mini` instead of `gpt-4`
-- Check internet connection
+`floeval generate` currently exports only:
+
+- `.json`
+- `.jsonl`
+
+### Dataset already has `llm_response`
+
+If the input dataset already contains responses, use `floeval evaluate` instead of `floeval generate`.
+
+### Prompt expansion not happening
+
+Check all of the following:
+
+- samples include `prompt_ids`
+- `evaluation_config.prompts_file` points to a real YAML or JSON prompt file
+- prompt IDs used in the dataset exist in that prompt file
+
+---
+
+## Agent evaluation issues
+
+### FloTorch import errors
+
+Symptom:
+
+- agent CLI or runner setup fails because FloTorch modules are missing
+
+Fix:
+
+```bash
+python -m pip install "floeval[flotorch]"
+```
+
+### FloTorch credentials missing
+
+Provide gateway credentials through either:
+
+- `llm_config.base_url` and `llm_config.api_key`
+- `FLOTORCH_BASE_URL` and `FLOTORCH_API_KEY`
+
+### `tool_call_accuracy` returns an error
+
+This metric needs `reference_tool_calls` in each agent sample.
+
+Example:
+
+```json
+{
+  "reference_tool_calls": [
+    {
+      "name": "search",
+      "args": {"query": "reset password"}
+    }
+  ]
+}
+```
+
+---
+
+## Runtime issues
+
+### Rate limits or slow runs
+
+Try:
+
+- using fewer samples while iterating
+- using a smaller model such as `gpt-4o-mini`
+- lowering generation fan-out with `dataset_generation_config.max_concurrency`
 
 ### Low scores unexpectedly
 
-**Check**:
-1. Is your LLM answering the right question?
-2. Are contexts relevant to the question?
-3. Is threshold set too high?
+Check:
+
+1. whether the model is answering the intended question
+2. whether contexts are relevant and clean
+3. whether thresholds are too strict for your stage of development
+4. whether you selected the right provider and metric for the task
 
 ---
 
-## Common Mistakes
+## Validation
 
-### API key in config
-
-You can pass your API key in the config file or in your Python script. If using a config file, ensure `llm_config.api_key` is set. Avoid committing real keys to version control—use environment variables or a secrets manager to populate the config at runtime if preferred.
-
-### Missing virtual environment
-
-❌ **Don't**:
-```bash
-pip install floeval  # Global install
-```
-
-✅ **Do**:
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install floeval
-```
-
-### Testing with too many samples
-
-❌ **Don't**:
-```json
-{
-  "samples": [/* 1000 samples */]
-}
-```
-
-✅ **Do**:
-```json
-{
-  "samples": [/* Start with 2-3 samples */]
-}
-```
-
----
-
-## Quick Checks
-
-### Verify Installation
+### Verify the installation
 
 ```bash
 floeval --version
 ```
 
-### Verify Config
-
-```bash
-floeval evaluate -c sample_data/eval_config.json -d sample_data/full_dataset.json
-```
-
-### Verify Dataset (Python)
+### Verify a standard dataset loads
 
 ```python
 from floeval import DatasetLoader
 
 dataset = DatasetLoader.from_file("dataset.json", partial_dataset=False)
-print(f"✅ {len(dataset.samples)} samples loaded")
+print(len(dataset.samples))
 ```
+
+### Verify an agent dataset loads
+
+```python
+from floeval.config.schemas.io.agent_dataset import AgentDataset
+
+dataset = AgentDataset.from_file("agent_dataset.json")
+print(len(dataset.samples))
+print(dataset.is_partial)
+```
+
+### Smoke-test your own files
+
+```bash
+floeval evaluate -c your_config.yaml -d your_dataset.json
+```
+
+Replace `your_config.yaml` and `your_dataset.json` with real files from your project.
 
 ---
 
-## Quick Reference
+## Related references
 
-### Required Config (evaluate)
-
-```json
-{
-  "llm_config": {
-    "base_url": "https://api.openai.com/v1",
-    "api_key": "your-key",
-    "chat_model": "gpt-4o-mini",
-    "embedding_model": "text-embedding-3-small"
-  },
-  "evaluation_config": {
-    "metrics": ["ragas:answer_relevancy", "ragas:faithfulness"]
-  }
-}
-```
-
-### Required Config (generate)
-
-```json
-{
-  "llm_config": {
-    "base_url": "https://api.openai.com/v1",
-    "api_key": "your-key",
-    "chat_model": "gpt-4o-mini",
-    "embedding_model": "text-embedding-3-small"
-  },
-  "dataset_generation_config": {
-    "generator_model": "gpt-4o-mini"
-  }
-}
-```
-
-### Partial Dataset Config
-
-When samples lack `llm_response`, add:
-
-```json
-{
-  "dataset_generation_config": {
-    "generator_model": "gpt-4o-mini"
-  }
-}
-```
-
----
-
-## Still Stuck?
-
-1. **Check examples**: See working code in [Examples](examples.md)
-2. **Review metrics**: Understand requirements in [Metrics](metrics.md)
-3. **Check API reference**: Full details in [API Reference](api-reference.md)
+- [Examples](examples.md)
+- [Agent Evaluation](agent-evaluation.md)
+- [Metrics](metrics.md)
+- [API Reference](api-reference.md)

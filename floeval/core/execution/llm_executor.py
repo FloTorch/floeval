@@ -142,6 +142,27 @@ class OpenAIProvider(BaseLLMProvider):
         logger.debug("LLM async response: %s chars", len(content) if content else 0)
         return content or ""
 
+    async def agenerate_with_messages(
+        self, messages: list[dict[str, str]], **kwargs: Any
+    ) -> str:
+        """Generate with full message list (e.g. for few-shot prompting).
+
+        Args:
+            messages: Full chat message list, e.g. [system, user, assistant, user, ...].
+            **kwargs: Additional params passed to chat.completions.create.
+
+        Returns:
+            Generated response text.
+        """
+        params: dict[str, Any] = {
+            "model": self._chat_model,
+            "messages": messages,
+        }
+        params.update(kwargs)
+        response = await self.async_client.chat.completions.create(**params)
+        content = response.choices[0].message.content
+        return content or ""
+
     def generate_embedding(self, text: str, **kwargs: Any) -> list[float]:
         """Sync embedding generation.
 

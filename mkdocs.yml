@@ -1,5 +1,5 @@
 site_name: Floeval
-site_url: https://github.com/FloTorch/Floeval
+site_url: https://github.com/FloTorch/floeval
 site_description: Multi-backend evaluation framework for LLM and RAG systems
 
 theme:
@@ -28,8 +28,10 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Prerequisites & Setup: setup.md
-  - Quick Copy & Run: copy-run.md
+  - Minimal Examples: copy-run.md
   - All Examples: examples.md
+  - Agent Evaluation: agent-evaluation.md
+  - Agent Tracing: agent-tracing.md
   - Metrics: metrics.md
   - Custom Metrics: custom-metrics.md
   - API Reference: api-reference.md
