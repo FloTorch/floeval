@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/FloTorch/Floeval/custom-metrics/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/FloTorch/floeval/custom-metrics/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
     <title>Custom Metrics - Floeval</title>
     <link rel="stylesheet" href="../css/theme.css" />
@@ -15,7 +15,7 @@
         // Current page data
         var mkdocs_page_name = "Custom Metrics";
         var mkdocs_page_input_path = "custom-metrics.md";
-        var mkdocs_page_url = "/FloTorch/Floeval/custom-metrics/";
+        var mkdocs_page_url = "/FloTorch/floeval/custom-metrics/";
       </script>
     
     <!--[if lt IE 9]>
@@ -54,11 +54,19 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../copy-run/">Quick Copy & Run</a>
+                <li class="toctree-l1"><a class="reference internal" href="../copy-run/">Minimal Examples</a>
                 </li>
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../examples/">All Examples</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agent-evaluation/">Agent Evaluation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agent-tracing/">Agent Tracing</a>
                 </li>
               </ul>
               <ul>
@@ -78,13 +86,13 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#custom_metric-options">@custom_metric options</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#execute_via-running-metrics-through-providers">execute_via: Running metrics through providers</a>
+    <li class="toctree-l3"><a class="reference internal" href="#execute_via">execute_via</a>
     </li>
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#available-parameters-in-custom_metric">Available parameters in @custom_metric</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example-using-various-parameters">Example: Using various parameters</a>
+    <li class="toctree-l3"><a class="reference internal" href="#parameter-examples">Parameter examples</a>
     </li>
         </ul>
     </li>
@@ -143,7 +151,7 @@
 <hr />
 <h2 id="two-types-of-custom-metrics">Two types of custom metrics</h2>
 <h3 id="1-custom_metric-decorator">1. @custom_metric decorator</h3>
-<p>Function-based metric. Supports params: <code>response</code>, <code>question</code>, <code>contexts</code>, <code>context</code> (MetricContext), <code>llm</code> (SimpleLLMHelper), <code>sample</code>.</p>
+<p>Use <code>@custom_metric</code> for function-based metrics. Supported parameters include <code>response</code>, <code>question</code>, <code>contexts</code>, <code>context</code> (<code>MetricContext</code>), <code>llm</code> (<code>SimpleLLMHelper</code>), and <code>sample</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.api.metrics.custom</span><span class="w"> </span><span class="kn">import</span> <span class="n">custom_metric</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nd">@custom_metric</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
@@ -151,7 +159,7 @@
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">response</span><span class="p">)</span> <span class="o">/</span> <span class="mf">100.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="2-criteria-llm-as-judge">2. criteria() — LLM-as-judge</h3>
-<p>Natural language description. LLM evaluates.</p>
+<p>Use <code>criteria()</code> to define an evaluation criterion in natural language and have an LLM score responses against it.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.api.metrics.custom</span><span class="w"> </span><span class="kn">import</span> <span class="n">criteria</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">empathy</span> <span class="o">=</span> <span class="n">criteria</span><span class="p">(</span>
@@ -161,7 +169,7 @@
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span>
 </code></pre></div>
 <hr />
-<h2 id="custom_metric-options">@custom_metric options</h2>
+<h2 id="custom_metric-options"><code>@custom_metric</code> options</h2>
 <table>
 <thead>
 <tr>
@@ -188,8 +196,8 @@
 </tr>
 </tbody>
 </table>
-<h3 id="execute_via-running-metrics-through-providers">execute_via: Running metrics through providers</h3>
-<p>By default, custom metrics run standalone (no API calls). Use <code>execute_via</code> to integrate with RAGAS or DeepEval:</p>
+<h3 id="execute_via"><code>execute_via</code></h3>
+<p>By default, custom metrics run standalone and do not depend on provider execution. Use <code>execute_via</code> to route a custom metric through RAGAS or DeepEval:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nd">@custom_metric</span><span class="p">(</span><span class="n">execute_via</span><span class="o">=</span><span class="s2">&quot;ragas&quot;</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">semantic_consistency</span><span class="p">(</span><span class="n">response</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">llm</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Uses RAGAS provider context and LLM.&quot;&quot;&quot;</span>
@@ -245,7 +253,7 @@
 </tr>
 </tbody>
 </table>
-<h3 id="example-using-various-parameters">Example: Using various parameters</h3>
+<h3 id="parameter-examples">Parameter examples</h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.api.metrics.custom</span><span class="w"> </span><span class="kn">import</span> <span class="n">custom_metric</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Simple: just response</span>
@@ -368,7 +376,7 @@
 <hr />
 <h2 id="next-steps">Next steps</h2>
 <ul>
-<li><strong><a href="../copy-run/">Copy &amp; Run</a></strong> — Copy-paste full examples</li>
+<li><strong><a href="../copy-run/">Minimal Examples</a></strong> — Compact runnable examples</li>
 <li><strong><a href="../metrics/">Metrics</a></strong> — Built-in metrics reference</li>
 <li><strong><a href="../examples/">Examples</a></strong> — All usage patterns</li>
 </ul>

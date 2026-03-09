@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="Multi-backend evaluation framework for LLM and RAG systems" /><link rel="canonical" href="https://github.com/FloTorch/Floeval/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="Multi-backend evaluation framework for LLM and RAG systems" /><link rel="canonical" href="https://github.com/FloTorch/floeval/" />
       <link rel="shortcut icon" href="img/favicon.ico" />
     <title>Floeval</title>
     <link rel="stylesheet" href="css/theme.css" />
@@ -15,7 +15,7 @@
         // Current page data
         var mkdocs_page_name = "Home";
         var mkdocs_page_input_path = "index.md";
-        var mkdocs_page_url = "/FloTorch/Floeval/";
+        var mkdocs_page_url = "/FloTorch/floeval/";
       </script>
     
     <!--[if lt IE 9]>
@@ -48,21 +48,15 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="#">Home</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#what-is-floeval">What is Floeval?</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#what-it-solves">What it solves</a>
+    <li class="toctree-l2"><a class="reference internal" href="#supported-workflows">Supported workflows</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#two-ways-to-use">Two ways to use</a>
+    <li class="toctree-l2"><a class="reference internal" href="#core-capabilities">Core capabilities</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#built-in-metrics">Built-in metrics</a>
+    <li class="toctree-l2"><a class="reference internal" href="#documentation-map">Documentation map</a>
     </li>
-        </ul>
+    <li class="toctree-l2"><a class="reference internal" href="#basic-workflow">Basic workflow</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#quick-decision">Quick decision</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#quick-start">Quick start</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#whats-next">What's next?</a>
+    <li class="toctree-l2"><a class="reference internal" href="#references">References</a>
     </li>
     </ul>
                 </li>
@@ -72,11 +66,19 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="copy-run/">Quick Copy & Run</a>
+                <li class="toctree-l1"><a class="reference internal" href="copy-run/">Minimal Examples</a>
                 </li>
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="examples/">All Examples</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="agent-evaluation/">Agent Evaluation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="agent-tracing/">Agent Tracing</a>
                 </li>
               </ul>
               <ul>
@@ -119,120 +121,140 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="floeval-user-guide">Floeval User Guide</h1>
-<p>Set up and start evaluating your LLM responses using Floeval. All functionalities, flows, and usage options in one place.</p>
+<p>Floeval supports evaluation workflows for LLM, RAG, and agent systems.</p>
 <hr />
-<h2 id="what-is-floeval">What is Floeval?</h2>
-<p>Floeval evaluates LLM and RAG system responses using metrics like <code>answer_relevancy</code> and <code>faithfulness</code>.</p>
-<h3 id="what-it-solves">What it solves</h3>
-<ul>
-<li>Measures how relevant and accurate your LLM answers are</li>
-<li>Helps you verify RAG systems stay grounded in context</li>
-</ul>
-<h3 id="two-ways-to-use">Two ways to use</h3>
+<h2 id="supported-workflows">Supported workflows</h2>
+<p>Floeval supports the following workflows:</p>
 <table>
 <thead>
 <tr>
-<th>Way</th>
-<th>Description</th>
+<th>Workflow</th>
+<th>Best for</th>
+<th>Main entry point</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Flow 1: CLI</strong></td>
-<td>Run evaluations from command line</td>
+<td>Standard CLI evaluation</td>
+<td>Evaluation from config and dataset files</td>
+<td><code>floeval evaluate</code></td>
 </tr>
 <tr>
-<td><strong>Flow 2: Python</strong></td>
-<td>Integrate into your code</td>
+<td>Standard Python evaluation</td>
+<td>App integration and programmatic control</td>
+<td><code>Evaluation(...)</code></td>
+</tr>
+<tr>
+<td>Agent evaluation</td>
+<td>Scoring traces, tool use, and final outcomes</td>
+<td><code>AgentEvaluation(...)</code> or <code>floeval evaluate --agent</code></td>
+</tr>
+<tr>
+<td>Trace capture</td>
+<td>Turning agent runs into evaluation-ready traces</td>
+<td><code>floeval.utils.agent_trace</code></td>
 </tr>
 </tbody>
 </table>
-<h3 id="built-in-metrics">Built-in metrics</h3>
+<hr />
+<h2 id="core-capabilities">Core capabilities</h2>
 <ul>
-<li><strong>RAGAS &amp; DeepEval</strong>: <code>answer_relevancy</code>, <code>faithfulness</code></li>
-<li>Plus create your own custom metrics</li>
+<li>Run <code>ragas</code>, <code>deepeval</code>, builtin, and custom metrics in the same project</li>
+<li>Evaluate full datasets that already contain <code>llm_response</code></li>
+<li>Evaluate partial datasets and let Floeval generate missing responses automatically</li>
+<li>Expand partial datasets across prompt variants with <code>prompt_ids</code> and <code>prompts_file</code></li>
+<li>Score agent traces with agent-specific metrics</li>
+<li>Capture traces from Python callables, LangChain-style agents, or optional FloTorch runners</li>
 </ul>
 <hr />
-<h2 id="quick-decision">Quick decision</h2>
+<h2 id="documentation-map">Documentation map</h2>
 <table>
 <thead>
 <tr>
-<th>I want to...</th>
-<th>Use</th>
+<th>Task</th>
+<th>Reference</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Run evaluations quickly</td>
-<td>CLI (Flow 1)</td>
+<td>Run evaluation from files</td>
+<td><a href="examples/#cli-workflows">Examples</a></td>
 </tr>
 <tr>
-<td>Integrate into my app</td>
-<td>Python (Flow 2)</td>
+<td>Compare providers or metric IDs</td>
+<td><a href="metrics/">Metrics</a></td>
 </tr>
 <tr>
-<td>Check answer relevancy</td>
-<td><code>answer_relevancy</code> metric</td>
+<td>Define custom scoring logic</td>
+<td><a href="custom-metrics/">Custom Metrics</a></td>
 </tr>
 <tr>
-<td>Check RAG accuracy</td>
-<td><code>faithfulness</code> metric</td>
+<td>Evaluate an agent trace dataset</td>
+<td><a href="agent-evaluation/">Agent Evaluation</a></td>
 </tr>
 <tr>
-<td>Create my own check</td>
-<td>Custom metrics</td>
+<td>Add trace capture to an agent</td>
+<td><a href="agent-tracing/">Agent Tracing</a></td>
+</tr>
+<tr>
+<td>Check config fields and constructors</td>
+<td><a href="api-reference/">API Reference</a></td>
 </tr>
 </tbody>
 </table>
 <hr />
-<h2 id="quick-start">Quick start</h2>
+<h2 id="basic-workflow">Basic workflow</h2>
 <ol>
-<li><code>pip install floeval</code></li>
-<li>Create config file (YAML/JSON) with <code>llm_config</code> (base_url, api_key, chat_model, embedding_model)</li>
-<li>Create dataset (JSON/JSONL) with samples</li>
-<li><code>floeval evaluate -c config.yaml -d dataset.json</code></li>
+<li>Install Floeval. See <a href="setup/">Prerequisites &amp; Setup</a> for version and environment details.</li>
+<li>Create a config file with <code>llm_config</code> and <code>evaluation_config</code></li>
+<li>Create a dataset file in <code>.json</code> or <code>.jsonl</code></li>
+<li>Run <code>floeval evaluate -c config.yaml -d dataset.json</code></li>
 </ol>
 <div class="admonition note">
-<p class="admonition-title">API credentials</p>
-<p>Pass your API key in the config file (<code>llm_config.api_key</code>) or in your Python script. See <a href="setup/">Setup</a> and <a href="examples/">Examples</a> for details.</p>
+<p class="admonition-title">Credential handling</p>
+<p>Examples use placeholder API keys for clarity. In real usage, prefer loading secrets from environment variables or a secrets manager and injecting them into your config or Python code at runtime.</p>
 </div>
 <hr />
-<h2 id="whats-next">What's next?</h2>
+<h2 id="references">References</h2>
 <table>
 <thead>
 <tr>
 <th>Section</th>
-<th>Content</th>
+<th>What it covers</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><a href="setup/">Prerequisites &amp; Setup</a></td>
-<td>Python, API key, install, verify</td>
+<td>installation, beta versioning, credentials, optional FloTorch setup</td>
 </tr>
 <tr>
-<td><a href="copy-run/">Quick Copy &amp; Run</a></td>
-<td>Copy-paste ready examples (no reading required!)</td>
+<td><a href="copy-run/">Minimal Examples</a></td>
+<td>short copy-paste examples</td>
 </tr>
 <tr>
-<td><a href="examples/#flow-1-using-cli">Flow 1: CLI</a></td>
-<td>Run from command line</td>
+<td><a href="examples/">Examples</a></td>
+<td>CLI, Python, prompt expansion, mixed providers, and agent flows</td>
 </tr>
 <tr>
-<td><a href="examples/#flow-2-using-python">Flow 2: Python</a></td>
-<td>Integrate into your app</td>
+<td><a href="agent-evaluation/">Agent Evaluation</a></td>
+<td>dataset shapes, CLI <code>--agent</code>, Python callable mode, FloTorch mode</td>
 </tr>
 <tr>
-<td><a href="metrics/">Metrics &amp; Custom</a></td>
-<td>Built-in metrics and custom metrics</td>
+<td><a href="agent-tracing/">Agent Tracing</a></td>
+<td><code>capture_trace</code>, <code>log_turn</code>, <code>log_tool_result</code>, <code>wrap_langchain_agent</code></td>
+</tr>
+<tr>
+<td><a href="metrics/">Metrics</a></td>
+<td>the current metric catalog by provider</td>
 </tr>
 <tr>
 <td><a href="api-reference/">API Reference</a></td>
-<td>Complete config and API reference</td>
+<td>config keys, dataset models, CLI signatures, and public APIs</td>
 </tr>
 <tr>
 <td><a href="troubleshooting/">Troubleshooting</a></td>
-<td>Common issues and fixes</td>
+<td>install, config, dataset, generation, and agent-eval fixes</td>
 </tr>
 </tbody>
 </table>
@@ -284,5 +306,5 @@
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2026-02-19 08:00:19.430729+00:00
+Build Date UTC : 2026-03-09 08:13:24.750554+00:00
 -->

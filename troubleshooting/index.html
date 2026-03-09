@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/FloTorch/Floeval/troubleshooting/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/FloTorch/floeval/troubleshooting/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
     <title>Troubleshooting - Floeval</title>
     <link rel="stylesheet" href="../css/theme.css" />
@@ -15,7 +15,7 @@
         // Current page data
         var mkdocs_page_name = "Troubleshooting";
         var mkdocs_page_input_path = "troubleshooting.md";
-        var mkdocs_page_url = "/FloTorch/Floeval/troubleshooting/";
+        var mkdocs_page_url = "/FloTorch/floeval/troubleshooting/";
       </script>
     
     <!--[if lt IE 9]>
@@ -54,11 +54,19 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../copy-run/">Quick Copy & Run</a>
+                <li class="toctree-l1"><a class="reference internal" href="../copy-run/">Minimal Examples</a>
                 </li>
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../examples/">All Examples</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agent-evaluation/">Agent Evaluation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agent-tracing/">Agent Tracing</a>
                 </li>
               </ul>
               <ul>
@@ -76,87 +84,81 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="#">Troubleshooting</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#installation-issues">Installation Issues</a>
+    <li class="toctree-l2"><a class="reference internal" href="#installation-issues">Installation issues</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#requires-python-311">"requires-python = '&gt;=3.11'"</a>
+    <li class="toctree-l3"><a class="reference internal" href="#python-version-is-too-old">Python version is too old</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#pip-install-floeval-fails">"pip install floeval" fails</a>
+    <li class="toctree-l3"><a class="reference internal" href="#package-install-fails">Package install fails</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#configuration-issues">Configuration Issues</a>
+    <li class="toctree-l2"><a class="reference internal" href="#config-issues">Config issues</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#authentication-failed">"Authentication failed"</a>
+    <li class="toctree-l3"><a class="reference internal" href="#authentication-failed">Authentication failed</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#missing-llm_config-section">"Missing 'llm_config' section"</a>
+    <li class="toctree-l3"><a class="reference internal" href="#missing-llm_config">Missing llm_config</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#dataset_generator_model-is-required-for-partial-datasets">"dataset_generator_model is required for partial datasets"</a>
+    <li class="toctree-l3"><a class="reference internal" href="#partial-dataset-but-no-generator-model">Partial dataset but no generator model</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#agent-cli-mode-missing-agent_name">Agent CLI mode missing agent_name</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#dataset-issues">Dataset Issues</a>
+    <li class="toctree-l2"><a class="reference internal" href="#dataset-issues">Dataset issues</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#field-required-contexts">"Field required: contexts"</a>
+    <li class="toctree-l3"><a class="reference internal" href="#faithfulness-or-retrieval-metrics-fail">faithfulness or retrieval metrics fail</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#field-required-llm_response">"Field required: llm_response"</a>
+    <li class="toctree-l3"><a class="reference internal" href="#standard-dataset-missing-llm_response">Standard dataset missing llm_response</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#invalid-json">"Invalid JSON"</a>
+    <li class="toctree-l3"><a class="reference internal" href="#agent-dataset-role-errors">Agent dataset role errors</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#invalid-json">Invalid JSON</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#generate-command-issues">Generate Command Issues</a>
+    <li class="toctree-l2"><a class="reference internal" href="#generate-command-issues">Generate command issues</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#floeval-generate-error-the-following-arguments-are-required-o-output">"floeval generate: error: the following arguments are required: -o, --output"</a>
+    <li class="toctree-l3"><a class="reference internal" href="#missing-output-path">Missing output path</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#no-generator_model-in-dataset_generation_config">"No generator_model in dataset_generation_config"</a>
+    <li class="toctree-l3"><a class="reference internal" href="#wrong-output-extension">Wrong output extension</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#input-dataset-has-llm_response-but-shouldnt">"Input dataset has llm_response but shouldn't"</a>
+    <li class="toctree-l3"><a class="reference internal" href="#dataset-already-has-llm_response">Dataset already has llm_response</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#generated-dataset-has-incorrect-format">Generated dataset has incorrect format</a>
+    <li class="toctree-l3"><a class="reference internal" href="#prompt-expansion-not-happening">Prompt expansion not happening</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#runtime-issues">Runtime Issues</a>
+    <li class="toctree-l2"><a class="reference internal" href="#agent-evaluation-issues">Agent evaluation issues</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#rate-limit-exceeded">"Rate limit exceeded"</a>
+    <li class="toctree-l3"><a class="reference internal" href="#flotorch-import-errors">FloTorch import errors</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#evaluation-takes-too-long">Evaluation takes too long</a>
+    <li class="toctree-l3"><a class="reference internal" href="#flotorch-credentials-missing">FloTorch credentials missing</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#tool_call_accuracy-returns-an-error">tool_call_accuracy returns an error</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#runtime-issues">Runtime issues</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#rate-limits-or-slow-runs">Rate limits or slow runs</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#low-scores-unexpectedly">Low scores unexpectedly</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#common-mistakes">Common Mistakes</a>
+    <li class="toctree-l2"><a class="reference internal" href="#validation">Validation</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#api-key-in-config">API key in config</a>
+    <li class="toctree-l3"><a class="reference internal" href="#verify-the-installation">Verify the installation</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#missing-virtual-environment">Missing virtual environment</a>
+    <li class="toctree-l3"><a class="reference internal" href="#verify-a-standard-dataset-loads">Verify a standard dataset loads</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#testing-with-too-many-samples">Testing with too many samples</a>
+    <li class="toctree-l3"><a class="reference internal" href="#verify-an-agent-dataset-loads">Verify an agent dataset loads</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#smoke-test-your-own-files">Smoke-test your own files</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#quick-checks">Quick Checks</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#verify-installation">Verify Installation</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#verify-config">Verify Config</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#verify-dataset-python">Verify Dataset (Python)</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#quick-reference">Quick Reference</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#required-config-evaluate">Required Config (evaluate)</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#required-config-generate">Required Config (generate)</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#partial-dataset-config">Partial Dataset Config</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#still-stuck">Still Stuck?</a>
+    <li class="toctree-l2"><a class="reference internal" href="#related-references">Related references</a>
     </li>
     </ul>
                 </li>
@@ -185,217 +187,191 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="troubleshooting">Troubleshooting</h1>
-<p>Quick fixes for common issues.</p>
+<p>Solutions to common installation, configuration, dataset, and runtime issues.</p>
 <hr />
-<h2 id="installation-issues">Installation Issues</h2>
-<h3 id="requires-python-311">"requires-python = '&gt;=3.11'"</h3>
-<p><strong>Problem</strong>: Python version too old</p>
-<p><strong>Fix</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Check version</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>python<span class="w"> </span>--version
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Need Python 3.11 or higher</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Download from python.org or use:</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Ubuntu: sudo apt install python3.11</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># macOS: brew install python@3.11</span>
-</code></pre></div></p>
-<h3 id="pip-install-floeval-fails">"pip install floeval" fails</h3>
-<p><strong>Fix</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Update pip first</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Then install</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>pip<span class="w"> </span>install<span class="w"> </span>floeval
-</code></pre></div></p>
-<hr />
-<h2 id="configuration-issues">Configuration Issues</h2>
-<h3 id="authentication-failed">"Authentication failed"</h3>
-<p><strong>Problem</strong>: API key not set or wrong</p>
-<p><strong>Fix</strong>: Ensure your config file has the correct <code>api_key</code> in <code>llm_config</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;llm_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">&quot;base_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://api.openai.com/v1&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">&quot;api_key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sk-your-key-here&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">&quot;chat_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">&quot;embedding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text-embedding-3-small&quot;</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="p">},</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="err">...</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">}</span>
+<h2 id="installation-issues">Installation issues</h2>
+<h3 id="python-version-is-too-old">Python version is too old</h3>
+<p>Symptom:</p>
+<ul>
+<li>install errors mentioning <code>requires-python &gt;=3.11</code></li>
+</ul>
+<p>Fix:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>--version
 </code></pre></div>
-<p>Or in Python, pass the key in your <code>LLM_CONFIG</code> dict when creating <code>OpenAIProviderConfig</code>.</p>
-<h3 id="missing-llm_config-section">"Missing 'llm_config' section"</h3>
-<p><strong>Problem</strong>: Config file has wrong structure</p>
-<p><strong>Fix</strong>: Use <code>llm_config</code> (not <code>gateway_config</code>). Required keys: <code>base_url</code>, <code>api_key</code>, <code>chat_model</code>, <code>embedding_model</code>.</p>
-<h3 id="dataset_generator_model-is-required-for-partial-datasets">"dataset_generator_model is required for partial datasets"</h3>
-<p><strong>Problem</strong>: Using a partial dataset (samples without <code>llm_response</code>) but config lacks generator model.</p>
-<p><strong>Fix</strong>: Add <code>dataset_generation_config</code> to your config:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;dataset_generation_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">&quot;generator_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o-mini&quot;</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="p">}</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
+<p>Upgrade to Python 3.11 or newer, then reinstall.</p>
+<h3 id="package-install-fails">Package install fails</h3>
+<p>Try upgrading pip first:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--pre<span class="w"> </span>floeval
+</code></pre></div>
+<p>If you are installing from the local repo:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
 </code></pre></div>
 <hr />
-<h2 id="dataset-issues">Dataset Issues</h2>
-<h3 id="field-required-contexts">"Field required: contexts"</h3>
-<p><strong>Problem</strong>: Using <code>faithfulness</code> metric without contexts</p>
-<p><strong>Fix Option 1</strong> - Add contexts to dataset:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Question?&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&quot;llm_response&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Answer.&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">&quot;contexts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Your context here&quot;</span><span class="p">]</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">}</span>
-</code></pre></div></p>
-<p><strong>Fix Option 2</strong> - Remove faithfulness metric:
+<h2 id="config-issues">Config issues</h2>
+<h3 id="authentication-failed">Authentication failed</h3>
+<p>Check that <code>llm_config.api_key</code> and <code>llm_config.base_url</code> are correct for your provider.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">llm_config</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.openai.com/v1&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-api-key&quot;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">chat_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">embedding_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;text-embedding-3-small&quot;</span>
+</code></pre></div>
+<p>If you load credentials from environment variables, print or validate them before constructing <code>OpenAIProviderConfig</code>.</p>
+<h3 id="missing-llm_config">Missing <code>llm_config</code></h3>
+<p>Both <code>floeval evaluate</code> and <code>floeval generate</code> expect a top-level <code>llm_config</code> section.</p>
+<h3 id="partial-dataset-but-no-generator-model">Partial dataset but no generator model</h3>
+<p>Symptom:</p>
+<ul>
+<li><code>dataset_generator_model is required for partial datasets</code></li>
+<li><code>No generator_model in dataset_generation_config</code></li>
+</ul>
+<p>Fix:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">dataset_generation_config</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">generator_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+</code></pre></div>
+<p>You can also provide <code>evaluation_config.dataset_generator_model</code>, but <code>dataset_generation_config.generator_model</code> is the clearest option.</p>
+<h3 id="agent-cli-mode-missing-agent_name">Agent CLI mode missing <code>agent_name</code></h3>
+<p>Symptom:</p>
+<ul>
+<li>partial agent evaluation fails with a message that <code>agent_name</code> is required</li>
+</ul>
+<p>Fix:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">evaluation_config</span><span class="p">:</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">answer_relevancy</span><span class="w">  </span><span class="c1"># Only this</span>
-</code></pre></div></p>
-<h3 id="field-required-llm_response">"Field required: llm_response"</h3>
-<p><strong>Problem</strong>: Using full-dataset path with samples that lack <code>llm_response</code></p>
-<p><strong>Fix</strong>: Either ensure every sample has <code>llm_response</code> (full dataset), or use a partial dataset and add <code>dataset_generation_config</code> so the CLI generates responses.</p>
-<h3 id="invalid-json">"Invalid JSON"</h3>
-<p><strong>Problem</strong>: JSON syntax error</p>
-<p><strong>Fix</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Validate JSON using Python</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import json; json.load(open(&#39;dataset.json&#39;))&quot;</span>
-</code></pre></div></p>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">agent_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;support-agent&quot;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;goal_achievement&quot;</span>
+</code></pre></div>
+<p>This is required for CLI partial agent evaluation with <code>--agent</code>.</p>
 <hr />
-<h2 id="generate-command-issues">Generate Command Issues</h2>
-<h3 id="floeval-generate-error-the-following-arguments-are-required-o-output">"floeval generate: error: the following arguments are required: -o, --output"</h3>
-<p><strong>Problem</strong>: Forgot to specify output file for <code>floeval generate</code></p>
-<p><strong>Fix</strong>: The <code>generate</code> command requires an output file to save generated responses:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>floeval<span class="w"> </span>generate<span class="w"> </span>-c<span class="w"> </span>config.yaml<span class="w"> </span>-d<span class="w"> </span>partial.json<span class="w"> </span>-o<span class="w"> </span>complete.json
+<h2 id="dataset-issues">Dataset issues</h2>
+<h3 id="faithfulness-or-retrieval-metrics-fail"><code>faithfulness</code> or retrieval metrics fail</h3>
+<p>Make sure your samples include the fields those metrics need:</p>
+<ul>
+<li><code>contexts</code> for grounding and retrieval checks</li>
+<li><code>ground_truth</code> for recall and precision style metrics where applicable</li>
+</ul>
+<p>Minimal example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;samples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What is RAG?&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">&quot;llm_response&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RAG stands for Retrieval-Augmented Generation.&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">      </span><span class="nt">&quot;contexts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;RAG combines retrieval with generation.&quot;</span><span class="p">],</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">      </span><span class="nt">&quot;ground_truth&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Retrieval-Augmented Generation&quot;</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="p">}</span>
 </code></pre></div>
-<h3 id="no-generator_model-in-dataset_generation_config">"No generator_model in dataset_generation_config"</h3>
-<p><strong>Problem</strong>: Config missing <code>dataset_generation_config</code> for generate command</p>
-<p><strong>Fix</strong>: Add to your config:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">&quot;dataset_generation_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">&quot;generator_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o-mini&quot;</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="p">}</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="p">}</span>
-</code></pre></div>
-<h3 id="input-dataset-has-llm_response-but-shouldnt">"Input dataset has llm_response but shouldn't"</h3>
-<p><strong>Problem</strong>: Using <code>floeval generate</code> on a full dataset (that already has responses)</p>
-<p><strong>Fix</strong>: Use <code>floeval evaluate</code> instead, or create a partial dataset without <code>llm_response</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Full dataset → evaluate</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>floeval<span class="w"> </span>evaluate<span class="w"> </span>-c<span class="w"> </span>config.yaml<span class="w"> </span>-d<span class="w"> </span>full_dataset.json<span class="w"> </span>-o<span class="w"> </span>results.json
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Partial dataset → generate</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>floeval<span class="w"> </span>generate<span class="w"> </span>-c<span class="w"> </span>config.yaml<span class="w"> </span>-d<span class="w"> </span>partial_dataset.json<span class="w"> </span>-o<span class="w"> </span>complete.json
-</code></pre></div>
-<h3 id="generated-dataset-has-incorrect-format">Generated dataset has incorrect format</h3>
-<p><strong>Problem</strong>: Output from <code>floeval generate</code> doesn't match expected format</p>
-<p><strong>Fix</strong>: Check that input partial dataset is valid:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Validate input</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import json; d = json.load(open(&#39;partial.json&#39;)); print(&#39;Samples:&#39;, len(d.get(&#39;samples&#39;, [])))&quot;</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Generate</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>floeval<span class="w"> </span>generate<span class="w"> </span>-c<span class="w"> </span>config.yaml<span class="w"> </span>-d<span class="w"> </span>partial.json<span class="w"> </span>-o<span class="w"> </span>complete.json
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># Validate output</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import json; d = json.load(open(&#39;complete.json&#39;)); s = d[&#39;samples&#39;][0]; print(&#39;Has response:&#39;, &#39;llm_response&#39; in s)&quot;</span>
+<h3 id="standard-dataset-missing-llm_response">Standard dataset missing <code>llm_response</code></h3>
+<p>If a standard dataset sample has no <code>llm_response</code>, treat it as a partial dataset and add generation config.</p>
+<h3 id="agent-dataset-role-errors">Agent dataset role errors</h3>
+<p>In saved agent trace datasets, message roles must be:</p>
+<ul>
+<li><code>human</code></li>
+<li><code>ai</code></li>
+<li><code>tool</code></li>
+</ul>
+<h3 id="invalid-json">Invalid JSON</h3>
+<p>Validate the file before running Floeval:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>python<span class="w"> </span>-m<span class="w"> </span>json.tool<span class="w"> </span>dataset.json
 </code></pre></div>
 <hr />
-<h2 id="runtime-issues">Runtime Issues</h2>
-<h3 id="rate-limit-exceeded">"Rate limit exceeded"</h3>
-<p><strong>Problem</strong>: Too many API calls too fast</p>
-<p><strong>Fix</strong>:
-- Wait 30 seconds and retry
-- Use fewer samples for testing
-- Check OpenAI account has credits</p>
-<h3 id="evaluation-takes-too-long">Evaluation takes too long</h3>
-<p><strong>Fix</strong>:
-- Start with 2-3 samples to test
-- Use <code>gpt-4o-mini</code> instead of <code>gpt-4</code>
-- Check internet connection</p>
+<h2 id="generate-command-issues">Generate command issues</h2>
+<h3 id="missing-output-path">Missing output path</h3>
+<p><code>floeval generate</code> always requires <code>-o</code> or <code>--output</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>floeval<span class="w"> </span>generate<span class="w"> </span>-c<span class="w"> </span>config.yaml<span class="w"> </span>-d<span class="w"> </span>partial.json<span class="w"> </span>-o<span class="w"> </span>complete.json
+</code></pre></div>
+<h3 id="wrong-output-extension">Wrong output extension</h3>
+<p><code>floeval generate</code> currently exports only:</p>
+<ul>
+<li><code>.json</code></li>
+<li><code>.jsonl</code></li>
+</ul>
+<h3 id="dataset-already-has-llm_response">Dataset already has <code>llm_response</code></h3>
+<p>If the input dataset already contains responses, use <code>floeval evaluate</code> instead of <code>floeval generate</code>.</p>
+<h3 id="prompt-expansion-not-happening">Prompt expansion not happening</h3>
+<p>Check all of the following:</p>
+<ul>
+<li>samples include <code>prompt_ids</code></li>
+<li><code>evaluation_config.prompts_file</code> points to a real YAML or JSON prompt file</li>
+<li>prompt IDs used in the dataset exist in that prompt file</li>
+</ul>
+<hr />
+<h2 id="agent-evaluation-issues">Agent evaluation issues</h2>
+<h3 id="flotorch-import-errors">FloTorch import errors</h3>
+<p>Symptom:</p>
+<ul>
+<li>agent CLI or runner setup fails because FloTorch modules are missing</li>
+</ul>
+<p>Fix:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;floeval[flotorch]&quot;</span>
+</code></pre></div>
+<h3 id="flotorch-credentials-missing">FloTorch credentials missing</h3>
+<p>Provide gateway credentials through either:</p>
+<ul>
+<li><code>llm_config.base_url</code> and <code>llm_config.api_key</code></li>
+<li><code>FLOTORCH_BASE_URL</code> and <code>FLOTORCH_API_KEY</code></li>
+</ul>
+<h3 id="tool_call_accuracy-returns-an-error"><code>tool_call_accuracy</code> returns an error</h3>
+<p>This metric needs <code>reference_tool_calls</code> in each agent sample.</p>
+<p>Example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">&quot;reference_tool_calls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;search&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">      </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;query&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;reset password&quot;</span><span class="p">}</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="runtime-issues">Runtime issues</h2>
+<h3 id="rate-limits-or-slow-runs">Rate limits or slow runs</h3>
+<p>Try:</p>
+<ul>
+<li>using fewer samples while iterating</li>
+<li>using a smaller model such as <code>gpt-4o-mini</code></li>
+<li>lowering generation fan-out with <code>dataset_generation_config.max_concurrency</code></li>
+</ul>
 <h3 id="low-scores-unexpectedly">Low scores unexpectedly</h3>
-<p><strong>Check</strong>:
-1. Is your LLM answering the right question?
-2. Are contexts relevant to the question?
-3. Is threshold set too high?</p>
-<hr />
-<h2 id="common-mistakes">Common Mistakes</h2>
-<h3 id="api-key-in-config">API key in config</h3>
-<p>You can pass your API key in the config file or in your Python script. If using a config file, ensure <code>llm_config.api_key</code> is set. Avoid committing real keys to version control—use environment variables or a secrets manager to populate the config at runtime if preferred.</p>
-<h3 id="missing-virtual-environment">Missing virtual environment</h3>
-<p>❌ <strong>Don't</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>pip<span class="w"> </span>install<span class="w"> </span>floeval<span class="w">  </span><span class="c1"># Global install</span>
-</code></pre></div></p>
-<p>✅ <strong>Do</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nb">source</span><span class="w"> </span>venv/bin/activate
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>pip<span class="w"> </span>install<span class="w"> </span>floeval
-</code></pre></div></p>
-<h3 id="testing-with-too-many-samples">Testing with too many samples</h3>
-<p>❌ <strong>Don't</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="p">{</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">&quot;samples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="cm">/* 1000 samples */</span><span class="p">]</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="p">}</span>
-</code></pre></div></p>
-<p>✅ <strong>Do</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="p">{</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">&quot;samples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="cm">/* Start with 2-3 samples */</span><span class="p">]</span>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="p">}</span>
-</code></pre></div></p>
-<hr />
-<h2 id="quick-checks">Quick Checks</h2>
-<h3 id="verify-installation">Verify Installation</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>floeval<span class="w"> </span>--version
-</code></pre></div>
-<h3 id="verify-config">Verify Config</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>floeval<span class="w"> </span>evaluate<span class="w"> </span>-c<span class="w"> </span>sample_data/eval_config.json<span class="w"> </span>-d<span class="w"> </span>sample_data/full_dataset.json
-</code></pre></div>
-<h3 id="verify-dataset-python">Verify Dataset (Python)</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval</span><span class="w"> </span><span class="kn">import</span> <span class="n">DatasetLoader</span>
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">DatasetLoader</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;dataset.json&quot;</span><span class="p">,</span> <span class="n">partial_dataset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✅ </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">samples</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples loaded&quot;</span><span class="p">)</span>
-</code></pre></div>
-<hr />
-<h2 id="quick-reference">Quick Reference</h2>
-<h3 id="required-config-evaluate">Required Config (evaluate)</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="p">{</span>
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">&quot;llm_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nt">&quot;base_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://api.openai.com/v1&quot;</span><span class="p">,</span>
-<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="nt">&quot;api_key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;your-key&quot;</span><span class="p">,</span>
-<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">    </span><span class="nt">&quot;chat_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
-<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">    </span><span class="nt">&quot;embedding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text-embedding-3-small&quot;</span>
-<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">  </span><span class="p">},</span>
-<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">  </span><span class="nt">&quot;evaluation_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">    </span><span class="nt">&quot;metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ragas:answer_relevancy&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ragas:faithfulness&quot;</span><span class="p">]</span>
-<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="w">  </span><span class="p">}</span>
-<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="p">}</span>
-</code></pre></div>
-<h3 id="required-config-generate">Required Config (generate)</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p">{</span>
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">&quot;llm_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">    </span><span class="nt">&quot;base_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://api.openai.com/v1&quot;</span><span class="p">,</span>
-<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">    </span><span class="nt">&quot;api_key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;your-key&quot;</span><span class="p">,</span>
-<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">    </span><span class="nt">&quot;chat_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
-<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">    </span><span class="nt">&quot;embedding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text-embedding-3-small&quot;</span>
-<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">  </span><span class="p">},</span>
-<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">  </span><span class="nt">&quot;dataset_generation_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="w">    </span><span class="nt">&quot;generator_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o-mini&quot;</span>
-<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="w">  </span><span class="p">}</span>
-<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="p">}</span>
-</code></pre></div>
-<h3 id="partial-dataset-config">Partial Dataset Config</h3>
-<p>When samples lack <code>llm_response</code>, add:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="p">{</span>
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">&quot;dataset_generation_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span><span class="nt">&quot;generator_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o-mini&quot;</span>
-<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">  </span><span class="p">}</span>
-<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="p">}</span>
-</code></pre></div>
-<hr />
-<h2 id="still-stuck">Still Stuck?</h2>
+<p>Check:</p>
 <ol>
-<li><strong>Check examples</strong>: See working code in <a href="../examples/">Examples</a></li>
-<li><strong>Review metrics</strong>: Understand requirements in <a href="../metrics/">Metrics</a></li>
-<li><strong>Check API reference</strong>: Full details in <a href="../api-reference/">API Reference</a></li>
+<li>whether the model is answering the intended question</li>
+<li>whether contexts are relevant and clean</li>
+<li>whether thresholds are too strict for your stage of development</li>
+<li>whether you selected the right provider and metric for the task</li>
 </ol>
+<hr />
+<h2 id="validation">Validation</h2>
+<h3 id="verify-the-installation">Verify the installation</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>floeval<span class="w"> </span>--version
+</code></pre></div>
+<h3 id="verify-a-standard-dataset-loads">Verify a standard dataset loads</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval</span><span class="w"> </span><span class="kn">import</span> <span class="n">DatasetLoader</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">DatasetLoader</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;dataset.json&quot;</span><span class="p">,</span> <span class="n">partial_dataset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">samples</span><span class="p">))</span>
+</code></pre></div>
+<h3 id="verify-an-agent-dataset-loads">Verify an agent dataset loads</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.agent_dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentDataset</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">AgentDataset</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;agent_dataset.json&quot;</span><span class="p">)</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">samples</span><span class="p">))</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">is_partial</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="smoke-test-your-own-files">Smoke-test your own files</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>floeval<span class="w"> </span>evaluate<span class="w"> </span>-c<span class="w"> </span>your_config.yaml<span class="w"> </span>-d<span class="w"> </span>your_dataset.json
+</code></pre></div>
+<p>Replace <code>your_config.yaml</code> and <code>your_dataset.json</code> with real files from your project.</p>
+<hr />
+<h2 id="related-references">Related references</h2>
+<ul>
+<li><a href="../examples/">Examples</a></li>
+<li><a href="../agent-evaluation/">Agent Evaluation</a></li>
+<li><a href="../metrics/">Metrics</a></li>
+<li><a href="../api-reference/">API Reference</a></li>
+</ul>
               
             </div>
           </div><footer>

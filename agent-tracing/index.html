@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/FloTorch/floeval/agent-tracing/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Agent Tracing - Floeval</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Agent Tracing";
+        var mkdocs_page_input_path = "agent-tracing.md";
+        var mkdocs_page_url = "/FloTorch/floeval/agent-tracing/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/cmd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Floeval
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../setup/">Prerequisites & Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../copy-run/">Minimal Examples</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../examples/">All Examples</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agent-evaluation/">Agent Evaluation</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Agent Tracing</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#trace-contents">Trace contents</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#public-api">Public API</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#core-helpers">Core helpers</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#basic-python-callable">Basic Python callable</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#async-agent">Async agent</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#langchain-or-langgraph-agents">LangChain or LangGraph agents</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#returning-agenttrace-directly">Returning AgentTrace directly</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#evaluation-workflows">Evaluation workflows</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#collect-traces-during-evaluation">Collect traces during evaluation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#capture-first-score-later">Capture first, score later</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#trace-shape">Trace shape</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#notes">Notes</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#related-references">Related references</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../metrics/">Metrics</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../custom-metrics/">Custom Metrics</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../api-reference/">API Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Floeval</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Agent Tracing</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="agent-tracing">Agent Tracing</h1>
+<p>Capture agent conversations and tool activity so they can be evaluated with <code>AgentEvaluation</code>.</p>
+<hr />
+<h2 id="trace-contents">Trace contents</h2>
+<p>Floeval's tracing helpers turn agent execution into an <code>AgentTrace</code> with:</p>
+<ul>
+<li>ordered messages</li>
+<li>optional tool calls and tool results</li>
+<li>a final user-facing response</li>
+<li>optional metadata collected during execution</li>
+</ul>
+<p>The resulting trace can then be:</p>
+<ul>
+<li>saved as a full agent dataset and scored later</li>
+<li>collected on the fly from a Python callable</li>
+<li>wrapped around LangChain or LangGraph style agents</li>
+</ul>
+<hr />
+<h2 id="public-api">Public API</h2>
+<p>Import tracing helpers from <code>floeval.utils.agent_trace</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.utils.agent_trace</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">capture_trace</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">create_span</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">log_tool_result</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">log_turn</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">wrap_langchain_agent</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span>
+</code></pre></div>
+<h3 id="core-helpers">Core helpers</h3>
+<table>
+<thead>
+<tr>
+<th>Helper</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>capture_trace</code></td>
+<td>Decorate an agent function so Floeval creates a trace context automatically</td>
+</tr>
+<tr>
+<td><code>log_turn</code></td>
+<td>Record an AI response turn inside the active trace</td>
+</tr>
+<tr>
+<td><code>log_tool_result</code></td>
+<td>Record tool output inside the active trace</td>
+</tr>
+<tr>
+<td><code>create_span</code></td>
+<td>Alternate helper that records an output turn in a DeepEval-style shape</td>
+</tr>
+<tr>
+<td><code>wrap_langchain_agent</code></td>
+<td>Adapt a LangChain or LangGraph agent to Floeval's callable interface</td>
+</tr>
+</tbody>
+</table>
+<p>For advanced control, <code>TraceCollector</code> is also available.</p>
+<hr />
+<h2 id="basic-python-callable">Basic Python callable</h2>
+<p>This pattern is suitable for Mode 2 agent evaluation.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.utils.agent_trace</span><span class="w"> </span><span class="kn">import</span> <span class="n">capture_trace</span><span class="p">,</span> <span class="n">log_tool_result</span><span class="p">,</span> <span class="n">log_turn</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nd">@capture_trace</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">weather_agent</span><span class="p">(</span><span class="n">user_input</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">tool_output</span> <span class="o">=</span> <span class="s2">&quot;Paris: 18C, light rain&quot;</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">log_tool_result</span><span class="p">(</span><span class="s2">&quot;weather_lookup&quot;</span><span class="p">,</span> <span class="n">tool_output</span><span class="p">)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">response</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Current weather for Paris: </span><span class="si">{</span><span class="n">tool_output</span><span class="si">}</span><span class="s2">&quot;</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">log_turn</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="k">return</span> <span class="n">response</span>
+</code></pre></div>
+<p><code>capture_trace</code> creates the trace context, <code>log_tool_result(...)</code> records a tool message, <code>log_turn(...)</code> records the agent response, and the returned string becomes the trace's final response.</p>
+<p>You can pass this function directly into <code>AgentEvaluation(agent=...)</code>.</p>
+<hr />
+<h2 id="async-agent">Async agent</h2>
+<p><code>capture_trace</code> also supports async agents:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.utils.agent_trace</span><span class="w"> </span><span class="kn">import</span> <span class="n">capture_trace</span><span class="p">,</span> <span class="n">log_turn</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nd">@capture_trace</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_support_agent</span><span class="p">(</span><span class="n">user_input</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">response</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Handled asynchronously: </span><span class="si">{</span><span class="n">user_input</span><span class="si">}</span><span class="s2">&quot;</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">log_turn</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="k">return</span> <span class="n">response</span>
+</code></pre></div>
+<hr />
+<h2 id="langchain-or-langgraph-agents">LangChain or LangGraph agents</h2>
+<p>If your agent expects a messages-style interface, wrap it before evaluation:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.api.agent_evaluation</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentEvaluation</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.agent_dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentDataset</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.utils.agent_trace</span><span class="w"> </span><span class="kn">import</span> <span class="n">wrap_langchain_agent</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">wrapped_agent</span> <span class="o">=</span> <span class="n">wrap_langchain_agent</span><span class="p">(</span><span class="n">langchain_agent</span><span class="p">)</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">evaluation</span> <span class="o">=</span> <span class="n">AgentEvaluation</span><span class="p">(</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">dataset</span><span class="o">=</span><span class="n">AgentDataset</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;partial_agent_dataset.json&quot;</span><span class="p">),</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">agent</span><span class="o">=</span><span class="n">wrapped_agent</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">llm_config</span><span class="o">=</span><span class="n">llm_config</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;goal_achievement&quot;</span><span class="p">],</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="p">)</span>
+</code></pre></div>
+<p>The wrapper adapts:</p>
+<ul>
+<li>string input into the <code>{"messages": [...]}</code> shape many agent frameworks expect</li>
+<li>agent output back into a string result that Floeval can trace</li>
+</ul>
+<p><code>TraceCollector</code> also tries to attach LangChain callbacks automatically when the wrapped agent exposes <code>invoke(...)</code> or <code>ainvoke(...)</code>.</p>
+<hr />
+<h2 id="returning-agenttrace-directly">Returning <code>AgentTrace</code> directly</h2>
+<p>If your agent already produces a full trace, you can return <code>AgentTrace</code> yourself instead of relying on helper logging.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.agent_dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentTrace</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">simple_agent</span><span class="p">(</span><span class="n">user_input</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AgentTrace</span><span class="p">:</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="k">return</span> <span class="n">AgentTrace</span><span class="o">.</span><span class="n">from_simple_response</span><span class="p">(</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="n">user_input</span><span class="o">=</span><span class="n">user_input</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="n">response</span><span class="o">=</span><span class="s2">&quot;Done.&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="n">source</span><span class="o">=</span><span class="s2">&quot;custom-runtime&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="p">)</span>
+</code></pre></div>
+<p>This works with <code>TraceCollector</code> and <code>AgentEvaluation</code> as long as the trace is valid.</p>
+<hr />
+<h2 id="evaluation-workflows">Evaluation workflows</h2>
+<p>Two common workflows are supported:</p>
+<h3 id="collect-traces-during-evaluation">Collect traces during evaluation</h3>
+<p>Use a partial agent dataset and pass <code>agent=</code> to <code>AgentEvaluation</code>. Floeval runs the agent, captures traces, and evaluates the resulting full samples.</p>
+<h3 id="capture-first-score-later">Capture first, score later</h3>
+<p>Run your agent separately, persist the resulting traces into an agent dataset file, then evaluate that file later with Mode 1.</p>
+<p>This approach is useful when:</p>
+<ul>
+<li>trace capture is expensive</li>
+<li>you want reproducible evaluations</li>
+<li>you want to inspect traces manually before scoring</li>
+</ul>
+<hr />
+<h2 id="trace-shape">Trace shape</h2>
+<p>Full trace datasets use this structure:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;trace&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">&quot;messages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="p">{</span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;human&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User request&quot;</span><span class="p">},</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="p">{</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ai&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;I&#39;ll look that up.&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="nt">&quot;tool_calls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;search&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;q&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User request&quot;</span><span class="p">}}]</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">      </span><span class="p">},</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="p">{</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tool&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="nt">&quot;tool_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;search&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">        </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tool result&quot;</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">      </span><span class="p">},</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">      </span><span class="p">{</span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ai&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Final answer&quot;</span><span class="p">}</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="p">],</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span><span class="nt">&quot;final_response&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Final answer&quot;</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="p">}</span>
+</code></pre></div>
+<p>Roles in saved datasets should be:</p>
+<ul>
+<li><code>human</code></li>
+<li><code>ai</code></li>
+<li><code>tool</code></li>
+</ul>
+<hr />
+<h2 id="notes">Notes</h2>
+<ul>
+<li>Prefer <code>@capture_trace</code> for custom Python agents. It is the simplest path.</li>
+<li>Use <code>log_turn()</code> only inside an active trace context.</li>
+<li>Use <code>reference_tool_calls</code> in your dataset when you want to score <code>ragas:tool_call_accuracy</code>.</li>
+<li>Use <code>reference_outcome</code> when you want stronger outcome-based scoring such as <code>goal_achievement</code> or <code>ragas:agent_goal_accuracy</code>.</li>
+<li>If your agent already exposes a stable trace format, returning <code>AgentTrace</code> directly can be cleaner than manual logging.</li>
+</ul>
+<hr />
+<h2 id="related-references">Related references</h2>
+<ul>
+<li><a href="../agent-evaluation/">Agent Evaluation</a></li>
+<li><a href="../api-reference/">API Reference</a></li>
+<li><a href="../examples/">Examples</a></li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../agent-evaluation/" class="btn btn-neutral float-left" title="Agent Evaluation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../metrics/" class="btn btn-neutral float-right" title="Metrics">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../agent-evaluation/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../metrics/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

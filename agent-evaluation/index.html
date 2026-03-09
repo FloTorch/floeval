@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/FloTorch/floeval/agent-evaluation/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Agent Evaluation - Floeval</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Agent Evaluation";
+        var mkdocs_page_input_path = "agent-evaluation.md";
+        var mkdocs_page_url = "/FloTorch/floeval/agent-evaluation/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/cmd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Floeval
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../setup/">Prerequisites & Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../copy-run/">Minimal Examples</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../examples/">All Examples</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Agent Evaluation</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#scope">Scope</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cli-workflow">CLI workflow</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#config-file">Config file</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#cli-partial-dataset-with-flotorch">CLI partial dataset with FloTorch</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#dataset-formats">Dataset formats</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#full-dataset-pre-captured-traces">Full dataset: pre-captured traces</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#partial-dataset-runtime-trace-capture">Partial dataset: runtime trace capture</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#agent-dataset-fields">Agent dataset fields</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#python-api">Python API</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#mode-1-score-pre-captured-traces">Mode 1: score pre-captured traces</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mode-2-python-callable-with-trace-collection">Mode 2: Python callable with trace collection</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mode-4-flotorch-runner">Mode 4: FloTorch runner</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#async-execution">Async execution</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#agent-metrics">Agent metrics</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#builtin-provider">Builtin provider</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#ragas-provider">RAGAS provider</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#results">Results</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#related-references">Related references</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agent-tracing/">Agent Tracing</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../metrics/">Metrics</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../custom-metrics/">Custom Metrics</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../api-reference/">API Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Floeval</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Agent Evaluation</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="agent-evaluation">Agent Evaluation</h1>
+<p>Use this guide for trace-based agent evaluation, tool-call checks, and outcome scoring.</p>
+<hr />
+<h2 id="scope">Scope</h2>
+<p><code>AgentEvaluation</code> is intended for datasets that capture agent behavior rather than plain <code>llm_response</code> outputs.</p>
+<p>Floeval currently supports three implemented agent-evaluation modes:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Input</th>
+<th>How traces are obtained</th>
+<th>Typical entry point</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mode 1</td>
+<td>Full agent dataset</td>
+<td>Already captured in the dataset</td>
+<td>CLI or Python</td>
+</tr>
+<tr>
+<td>Mode 2</td>
+<td>Partial agent dataset</td>
+<td>Floeval runs your Python agent callable and collects traces</td>
+<td>Python</td>
+</tr>
+<tr>
+<td>Mode 4</td>
+<td>Partial agent dataset</td>
+<td>Floeval runs a FloTorch runner</td>
+<td>CLI or Python</td>
+</tr>
+</tbody>
+</table>
+<p>Mode 3 is not currently available.</p>
+<hr />
+<h2 id="cli-workflow">CLI workflow</h2>
+<p>Use the <code>--agent</code> flag to switch the CLI into agent-evaluation mode:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>floeval<span class="w"> </span>evaluate<span class="w"> </span>-c<span class="w"> </span>config.yaml<span class="w"> </span>-d<span class="w"> </span>agent_dataset.json<span class="w"> </span>--agent<span class="w"> </span>-o<span class="w"> </span>agent_results.json
+</code></pre></div>
+<h3 id="config-file">Config file</h3>
+<p>For agent evaluation, <code>evaluation_config.metrics</code> is required. When you pass a partial agent dataset, <code>evaluation_config.agent_name</code> is also required for CLI Mode 4.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">llm_config</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.openai.com/v1&quot;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-api-key&quot;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">chat_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">chat_endpoint</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;chat/completions&quot;</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">embedding_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;text-embedding-3-small&quot;</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">embedding_endpoint</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;embeddings&quot;</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nt">evaluation_config</span><span class="p">:</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;goal_achievement&quot;</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;response_coherence&quot;</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="nt">metric_params</span><span class="p">:</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nt">goal_achievement</span><span class="p">:</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">      </span><span class="nt">threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
+</code></pre></div>
+<h3 id="cli-partial-dataset-with-flotorch">CLI partial dataset with FloTorch</h3>
+<p>Add <code>agent_name</code> when evaluating a partial agent dataset from the CLI:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">llm_config</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://gateway.example/openai/v1&quot;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-gateway-key&quot;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">chat_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nt">evaluation_config</span><span class="p">:</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">agent_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;support-agent&quot;</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;goal_achievement&quot;</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;ragas:tool_call_accuracy&quot;</span>
+</code></pre></div>
+<p>This path requires the optional FloTorch integration:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;floeval[flotorch]&quot;</span>
+</code></pre></div>
+<p><code>create_flotorch_runner()</code> can read gateway credentials from:</p>
+<ul>
+<li>explicit function arguments</li>
+<li><code>llm_config.base_url</code> and <code>llm_config.api_key</code></li>
+<li><code>FLOTORCH_BASE_URL</code> and <code>FLOTORCH_API_KEY</code></li>
+</ul>
+<hr />
+<h2 id="dataset-formats">Dataset formats</h2>
+<p>Agent datasets are loaded through <code>AgentDataset.from_file(...)</code> and support <code>.json</code> and <code>.jsonl</code>.</p>
+<h3 id="full-dataset-pre-captured-traces">Full dataset: pre-captured traces</h3>
+<p>Use a full dataset when traces are already available and only scoring is required.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;samples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Summarize today&#39;s weather for Paris.&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">&quot;reference_outcome&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;A short weather summary for Paris.&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">      </span><span class="nt">&quot;trace&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="nt">&quot;messages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">          </span><span class="p">{</span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;human&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Summarize today&#39;s weather for Paris.&quot;</span><span class="p">},</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">          </span><span class="p">{</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">            </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ai&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">            </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;I&#39;ll check the weather first.&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">            </span><span class="nt">&quot;tool_calls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">              </span><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;weather_lookup&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;city&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Paris&quot;</span><span class="p">}}</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">            </span><span class="p">]</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">          </span><span class="p">},</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">          </span><span class="p">{</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">            </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tool&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">            </span><span class="nt">&quot;tool_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;weather_lookup&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">            </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Paris: 18C, light rain&quot;</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">          </span><span class="p">},</span>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="w">          </span><span class="p">{</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="w">            </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ai&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="w">            </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Paris is 18C with light rain today.&quot;</span>
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="w">          </span><span class="p">}</span>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="w">        </span><span class="p">],</span>
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="w">        </span><span class="nt">&quot;final_response&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Paris is 18C with light rain today.&quot;</span>
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="w">      </span><span class="p">}</span>
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="partial-dataset-runtime-trace-capture">Partial dataset: runtime trace capture</h3>
+<p>Use a partial dataset when Floeval should run the agent and convert the results into full trace-based samples before scoring.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;samples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Book a table for two at 7pm tomorrow.&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">&quot;reference_outcome&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;A confirmed reservation for two at 7pm tomorrow.&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="nt">&quot;reference_tool_calls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="p">{</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">          </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;create_reservation&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">          </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;party_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7pm tomorrow&quot;</span><span class="p">}</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">      </span><span class="p">]</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="agent-dataset-fields">Agent dataset fields</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Used in</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>user_input</code></td>
+<td>Full and partial datasets</td>
+<td>Can be a string or structured object</td>
+</tr>
+<tr>
+<td><code>trace.messages</code></td>
+<td>Full datasets</td>
+<td>Message roles must be <code>human</code>, <code>ai</code>, or <code>tool</code></td>
+</tr>
+<tr>
+<td><code>trace.final_response</code></td>
+<td>Full datasets</td>
+<td>Final user-facing answer from the agent</td>
+</tr>
+<tr>
+<td><code>reference_outcome</code></td>
+<td>Optional</td>
+<td>Helps goal-oriented metrics compare expected outcome vs actual result</td>
+</tr>
+<tr>
+<td><code>reference_tool_calls</code></td>
+<td>Optional but required for <code>tool_call_accuracy</code></td>
+<td>Expected tool calls for the sample</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>Optional</td>
+<td>Extra information carried through into results</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="python-api">Python API</h2>
+<p>Import <code>AgentEvaluation</code> directly from <code>floeval.api.agent_evaluation</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.api.agent_evaluation</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentEvaluation</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.agent_dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentDataset</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIProviderConfig</span>
+</code></pre></div>
+<h3 id="mode-1-score-pre-captured-traces">Mode 1: score pre-captured traces</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.api.agent_evaluation</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentEvaluation</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.agent_dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentDataset</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIProviderConfig</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">AgentDataset</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;agent_dataset.json&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">llm_config</span> <span class="o">=</span> <span class="n">OpenAIProviderConfig</span><span class="p">(</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://api.openai.com/v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;your-api-key&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="n">chat_model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="p">)</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="n">evaluation</span> <span class="o">=</span> <span class="n">AgentEvaluation</span><span class="p">(</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    <span class="n">llm_config</span><span class="o">=</span><span class="n">llm_config</span><span class="p">,</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;goal_achievement&quot;</span><span class="p">,</span> <span class="s2">&quot;response_coherence&quot;</span><span class="p">],</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="p">)</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="n">results</span> <span class="o">=</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">summary</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="mode-2-python-callable-with-trace-collection">Mode 2: Python callable with trace collection</h3>
+<p>Pass <code>agent=</code> when the dataset is partial and the agent is available as a Python callable.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.api.agent_evaluation</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentEvaluation</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.agent_dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentDataset</span><span class="p">,</span> <span class="n">PartialAgentSample</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIProviderConfig</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.utils.agent_trace</span><span class="w"> </span><span class="kn">import</span> <span class="n">capture_trace</span><span class="p">,</span> <span class="n">log_turn</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="nd">@capture_trace</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">support_agent</span><span class="p">(</span><span class="n">user_input</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="n">response</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Handled request: </span><span class="si">{</span><span class="n">user_input</span><span class="si">}</span><span class="s2">&quot;</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="n">log_turn</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    <span class="k">return</span> <span class="n">response</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">AgentDataset</span><span class="p">(</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>    <span class="n">samples</span><span class="o">=</span><span class="p">[</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>        <span class="n">PartialAgentSample</span><span class="p">(</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>            <span class="n">user_input</span><span class="o">=</span><span class="s2">&quot;Reset my password&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>            <span class="n">reference_outcome</span><span class="o">=</span><span class="s2">&quot;Password reset instructions were provided.&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>        <span class="p">)</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>    <span class="p">]</span>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="p">)</span>
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="n">llm_config</span> <span class="o">=</span> <span class="n">OpenAIProviderConfig</span><span class="p">(</span>
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://api.openai.com/v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;your-api-key&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>    <span class="n">chat_model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a><span class="p">)</span>
+<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>
+<a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a><span class="n">evaluation</span> <span class="o">=</span> <span class="n">AgentEvaluation</span><span class="p">(</span>
+<a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
+<a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>    <span class="n">agent</span><span class="o">=</span><span class="n">support_agent</span><span class="p">,</span>
+<a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>    <span class="n">llm_config</span><span class="o">=</span><span class="n">llm_config</span><span class="p">,</span>
+<a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;goal_achievement&quot;</span><span class="p">],</span>
+<a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a><span class="p">)</span>
+<a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a>
+<a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a><span class="n">results</span> <span class="o">=</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="mode-4-flotorch-runner">Mode 4: FloTorch runner</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.api.agent_evaluation</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentEvaluation</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.agent_dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentDataset</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.config.schemas.io.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIProviderConfig</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.flotorch</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_flotorch_runner</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">AgentDataset</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;partial_agent_dataset.json&quot;</span><span class="p">)</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">llm_config</span> <span class="o">=</span> <span class="n">OpenAIProviderConfig</span><span class="p">(</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://gateway.example/openai/v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;your-gateway-key&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="n">chat_model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="p">)</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="n">runner</span> <span class="o">=</span> <span class="n">create_flotorch_runner</span><span class="p">(</span><span class="s2">&quot;support-agent&quot;</span><span class="p">,</span> <span class="n">llm_config</span><span class="o">=</span><span class="n">llm_config</span><span class="p">)</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="n">evaluation</span> <span class="o">=</span> <span class="n">AgentEvaluation</span><span class="p">(</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>    <span class="n">agent_runner</span><span class="o">=</span><span class="n">runner</span><span class="p">,</span>
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>    <span class="n">llm_config</span><span class="o">=</span><span class="n">llm_config</span><span class="p">,</span>
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;goal_achievement&quot;</span><span class="p">,</span> <span class="s2">&quot;ragas:tool_call_accuracy&quot;</span><span class="p">],</span>
+<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a><span class="p">)</span>
+<a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>
+<a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a><span class="n">results</span> <span class="o">=</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="async-execution">Async execution</h3>
+<p><code>AgentEvaluation</code> also supports async execution:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">results</span> <span class="o">=</span> <span class="k">await</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">arun</span><span class="p">()</span>
+</code></pre></div>
+<hr />
+<h2 id="agent-metrics">Agent metrics</h2>
+<h3 id="builtin-provider">Builtin provider</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Best for</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>goal_achievement</code></td>
+<td>Did the agent satisfy the user request?</td>
+<td>Uses an LLM judge; <code>reference_outcome</code> helps when available</td>
+</tr>
+<tr>
+<td><code>response_coherence</code></td>
+<td>Does the final response match the conversation trace?</td>
+<td>Uses an LLM judge over the full trace</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ragas-provider">RAGAS provider</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Best for</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ragas:agent_goal_accuracy</code></td>
+<td>Compare the trace and final response against an expected outcome</td>
+<td>Best when <code>reference_outcome</code> is present</td>
+</tr>
+<tr>
+<td><code>ragas:tool_call_accuracy</code></td>
+<td>Check whether the agent used the expected tools</td>
+<td>Requires <code>reference_tool_calls</code></td>
+</tr>
+</tbody>
+</table>
+<p>You can mix providers in one run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">metrics</span> <span class="o">=</span> <span class="p">[</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="s2">&quot;goal_achievement&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="s2">&quot;response_coherence&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="s2">&quot;ragas:tool_call_accuracy&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="p">]</span>
+</code></pre></div>
+<hr />
+<h2 id="results">Results</h2>
+<p>Agent evaluation returns per-sample metric data and a summary:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">results</span><span class="o">.</span><span class="n">sample_results</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="n">results</span><span class="o">.</span><span class="n">summary</span>
+</code></pre></div>
+<p>Each sample result includes:</p>
+<ul>
+<li><code>user_input</code></li>
+<li><code>final_response</code></li>
+<li><code>reference_outcome</code></li>
+<li><code>metrics</code></li>
+</ul>
+<p>The summary contains the average score for each metric that completed successfully.</p>
+<hr />
+<h2 id="related-references">Related references</h2>
+<ul>
+<li><a href="../agent-tracing/">Agent Tracing</a></li>
+<li><a href="../metrics/">Metrics</a></li>
+<li><a href="../api-reference/">API Reference</a></li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../examples/" class="btn btn-neutral float-left" title="All Examples"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../agent-tracing/" class="btn btn-neutral float-right" title="Agent Tracing">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../examples/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../agent-tracing/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

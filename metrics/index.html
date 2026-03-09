@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/FloTorch/Floeval/metrics/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/FloTorch/floeval/metrics/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
     <title>Metrics - Floeval</title>
     <link rel="stylesheet" href="../css/theme.css" />
@@ -15,7 +15,7 @@
         // Current page data
         var mkdocs_page_name = "Metrics";
         var mkdocs_page_input_path = "metrics.md";
-        var mkdocs_page_url = "/FloTorch/Floeval/metrics/";
+        var mkdocs_page_url = "/FloTorch/floeval/metrics/";
       </script>
     
     <!--[if lt IE 9]>
@@ -54,79 +54,63 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../copy-run/">Quick Copy & Run</a>
+                <li class="toctree-l1"><a class="reference internal" href="../copy-run/">Minimal Examples</a>
                 </li>
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../examples/">All Examples</a>
                 </li>
               </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agent-evaluation/">Agent Evaluation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agent-tracing/">Agent Tracing</a>
+                </li>
+              </ul>
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="#">Metrics</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#built-in-metrics">Built-in metrics</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#metric-details">Metric details</a>
-        <ul>
-    <li class="toctree-l4"><a class="reference internal" href="#answer_relevancy">answer_relevancy</a>
+    <li class="toctree-l2"><a class="reference internal" href="#how-to-specify-metrics">How to specify metrics</a>
     </li>
-    <li class="toctree-l4"><a class="reference internal" href="#faithfulness">faithfulness</a>
+    <li class="toctree-l2"><a class="reference internal" href="#standard-llm-and-rag-metrics">Standard LLM and RAG metrics</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#ragas">RAGAS</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#deepeval">DeepEval</a>
     </li>
         </ul>
     </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#full-vs-partial-datasets">Full vs. Partial datasets</a>
+    <li class="toctree-l2"><a class="reference internal" href="#agent-metrics">Agent metrics</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#full-dataset">Full dataset</a>
+    <li class="toctree-l3"><a class="reference internal" href="#builtin">Builtin</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#partial-dataset">Partial dataset</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#generating-then-saving-advanced">Generating then saving (advanced)</a>
+    <li class="toctree-l3"><a class="reference internal" href="#ragas_1">RAGAS</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#sample-fields-reference">Sample fields reference</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#quick-decision-guide">Quick decision guide</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#using-both-metrics">Using both metrics</a>
+    <li class="toctree-l2"><a class="reference internal" href="#field-guidance">Field guidance</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#configuration-yaml">Configuration (YAML)</a>
+    <li class="toctree-l3"><a class="reference internal" href="#standard-evaluation-datasets">Standard evaluation datasets</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#configuration-python">Configuration (Python)</a>
+    <li class="toctree-l3"><a class="reference internal" href="#agent-evaluation-datasets">Agent evaluation datasets</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#providers-ragas-vs-deepeval">Providers: RAGAS vs DeepEval</a>
+    <li class="toctree-l2"><a class="reference internal" href="#choosing-a-provider">Choosing a provider</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#selecting-a-provider">Selecting a provider</a>
+    <li class="toctree-l3"><a class="reference internal" href="#provider-selection">Provider selection</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example-configurations">Example configurations</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#setting-thresholds">Setting thresholds</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#yaml-configuration">YAML configuration</a>
+    <li class="toctree-l2"><a class="reference internal" href="#thresholds-and-params">Thresholds and params</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#python-configuration">Python configuration</a>
+    <li class="toctree-l2"><a class="reference internal" href="#understanding-results">Understanding results</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#threshold-recommendations">Threshold recommendations</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#understanding-scores">Understanding scores</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#interpreting-sample-results">Interpreting sample results</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#aggregate-vs-sample-scores">Aggregate vs. sample scores</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#common-issues">Common issues</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#field-required-contexts">"Field required: contexts"</a>
-    </li>
-        </ul>
+    <li class="toctree-l2"><a class="reference internal" href="#discover-metrics-programmatically">Discover metrics programmatically</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a>
     </li>
@@ -169,405 +153,342 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="available-metrics">Available Metrics</h1>
-<p>Built-in metrics from RAGAS and DeepEval, plus guidance on choosing metrics for your use case.</p>
+<p>Floeval currently registers metrics across <code>ragas</code>, <code>deepeval</code>, and <code>builtin</code>, plus any <code>custom</code> metrics you define at runtime.</p>
 <hr />
-<h2 id="built-in-metrics">Built-in metrics</h2>
+<h2 id="how-to-specify-metrics">How to specify metrics</h2>
+<p>You can reference metrics in four ways:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Example</th>
+<th>When to use it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plain string</td>
+<td><code>"answer_relevancy"</code></td>
+<td>Use with <code>default_provider</code></td>
+</tr>
+<tr>
+<td>Provider-qualified string</td>
+<td><code>"deepeval:faithfulness"</code></td>
+<td>Use when the metric exists in multiple providers</td>
+</tr>
+<tr>
+<td>Dict spec</td>
+<td><code>{"id": "faithfulness", "provider": "deepeval", "params": {"threshold": 0.8}}</code></td>
+<td>Use when you need per-metric params</td>
+</tr>
+<tr>
+<td>Metric instance</td>
+<td><code>my_metric</code></td>
+<td>Use with custom programmatic metrics</td>
+</tr>
+</tbody>
+</table>
+<p>If the same metric ID exists in more than one provider and you do not set <code>default_provider</code>, use the <code>provider:metric</code> form.</p>
+<hr />
+<h2 id="standard-llm-and-rag-metrics">Standard LLM and RAG metrics</h2>
+<h3 id="ragas">RAGAS</h3>
 <table>
 <thead>
 <tr>
 <th>Metric</th>
-<th>Provider</th>
-<th>Required fields</th>
-<th>What it measures</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>answer_relevancy</td>
-<td>RAGAS, DeepEval</td>
-<td>user_input, llm_response</td>
-<td>How relevant is the answer to the question?</td>
-</tr>
-<tr>
-<td>faithfulness</td>
-<td>RAGAS, DeepEval</td>
-<td>user_input, llm_response, <strong>contexts</strong></td>
-<td>Does the answer stay grounded in the provided contexts?</td>
-</tr>
-</tbody>
-</table>
-<h3 id="metric-details">Metric details</h3>
-<h4 id="answer_relevancy">answer_relevancy</h4>
-<ul>
-<li><strong>What it does</strong>: Measures how well the LLM's response answers the user's question</li>
-<li><strong>Score range</strong>: 0–1 (higher is better)</li>
-<li><strong>Use case</strong>: All evaluations (both retrieval-augmented and standalone LLM)</li>
-<li><strong>Example</strong>: Question: "What is Python?" Answer: "Python is a programming language" → High relevancy score</li>
-</ul>
-<h4 id="faithfulness">faithfulness</h4>
-<ul>
-<li><strong>What it does</strong>: Measures whether the LLM's response is supported by the provided context</li>
-<li><strong>Score range</strong>: 0–1 (higher is better)  </li>
-<li><strong>Use case</strong>: RAG systems, where you want to verify the LLM doesn't hallucinate</li>
-<li><strong>Requires</strong>: <code>contexts</code> field in your dataset (list of reference documents)</li>
-<li><strong>Example</strong>: Context: "The capital of France is Paris." Answer: "The capital of France is Paris." → High faithfulness</li>
-<li><strong>Counter-example</strong>: Context: "Python is a programming language." Answer: "Python was created in 1992." → Low faithfulness (info not in context)</li>
-</ul>
-<hr />
-<h2 id="full-vs-partial-datasets">Full vs. Partial datasets</h2>
-<p>Understanding when to use each dataset type helps optimize your evaluation workflow.</p>
-<h3 id="full-dataset">Full dataset</h3>
-<p><strong>Use when</strong>: You have pre-generated LLM responses ready to evaluate.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;samples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="p">{</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What is Python?&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="nt">&quot;llm_response&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Python is a programming language.&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">      </span><span class="nt">&quot;contexts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Python is widely used in data science.&quot;</span><span class="p">]</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="p">]</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">}</span>
-</code></pre></div>
-<p><strong>Workflow</strong>:</p>
-<ol>
-<li>Generate responses from your LLM offline</li>
-<li>Save to JSON/JSONL</li>
-<li>Run evaluation: <code>floeval evaluate -c config.yaml -d dataset.json</code></li>
-</ol>
-<p><strong>Pros</strong>:</p>
-<ul>
-<li>Faster evaluation (no LLM calls during evaluation)</li>
-<li>Good for batch processing</li>
-<li>Can generate responses in parallel</li>
-</ul>
-<p><strong>Cons</strong>:</p>
-<ul>
-<li>Requires pre-generated responses</li>
-<li>Takes up more disk space</li>
-</ul>
-<h3 id="partial-dataset">Partial dataset</h3>
-<p><strong>Use when</strong>: You only have questions and want Floeval to generate responses on-the-fly.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;samples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="p">{</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What is Python?&quot;</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="p">},</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="p">{</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;How does RAG work?&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="nt">&quot;contexts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;RAG combines retrieval with generation.&quot;</span><span class="p">]</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="p">]</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="p">}</span>
-</code></pre></div>
-<p><strong>Requires</strong> in config:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">dataset_generation_config</span><span class="p">:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">generator_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
-</code></pre></div>
-<p><strong>Workflow</strong>:</p>
-<ol>
-<li>Save questions to JSON/JSONL (no responses needed)</li>
-<li>Run evaluation: <code>floeval evaluate -c config.yaml -d dataset.json</code></li>
-<li>Floeval automatically generates responses using the specified model</li>
-</ol>
-<p><strong>Pros</strong>:</p>
-<ul>
-<li>Simpler setup; no need to pre-generate</li>
-<li>Single command; generates and evaluates in one pass</li>
-<li>Good for quick iterations</li>
-</ul>
-<p><strong>Cons</strong>:</p>
-<ul>
-<li>Slower (LLM calls happen during evaluation)</li>
-<li>Higher API costs</li>
-</ul>
-<h3 id="generating-then-saving-advanced">Generating then saving (advanced)</h3>
-<p>Generate responses separately, then reuse them:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>floeval<span class="w"> </span>generate<span class="w"> </span>-c<span class="w"> </span>config.yaml<span class="w"> </span>-d<span class="w"> </span>partial.json<span class="w"> </span>-o<span class="w"> </span>complete.json
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>floeval<span class="w"> </span>evaluate<span class="w"> </span>-c<span class="w"> </span>config.yaml<span class="w"> </span>-d<span class="w"> </span>complete.json
-</code></pre></div>
-<p>This way, you generate responses once and can evaluate them multiple times.</p>
-<hr />
-<h2 id="sample-fields-reference">Sample fields reference</h2>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Required</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>user_input</td>
-<td>Yes</td>
-<td>Question or prompt</td>
-</tr>
-<tr>
-<td>llm_response</td>
-<td>Yes</td>
-<td>LLM's answer</td>
-</tr>
-<tr>
-<td>contexts</td>
-<td>For faithfulness</td>
-<td>List of retrieved documents</td>
-</tr>
-<tr>
-<td>ground_truth</td>
-<td>Optional</td>
-<td>Expected answer</td>
-</tr>
-<tr>
-<td>metadata</td>
-<td>Optional</td>
-<td>Extra metadata</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="quick-decision-guide">Quick decision guide</h2>
-<p><strong>Step 1: Do you have a RAG system?</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Do you have retrieved contexts to include?
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>│
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>├─ NO  → Use: answer_relevancy only
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>│
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>└─ YES → Use: answer_relevancy + faithfulness
-</code></pre></div>
-<p><strong>Step 2: Do you have LLM responses ready?</strong></p>
-<table>
-<thead>
-<tr>
-<th>Scenario</th>
-<th>Dataset type</th>
-<th>Command</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>You have pre-generated responses</td>
-<td>Full dataset</td>
-<td><code>floeval evaluate -c config.yaml -d dataset.json</code></td>
-</tr>
-<tr>
-<td>You only have questions; want Floeval to generate responses</td>
-<td>Partial dataset</td>
-<td><code>floeval evaluate -c config.yaml -d dataset.json</code> (auto-detected)</td>
-</tr>
-<tr>
-<td>You want to generate &amp; save responses separately</td>
-<td>Partial dataset</td>
-<td><code>floeval generate -c config.yaml -d dataset.json -o complete.json</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="using-both-metrics">Using both metrics</h2>
-<h3 id="configuration-yaml">Configuration (YAML)</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">evaluation_config</span><span class="p">:</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">default_provider</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ragas&quot;</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;answer_relevancy&quot;</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;faithfulness&quot;</span>
-</code></pre></div>
-<h3 id="configuration-python">Configuration (Python)</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">evaluation</span> <span class="o">=</span> <span class="n">Evaluation</span><span class="p">(</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">llm_config</span><span class="o">=</span><span class="n">llm_config</span><span class="p">,</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;answer_relevancy&quot;</span><span class="p">,</span> <span class="s2">&quot;faithfulness&quot;</span><span class="p">],</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">default_provider</span><span class="o">=</span><span class="s2">&quot;ragas&quot;</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">)</span>
-</code></pre></div>
-<hr />
-<h2 id="providers-ragas-vs-deepeval">Providers: RAGAS vs DeepEval</h2>
-<p>Both providers implement the same metrics but use different underlying implementations.</p>
-<table>
-<thead>
-<tr>
-<th>Aspect</th>
-<th>RAGAS</th>
-<th>DeepEval</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Default</strong></td>
-<td>Yes</td>
-<td>Available as alternative</td>
-</tr>
-<tr>
-<td><strong>Speed</strong></td>
-<td>Generally faster</td>
-<td>Slightly slower</td>
-</tr>
-<tr>
-<td><strong>Accuracy</strong></td>
-<td>Good; research-backed</td>
-<td>Good; industry-standard</td>
-</tr>
-<tr>
-<td><strong>Use case</strong></td>
-<td>RAG evaluation</td>
-<td>General-purpose LLM evaluation</td>
-</tr>
-<tr>
-<td><strong>Setup</strong></td>
-<td><code>default_provider: "ragas"</code></td>
-<td><code>"deepeval:answer_relevancy"</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="selecting-a-provider">Selecting a provider</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Use RAGAS (default)</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">evaluation_config</span><span class="p">:</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">default_provider</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ragas&quot;</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;answer_relevancy&quot;</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;faithfulness&quot;</span>
-</code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Mix providers</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">evaluation_config</span><span class="p">:</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;ragas:answer_relevancy&quot;</span><span class="w">      </span><span class="c1"># From RAGAS</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;deepeval:faithfulness&quot;</span><span class="w">        </span><span class="c1"># From DeepEval</span>
-</code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Python: specify in metric dict</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">evaluation</span> <span class="o">=</span> <span class="n">Evaluation</span><span class="p">(</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>        <span class="s2">&quot;ragas:answer_relevancy&quot;</span><span class="p">,</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>        <span class="s2">&quot;deepeval:faithfulness&quot;</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    <span class="p">]</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="p">)</span>
-</code></pre></div>
-<p><strong>Recommendation</strong>: Start with RAGAS (default). Switch to DeepEval if you need specific features or different evaluation behavior.</p>
-<hr />
-<h2 id="setting-thresholds">Setting thresholds</h2>
-<p>Thresholds define the score boundary for pass/fail decisions.</p>
-<h3 id="yaml-configuration">YAML configuration</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">evaluation_config</span><span class="p">:</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;answer_relevancy&quot;</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;faithfulness&quot;</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="nt">metric_params</span><span class="p">:</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="nt">answer_relevancy</span><span class="p">:</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">      </span><span class="nt">threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="nt">faithfulness</span><span class="p">:</span>
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">      </span><span class="nt">threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.8</span>
-</code></pre></div>
-<h3 id="python-configuration">Python configuration</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">evaluation</span> <span class="o">=</span> <span class="n">Evaluation</span><span class="p">(</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">llm_config</span><span class="o">=</span><span class="n">llm_config</span><span class="p">,</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;answer_relevancy&quot;</span><span class="p">,</span> <span class="s2">&quot;faithfulness&quot;</span><span class="p">],</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    <span class="n">metric_params</span><span class="o">=</span><span class="p">{</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>        <span class="s2">&quot;answer_relevancy&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;threshold&quot;</span><span class="p">:</span> <span class="mf">0.7</span><span class="p">},</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>        <span class="s2">&quot;faithfulness&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;threshold&quot;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">}</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    <span class="p">}</span>
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="p">)</span>
-</code></pre></div>
-<h3 id="threshold-recommendations">Threshold recommendations</h3>
-<table>
-<thead>
-<tr>
-<th>Environment</th>
-<th>Threshold</th>
+<th>Best for</th>
 <th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Development</td>
-<td>0.5</td>
-<td>Lenient; use for iteration</td>
+<td><code>answer_relevancy</code></td>
+<td>General LLM answer quality</td>
+<td>Works on standard evaluation datasets</td>
 </tr>
 <tr>
-<td>Staging</td>
-<td>0.7</td>
-<td>Moderate; ensures basic quality</td>
+<td><code>faithfulness</code></td>
+<td>Grounding against retrieved context</td>
+<td>Use when samples include <code>contexts</code></td>
 </tr>
 <tr>
-<td>Production</td>
-<td>0.8–0.9</td>
-<td>Strict; high-quality outputs</td>
+<td><code>context_precision</code></td>
+<td>Retrieval ranking quality</td>
+<td>Retrieval-focused metric</td>
+</tr>
+<tr>
+<td><code>context_recall</code></td>
+<td>Coverage of relevant information</td>
+<td>Retrieval-focused metric</td>
+</tr>
+<tr>
+<td><code>context_entity_recall</code></td>
+<td>Entity-level recall from context</td>
+<td>Useful when preserving entities matters</td>
+</tr>
+<tr>
+<td><code>noise_sensitivity</code></td>
+<td>Robustness to noisy or irrelevant context</td>
+<td>Retrieval-focused stress metric</td>
 </tr>
 </tbody>
 </table>
-<ul>
-<li><strong>Sample pass rate</strong>: If 80% of samples exceed threshold, evaluation passes</li>
-<li><strong>Adjust based on your domain</strong>: Customer-facing tasks may need higher thresholds</li>
-</ul>
-<hr />
-<h2 id="understanding-scores">Understanding scores</h2>
-<p>All built-in metrics return scores between 0 and 1.</p>
+<h3 id="deepeval">DeepEval</h3>
 <table>
 <thead>
 <tr>
-<th>Score range</th>
-<th>Interpretation</th>
-<th>Action</th>
+<th>Metric</th>
+<th>Best for</th>
+<th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>0.9–1.0</td>
-<td>Excellent ✅</td>
-<td>Production-ready</td>
+<td><code>answer_relevancy</code></td>
+<td>General LLM answer quality</td>
+<td>Alternate implementation to RAGAS</td>
 </tr>
 <tr>
-<td>0.7–0.9</td>
-<td>Good ✅</td>
-<td>Acceptable for most use cases</td>
+<td><code>faithfulness</code></td>
+<td>Grounding against context</td>
+<td>Uses DeepEval's test-case flow</td>
 </tr>
 <tr>
-<td>0.5–0.7</td>
-<td>Needs improvement ⚠️</td>
-<td>Iterate; investigate failure patterns</td>
+<td><code>contextual_precision</code></td>
+<td>Retrieval precision</td>
+<td>Typically uses <code>contexts</code> and <code>ground_truth</code></td>
 </tr>
 <tr>
-<td>0.0–0.5</td>
-<td>Poor ❌</td>
-<td>Critical; requires redesign</td>
+<td><code>contextual_recall</code></td>
+<td>Retrieval recall</td>
+<td>Typically uses <code>contexts</code> and <code>ground_truth</code></td>
+</tr>
+<tr>
+<td><code>contextual_relevancy</code></td>
+<td>Whether retrieved context is relevant</td>
+<td>Typically uses <code>contexts</code></td>
 </tr>
 </tbody>
 </table>
-<h3 id="interpreting-sample-results">Interpreting sample results</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># Check individual sample scores</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">sample_results</span><span class="p">:</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Question: </span><span class="si">{</span><span class="n">sample</span><span class="p">[</span><span class="s1">&#39;user_input&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Answer: </span><span class="si">{</span><span class="n">sample</span><span class="p">[</span><span class="s1">&#39;llm_response&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Metrics: </span><span class="si">{</span><span class="n">sample</span><span class="p">[</span><span class="s1">&#39;metrics&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    <span class="c1"># Output: {&quot;answer_relevancy&quot;: 0.92, &quot;faithfulness&quot;: 0.87}</span>
-</code></pre></div>
-<h3 id="aggregate-vs-sample-scores">Aggregate vs. sample scores</h3>
+<hr />
+<h2 id="agent-metrics">Agent metrics</h2>
+<p>These metrics are intended for <code>AgentEvaluation</code>, not standard <code>Evaluation</code>.</p>
+<h3 id="builtin">Builtin</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Best for</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>goal_achievement</code></td>
+<td>Did the agent satisfy the request?</td>
+<td>Uses an LLM judge; <code>reference_outcome</code> helps</td>
+</tr>
+<tr>
+<td><code>response_coherence</code></td>
+<td>Is the final answer consistent with the trace?</td>
+<td>Uses the conversation trace and final response</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ragas_1">RAGAS</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Best for</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agent_goal_accuracy</code></td>
+<td>Compare the agent's result to an expected outcome</td>
+<td>Best with <code>reference_outcome</code></td>
+</tr>
+<tr>
+<td><code>tool_call_accuracy</code></td>
+<td>Compare actual tool use to expected tool use</td>
+<td>Requires <code>reference_tool_calls</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="field-guidance">Field guidance</h2>
+<h3 id="standard-evaluation-datasets">Standard evaluation datasets</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Commonly used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>user_input</code></td>
+<td>All standard metrics</td>
+</tr>
+<tr>
+<td><code>llm_response</code></td>
+<td>All standard metrics</td>
+</tr>
+<tr>
+<td><code>contexts</code></td>
+<td><code>faithfulness</code>, retrieval-focused metrics, contextual metrics</td>
+</tr>
+<tr>
+<td><code>ground_truth</code></td>
+<td>Recall and precision style metrics, especially DeepEval contextual metrics</td>
+</tr>
+<tr>
+<td><code>prompt_id</code></td>
+<td>Generated datasets that came from prompt expansion</td>
+</tr>
+</tbody>
+</table>
+<h3 id="agent-evaluation-datasets">Agent evaluation datasets</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Commonly used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>trace.messages</code></td>
+<td>All agent metrics</td>
+</tr>
+<tr>
+<td><code>trace.final_response</code></td>
+<td>All agent metrics</td>
+</tr>
+<tr>
+<td><code>reference_outcome</code></td>
+<td><code>goal_achievement</code>, <code>agent_goal_accuracy</code></td>
+</tr>
+<tr>
+<td><code>reference_tool_calls</code></td>
+<td><code>tool_call_accuracy</code></td>
+</tr>
+</tbody>
+</table>
+<p>If a metric needs fields that are missing from your samples, it will fail at evaluation time and the failure will be recorded in that sample's metric metadata.</p>
+<hr />
+<h2 id="choosing-a-provider">Choosing a provider</h2>
+<h3 id="provider-selection">Provider selection</h3>
 <ul>
-<li><strong>Aggregate scores</strong>: Average across all samples (e.g., 0.89 = 89% average relevancy)</li>
-<li><strong>Sample scores</strong>: Score for each individual evaluation sample</li>
-<li><strong>Use aggregate</strong> for overall system performance</li>
-<li><strong>Use sample scores</strong> to identify problematic responses and improve your system</li>
+<li>Use <code>ragas</code> when you want the default provider for common answer and retrieval metrics.</li>
+<li>Use <code>deepeval</code> when you want its contextual metrics or prefer its scoring behavior.</li>
+<li>Use <code>builtin</code> for agent-specific judge metrics.</li>
+<li>Use <code>custom</code> for domain-specific checks you write yourself.</li>
+</ul>
+<h3 id="example-configurations">Example configurations</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">evaluation_config</span><span class="p">:</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">default_provider</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ragas&quot;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;answer_relevancy&quot;</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;faithfulness&quot;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">evaluation_config</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;ragas:answer_relevancy&quot;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;deepeval:contextual_relevancy&quot;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">evaluation</span> <span class="o">=</span> <span class="n">Evaluation</span><span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">llm_config</span><span class="o">=</span><span class="n">llm_config</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;faithfulness&quot;</span><span class="p">,</span> <span class="s2">&quot;provider&quot;</span><span class="p">:</span> <span class="s2">&quot;deepeval&quot;</span><span class="p">,</span> <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;threshold&quot;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">}},</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="s2">&quot;ragas:answer_relevancy&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="p">],</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="thresholds-and-params">Thresholds and params</h2>
+<p>Set thresholds through <code>metric_params</code> or through metric dict specs.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">evaluation_config</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;answer_relevancy&quot;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;faithfulness&quot;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">metric_params</span><span class="p">:</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nt">answer_relevancy</span><span class="p">:</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">      </span><span class="nt">threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">faithfulness</span><span class="p">:</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">      </span><span class="nt">threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.8</span>
+</code></pre></div>
+<p>Provider-qualified keys also work:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">evaluation_config</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;ragas:answer_relevancy&quot;</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;deepeval:faithfulness&quot;</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">metric_params</span><span class="p">:</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">ragas:answer_relevancy</span><span class="p">:</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">      </span><span class="nt">threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">deepeval:faithfulness</span><span class="p">:</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">      </span><span class="nt">threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.8</span>
+</code></pre></div>
+<hr />
+<h2 id="understanding-results">Understanding results</h2>
+<p>All built-in provider scores are normalized to the <code>0.0</code> to <code>1.0</code> range.</p>
+<table>
+<thead>
+<tr>
+<th>Score range</th>
+<th>Typical interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0.9 - 1.0</code></td>
+<td>Strong</td>
+</tr>
+<tr>
+<td><code>0.7 - 0.9</code></td>
+<td>Good</td>
+</tr>
+<tr>
+<td><code>0.5 - 0.7</code></td>
+<td>Mixed</td>
+</tr>
+<tr>
+<td><code>0.0 - 0.5</code></td>
+<td>Weak</td>
+</tr>
+</tbody>
+</table>
+<p>Use:</p>
+<ul>
+<li>aggregate scores for overall system quality</li>
+<li>per-sample scores to inspect failure patterns</li>
+<li>metric metadata to understand thresholds, provider, and recorded errors</li>
 </ul>
 <hr />
-<h2 id="common-issues">Common issues</h2>
-<h3 id="field-required-contexts">"Field required: contexts"</h3>
-<p><strong>Problem:</strong> Using <code>faithfulness</code> without contexts in dataset.</p>
-<p><strong>Solution:</strong> Either add contexts to your dataset, or use only <code>answer_relevancy</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">evaluation_config</span><span class="p">:</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;answer_relevancy&quot;</span><span class="w">  </span><span class="c1"># Remove faithfulness</span>
+<h2 id="discover-metrics-programmatically">Discover metrics programmatically</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">floeval.api.metrics.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetricRegistry</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">MetricRegistry</span><span class="o">.</span><span class="n">list_providers</span><span class="p">())</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">MetricRegistry</span><span class="o">.</span><span class="n">list_metrics</span><span class="p">(</span><span class="s2">&quot;ragas&quot;</span><span class="p">))</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">MetricRegistry</span><span class="o">.</span><span class="n">list_metrics</span><span class="p">(</span><span class="s2">&quot;deepeval&quot;</span><span class="p">))</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">MetricRegistry</span><span class="o">.</span><span class="n">list_metrics</span><span class="p">(</span><span class="s2">&quot;builtin&quot;</span><span class="p">))</span>
 </code></pre></div>
+<p><code>custom</code> metrics appear in the registry after you define them.</p>
 <hr />
 <h2 id="next-steps">Next steps</h2>
 <ul>
-<li><strong><a href="../custom-metrics/">Custom Metrics</a></strong> — Create your own evaluation logic</li>
-<li><strong><a href="../examples/">Examples</a></strong> — See all usage examples</li>
-<li><strong><a href="../copy-run/">Copy &amp; Run</a></strong> — Copy-paste examples</li>
+<li><a href="../examples/">Examples</a> for provider-routing examples</li>
+<li><a href="../agent-evaluation/">Agent Evaluation</a> for agent-only metrics</li>
+<li><a href="../custom-metrics/">Custom Metrics</a> for user-defined scoring</li>
 </ul>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../examples/" class="btn btn-neutral float-left" title="All Examples"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../agent-tracing/" class="btn btn-neutral float-left" title="Agent Tracing"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../custom-metrics/" class="btn btn-neutral float-right" title="Custom Metrics">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -591,7 +512,7 @@
   <span class="rst-current-version" data-toggle="rst-current-version">
     
     
-      <span><a href="../examples/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../agent-tracing/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../custom-metrics/" style="color: #fcfcfc">Next &raquo;</a></span>
