@@ -52,6 +52,42 @@ class AgentDatasetLoader:
             raise DatasetLoadError(f"Failed to load dataset: {e}") from e
 
     @staticmethod
+    def _trace_from_dict(trace_data: dict) -> AgentTrace:
+        """Parse trace dict to AgentTrace."""
+        messages = []
+        for msg_data in trace_data.get("messages", []):
+            role = msg_data.get("role", "")
+            if role == "assistant":
+                role = "ai"
+            if role == "human":
+                messages.append(HumanMessage(content=msg_data.get("content", "")))
+            elif role == "ai":
+                tool_calls = [
+                    ToolCall(**tc) for tc in msg_data.get("tool_calls", [])
+                ]
+                messages.append(
+                    AIMessage(
+                        content=msg_data.get("content", ""),
+                        tool_calls=tool_calls,
+                    )
+                )
+            elif role == "tool":
+                messages.append(
+                    ToolMessage(
+                        content=msg_data.get("content", ""),
+                        tool_name=msg_data.get("tool_name", ""),
+                        tool_call_id=msg_data.get("tool_call_id"),
+                    )
+                )
+            else:
+                raise ValueError(f"Unknown role: {role}")
+        return AgentTrace(
+            messages=messages,
+            final_response=trace_data.get("final_response", ""),
+            metadata=trace_data.get("metadata", {}),
+        )
+
+    @staticmethod
     def _parse_reference_tool_calls(data: dict) -> list[ToolCall] | None:
         """Parse reference tool calls from data dict."""
         raw = data.get("reference_tool_calls")
@@ -123,47 +159,20 @@ class AgentDatasetLoader:
                 metadata=data.get("metadata", {}),
             )
 
-        trace_data = data["trace"]
-        messages = []
+        trace = AgentDatasetLoader._trace_from_dict(data["trace"])
 
-        for msg_data in trace_data["messages"]:
-            role = msg_data.get("role", "")
-
-            if role == "human":
-                messages.append(
-                    HumanMessage(content=msg_data.get("content", ""))
-                )
-            elif role == "ai":
-                tool_calls = [
-                    ToolCall(**tc) for tc in msg_data.get("tool_calls", [])
-                ]
-                messages.append(
-                    AIMessage(
-                        content=msg_data.get("content", ""),
-                        tool_calls=tool_calls,
-                    )
-                )
-            elif role == "tool":
-                messages.append(
-                    ToolMessage(
-                        content=msg_data.get("content", ""),
-                        tool_name=msg_data.get("tool_name", ""),
-                        tool_call_id=msg_data.get("tool_call_id"),
-                    )
-                )
-            else:
-                raise ValueError(f"Unknown role: {role}")
-
-        trace = AgentTrace(
-            messages=messages,
-            final_response=trace_data.get("final_response", ""),
-            metadata=trace_data.get("metadata", {}),
-        )
+        agent_traces: list[AgentTrace] | None = None
+        raw_traces = data.get("agent_traces")
+        if isinstance(raw_traces, list) and raw_traces:
+            agent_traces = [
+                AgentDatasetLoader._trace_from_dict(t) for t in raw_traces if isinstance(t, dict)
+            ]
 
         return AgentSample(
             user_input=data["user_input"],
             trace=trace,
             reference_outcome=data.get("reference_outcome"),
             reference_tool_calls=AgentDatasetLoader._parse_reference_tool_calls(data),
+            agent_traces=agent_traces,
             metadata=data.get("metadata", {}),
         )
