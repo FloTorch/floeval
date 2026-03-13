@@ -96,6 +96,14 @@ class AgentDatasetLoader:
         return [ToolCall(**tc) for tc in raw]
 
     @staticmethod
+    def _get_user_input(data: dict) -> str | None:
+        return data.get("user_input") or data.get("question")
+
+    @staticmethod
+    def _get_reference_outcome(data: dict) -> str | dict | None:
+        return data.get("reference_outcome") or data.get("answer")
+
+    @staticmethod
     def _load_jsonl(path: Path) -> AgentDataset:
         """Load JSONL file."""
         samples = []
@@ -150,17 +158,23 @@ class AgentDatasetLoader:
 
     @staticmethod
     def _parse_sample(data: dict) -> AgentSample | PartialAgentSample:
-        """Parse dict to sample (auto-detect partial vs full)."""
+        """Parse dict to sample (auto-detect partial vs full).
+        """
+        user_input = AgentDatasetLoader._get_user_input(data)
+        if not user_input:
+            raise ValueError("Record missing both 'user_input' and 'question'")
+        reference_outcome = AgentDatasetLoader._get_reference_outcome(data)
+        ref_tool_calls = AgentDatasetLoader._parse_reference_tool_calls(data)
+
         if "trace" not in data:
             return PartialAgentSample(
-                user_input=data["user_input"],
-                reference_outcome=data.get("reference_outcome"),
-                reference_tool_calls=AgentDatasetLoader._parse_reference_tool_calls(data),
+                user_input=user_input,
+                reference_outcome=reference_outcome,
+                reference_tool_calls=ref_tool_calls,
                 metadata=data.get("metadata", {}),
             )
 
         trace = AgentDatasetLoader._trace_from_dict(data["trace"])
-
         agent_traces: list[AgentTrace] | None = None
         raw_traces = data.get("agent_traces")
         if isinstance(raw_traces, list) and raw_traces:
@@ -169,10 +183,10 @@ class AgentDatasetLoader:
             ]
 
         return AgentSample(
-            user_input=data["user_input"],
+            user_input=user_input,
             trace=trace,
-            reference_outcome=data.get("reference_outcome"),
-            reference_tool_calls=AgentDatasetLoader._parse_reference_tool_calls(data),
+            reference_outcome=reference_outcome,
+            reference_tool_calls=ref_tool_calls,
             agent_traces=agent_traces,
             metadata=data.get("metadata", {}),
         )
