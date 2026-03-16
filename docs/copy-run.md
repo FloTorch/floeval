@@ -3,7 +3,7 @@
 Use these minimal examples as starting points for common workflows.
 
 !!! note "Prerequisites"
-    Example 2 does not need an API key. The others use `llm_config`, so replace the placeholder key before running them.
+    Examples 2 and 7 do not need an API key. The others use `llm_config`, so replace the placeholder key before running them.
 
 ---
 
@@ -226,6 +226,44 @@ evaluation = AgentEvaluation(
 )
 
 print(evaluation.run().summary)
+```
+
+---
+
+## Example 7: DeepEval exact match and pattern match (no API key needed)
+
+```python
+from floeval import Evaluation, DatasetLoader
+
+dataset = DatasetLoader.from_samples(
+    [
+        {
+            "user_input": "What is your support email?",
+            "llm_response": "support@example.com",
+            "ground_truth": "support@example.com",
+        },
+        {
+            "user_input": "What is the office pin code?",
+            "llm_response": "560001",
+            "ground_truth": "560001",
+        },
+    ],
+    partial_dataset=False,
+)
+
+evaluation = Evaluation(
+    dataset=dataset,
+    metrics=[
+        {"id": "exact_match", "provider": "deepeval"},
+        {
+            "id": "pattern_match",
+            "provider": "deepeval",
+            "params": {"pattern": r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"},
+        },
+    ],
+)
+
+print(evaluation.run().aggregate_scores)
 ```
 
 ---

@@ -220,6 +220,104 @@ evaluation = Evaluation(
 )
 ```
 
+### DeepEval output-validation metrics
+
+These metrics check output structure, format, and safety without needing retrieval contexts.
+
+```python
+from floeval import Evaluation, DatasetLoader
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+
+llm_config = OpenAIProviderConfig(
+    base_url="https://api.openai.com/v1",
+    api_key="your-api-key",
+    chat_model="gpt-4o-mini",
+    embedding_model="text-embedding-3-small",
+)
+
+dataset = DatasetLoader.from_samples(
+    [
+        {
+            "user_input": "What is your support email?",
+            "llm_response": "support@example.com",
+            "ground_truth": "support@example.com",
+        },
+        {
+            "user_input": "What is the office zip code?",
+            "llm_response": "The zip code is 10001.",
+            "ground_truth": "10001",
+        },
+    ],
+    partial_dataset=False,
+)
+
+evaluation = Evaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    metrics=[
+        {"id": "exact_match", "provider": "deepeval"},
+        {
+            "id": "pattern_match",
+            "provider": "deepeval",
+            "params": {"pattern": r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"},
+        },
+        {"id": "toxicity", "provider": "deepeval", "params": {"threshold": 0.5}},
+    ],
+)
+
+results = evaluation.run()
+print(results.aggregate_scores)
+```
+
+### DeepEval hallucination check
+
+```python
+dataset = DatasetLoader.from_samples(
+    [
+        {
+            "user_input": "What year was Python created?",
+            "llm_response": "Python was created in 1991.",
+            "contexts": ["Python was first released in 1991 by Guido van Rossum."],
+        }
+    ],
+    partial_dataset=False,
+)
+
+evaluation = Evaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    metrics=[
+        {"id": "hallucination", "provider": "deepeval", "params": {"include_reason": True}},
+    ],
+)
+
+results = evaluation.run()
+```
+
+### DeepEval JSON correctness
+
+```python
+dataset = DatasetLoader.from_samples(
+    [
+        {
+            "user_input": "What is the capital of France?",
+            "llm_response": '{"answer": "Paris"}',
+        }
+    ],
+    partial_dataset=False,
+)
+
+evaluation = Evaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    metrics=[
+        {"id": "json_correctness", "provider": "deepeval", "params": {"include_reason": True}},
+    ],
+)
+
+results = evaluation.run()
+```
+
 ### Async execution
 
 ```python

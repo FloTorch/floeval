@@ -11,7 +11,12 @@ from deepeval.metrics import (
     ContextualPrecisionMetric,
     ContextualRecallMetric,
     ContextualRelevancyMetric,
+    ExactMatchMetric,
     FaithfulnessMetric,
+    HallucinationMetric,
+    JsonCorrectnessMetric,
+    PatternMatchMetric,
+    ToxicityMetric,
 )
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
@@ -66,6 +71,8 @@ class DeepEvalMetric(BaseMetric):
             "evaluation_template",
             "truths_extraction_limit",
             "penalize_ambiguous_claims",
+            "expected_schema",
+            "pattern",
         ]:
             if key in kwargs and key not in metric_params:
                 metric_params[key] = kwargs[key]
@@ -337,3 +344,101 @@ class ContextualRelevancyDeepEvalMetric(DeepEvalMetric):
         )
         result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
         return self._extract_metric_result(result, "contextual_relevancy")
+
+
+class HallucinationDeepEvalMetric(DeepEvalMetric):
+    """Hallucination metric implementation using DeepEval."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="hallucination", **kwargs)
+
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
+        """Compare actual_output against context to detect factual contradictions."""
+        if self._llm_adapter is None:
+            raise ValueError(
+                "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
+            )
+        metric_kwargs = self._metric_params | {"model": self._llm_adapter}
+        metric_instance = HallucinationMetric(**metric_kwargs)
+        test_case = self.adapter.transform_test_case(
+            metric_name="hallucination",
+            test_case_dict=sample.model_dump(),
+        )
+        result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+        return self._extract_metric_result(result, "hallucination")
+
+
+class ToxicityDeepEvalMetric(DeepEvalMetric):
+    """Toxicity metric implementation using DeepEval."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="toxicity", **kwargs)
+
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
+        """Extract opinions from actual_output and classify each as toxic or not."""
+        if self._llm_adapter is None:
+            raise ValueError(
+                "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
+            )
+        metric_kwargs = self._metric_params | {"model": self._llm_adapter}
+        metric_instance = ToxicityMetric(**metric_kwargs)
+        test_case = self.adapter.transform_test_case(
+            metric_name="toxicity",
+            test_case_dict=sample.model_dump(),
+        )
+        result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+        return self._extract_metric_result(result, "toxicity")
+
+
+class ExactMatchDeepEvalMetric(DeepEvalMetric):
+    """Exact match metric implementation using DeepEval."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="exact_match", **kwargs)
+
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
+        """Check if actual_output exactly matches expected_output."""
+        metric_instance = ExactMatchMetric(**self._metric_params)
+        test_case = self.adapter.transform_test_case(
+            metric_name="exact_match",
+            test_case_dict=sample.model_dump(),
+        )
+        result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+        return self._extract_metric_result(result, "exact_match")
+
+
+class PatternMatchDeepEvalMetric(DeepEvalMetric):
+    """Pattern match metric implementation using DeepEval."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="pattern_match", **kwargs)
+
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
+        """Check if actual_output matches the configured regex pattern."""
+        metric_instance = PatternMatchMetric(**self._metric_params)
+        test_case = self.adapter.transform_test_case(
+            metric_name="pattern_match",
+            test_case_dict=sample.model_dump(),
+        )
+        result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+        return self._extract_metric_result(result, "pattern_match")
+
+
+class JsonCorrectnessDeepEvalMetric(DeepEvalMetric):
+    """JSON correctness metric implementation using DeepEval."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="json_correctness", **kwargs)
+
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
+        """Validate actual_output against the configured expected JSON schema."""
+        metric_kwargs = dict(self._metric_params)
+        if self._llm_adapter is not None:
+            metric_kwargs["model"] = self._llm_adapter
+        metric_instance = JsonCorrectnessMetric(**metric_kwargs)
+        test_case = self.adapter.transform_test_case(
+            metric_name="json_correctness",
+            test_case_dict=sample.model_dump(),
+        )
+        result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+        return self._extract_metric_result(result, "json_correctness")
