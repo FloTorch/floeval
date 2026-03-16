@@ -190,6 +190,7 @@ class AgentSample(BaseModel):
     trace: AgentTrace
     reference_outcome: AgentInputOutput | None = None
     reference_tool_calls: list[ToolCall] | None = None
+    agent_traces: list[AgentTrace] | None = None  # One per agent, in execution order (workflow)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @classmethod

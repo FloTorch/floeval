@@ -25,7 +25,16 @@ def _build_headers(api_key: str) -> Dict[str, str]:
 
 
 def _build_gateway_memory_url(base_url: str, provider_name: str) -> str:
-    return f"{base_url.rstrip('/')}/v1/memory/{provider_name}"
+    """Build memory API URL. Memory API does not use /openai in path; strips it from LLM base_url."""
+    base = base_url.rstrip("/")
+    if "/openai/v1" in base:
+        base = base.replace("/openai/v1", "")
+    elif "/openai" in base:
+        base = base.replace("/openai", "")
+    base = base.rstrip("/")
+    if base.endswith("/v1"):
+        return f"{base}/memory/{provider_name}"
+    return f"{base}/v1/memory/{provider_name}"
 
 
 def add_memory(
