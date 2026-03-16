@@ -1,8 +1,8 @@
 """DeepEval provider module.
 
 This module registers DeepEval metrics (answer_relevancy, faithfulness,
-contextual_precision, contextual_recall, contextual_relevancy) with the global
-metric registry.
+contextual_precision, contextual_recall, contextual_relevancy, hallucination,
+toxicity) with the global metric registry.
 """
 
 from floeval.api.metrics.registry import MetricRegistry
@@ -12,6 +12,8 @@ from floeval.metric_providers.deepeval.metrics import (
     ContextualRecallDeepEvalMetric,
     ContextualRelevancyDeepEvalMetric,
     FaithfulnessDeepEvalMetric,
+    HallucinationDeepEvalMetric,
+    ToxicityDeepEvalMetric,
 )
 
 # Create a module-level registry instance for registration
@@ -26,6 +28,8 @@ _registry.register("deepeval", "contextual_recall", ContextualRecallDeepEvalMetr
 _registry.register(
     "deepeval", "contextual_relevancy", ContextualRelevancyDeepEvalMetric
 )
+_registry.register("deepeval", "hallucination", HallucinationDeepEvalMetric)
+_registry.register("deepeval", "toxicity", ToxicityDeepEvalMetric)
 
 __all__ = [
     "FaithfulnessDeepEvalMetric",
@@ -33,4 +37,6 @@ __all__ = [
     "ContextualPrecisionDeepEvalMetric",
     "ContextualRecallDeepEvalMetric",
     "ContextualRelevancyDeepEvalMetric",
+    "HallucinationDeepEvalMetric",
+    "ToxicityDeepEvalMetric",
 ]

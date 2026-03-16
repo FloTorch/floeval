@@ -31,3 +31,14 @@ class ContextualRelevancyTestCase(BaseModel):
     user_input: str
     llm_response: str
     contexts: list[str]
+
+
+class HallucinationTestCase(BaseModel):
+    user_input: str
+    llm_response: str
+    contexts: list[str]
+
+
+class ToxicityTestCase(BaseModel):
+    user_input: str
+    llm_response: str

@@ -12,6 +12,8 @@ from deepeval.metrics import (
     ContextualRecallMetric,
     ContextualRelevancyMetric,
     FaithfulnessMetric,
+    HallucinationMetric,
+    ToxicityMetric,
 )
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
@@ -337,3 +339,47 @@ class ContextualRelevancyDeepEvalMetric(DeepEvalMetric):
         )
         result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
         return self._extract_metric_result(result, "contextual_relevancy")
+
+
+class HallucinationDeepEvalMetric(DeepEvalMetric):
+    """Hallucination metric implementation using DeepEval."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="hallucination", **kwargs)
+
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
+        """Compare actual_output against context to detect factual contradictions."""
+        if self._llm_adapter is None:
+            raise ValueError(
+                "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
+            )
+        metric_kwargs = self._metric_params | {"model": self._llm_adapter}
+        metric_instance = HallucinationMetric(**metric_kwargs)
+        test_case = self.adapter.transform_test_case(
+            metric_name="hallucination",
+            test_case_dict=sample.model_dump(),
+        )
+        result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+        return self._extract_metric_result(result, "hallucination")
+
+
+class ToxicityDeepEvalMetric(DeepEvalMetric):
+    """Toxicity metric implementation using DeepEval."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="toxicity", **kwargs)
+
+    def evaluate(self, sample: Sample, **kwargs) -> MetricResult:
+        """Extract opinions from actual_output and classify each as toxic or not."""
+        if self._llm_adapter is None:
+            raise ValueError(
+                "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
+            )
+        metric_kwargs = self._metric_params | {"model": self._llm_adapter}
+        metric_instance = ToxicityMetric(**metric_kwargs)
+        test_case = self.adapter.transform_test_case(
+            metric_name="toxicity",
+            test_case_dict=sample.model_dump(),
+        )
+        result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+        return self._extract_metric_result(result, "toxicity")
