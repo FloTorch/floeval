@@ -1,6 +1,4 @@
 """DAG models and utilities for agent workflow execution.
-
-Adapted from flobench DAG implementation, minimal subset (no Temporal, no Policies).
 """
 
 from __future__ import annotations
