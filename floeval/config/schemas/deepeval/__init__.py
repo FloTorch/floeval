@@ -42,3 +42,19 @@ class HallucinationTestCase(BaseModel):
 class ToxicityTestCase(BaseModel):
     user_input: str
     llm_response: str
+
+
+class ExactMatchTestCase(BaseModel):
+    user_input: str
+    llm_response: str
+    ground_truth: str
+
+
+class PatternMatchTestCase(BaseModel):
+    user_input: str
+    llm_response: str
+
+
+class JsonCorrectnessTestCase(BaseModel):
+    user_input: str
+    llm_response: str

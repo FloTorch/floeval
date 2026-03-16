@@ -14,7 +14,10 @@ from floeval.config.schemas.deepeval import (
     ContextualRecallTestCase,
     ContextualRelevancyTestCase,
     FaithfulnessTestCase,
+    ExactMatchTestCase,
     HallucinationTestCase,
+    JsonCorrectnessTestCase,
+    PatternMatchTestCase,
     ToxicityTestCase,
 )
 from floeval.config.schemas.io.llm import LLMProviderConfig, _normalize_openai_base_url
@@ -27,6 +30,9 @@ __VALID_TEST_CASE_SCHEMAS__ = {
     "contextual_relevancy": ContextualRelevancyTestCase,
     "hallucination": HallucinationTestCase,
     "toxicity": ToxicityTestCase,
+    "exact_match": ExactMatchTestCase,
+    "pattern_match": PatternMatchTestCase,
+    "json_correctness": JsonCorrectnessTestCase,
 }
 
 
@@ -196,6 +202,40 @@ class DeepEvalAdapter:
             if not isinstance(test_case, ToxicityTestCase):
                 raise TypeError(
                     f"Expected ToxicityTestCase after validation, got {type(test_case)}"
+                )
+
+            return LLMTestCase(
+                input=test_case.user_input,
+                actual_output=test_case.llm_response,
+            )
+        elif metric_name == "exact_match":
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            if not isinstance(test_case, ExactMatchTestCase):
+                raise TypeError(
+                    f"Expected ExactMatchTestCase after validation, got {type(test_case)}"
+                )
+
+            return LLMTestCase(
+                input=test_case.user_input,
+                actual_output=test_case.llm_response,
+                expected_output=test_case.ground_truth,
+            )
+        elif metric_name == "pattern_match":
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            if not isinstance(test_case, PatternMatchTestCase):
+                raise TypeError(
+                    f"Expected PatternMatchTestCase after validation, got {type(test_case)}"
+                )
+
+            return LLMTestCase(
+                input=test_case.user_input,
+                actual_output=test_case.llm_response,
+            )
+        elif metric_name == "json_correctness":
+            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            if not isinstance(test_case, JsonCorrectnessTestCase):
+                raise TypeError(
+                    f"Expected JsonCorrectnessTestCase after validation, got {type(test_case)}"
                 )
 
             return LLMTestCase(
