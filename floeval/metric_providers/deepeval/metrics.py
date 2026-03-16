@@ -71,6 +71,8 @@ class DeepEvalMetric(BaseMetric):
             "evaluation_template",
             "truths_extraction_limit",
             "penalize_ambiguous_claims",
+            "expected_schema",
+            "pattern",
         ]:
             if key in kwargs and key not in metric_params:
                 metric_params[key] = kwargs[key]
