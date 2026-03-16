@@ -41,6 +41,11 @@ If the same metric ID exists in more than one provider and you do not set `defau
 | `contextual_precision` | Retrieval precision | Typically uses `contexts` and `ground_truth` |
 | `contextual_recall` | Retrieval recall | Typically uses `contexts` and `ground_truth` |
 | `contextual_relevancy` | Whether retrieved context is relevant | Typically uses `contexts` |
+| `hallucination` | Detecting factual contradictions | Compares output against `contexts`; needs LLM |
+| `toxicity` | Safety and tone checking | Classifies opinions in output as toxic/non-toxic; needs LLM |
+| `exact_match` | Exact output verification | Binary match against `ground_truth`; no LLM needed |
+| `pattern_match` | Format or structure validation | Regex match via `pattern` param; no LLM needed |
+| `json_correctness` | JSON schema compliance | Validates output against `expected_schema`; LLM optional |
 
 ---
 
@@ -72,9 +77,12 @@ These metrics are intended for `AgentEvaluation`, not standard `Evaluation`.
 |-------|------------------|
 | `user_input` | All standard metrics |
 | `llm_response` | All standard metrics |
-| `contexts` | `faithfulness`, retrieval-focused metrics, contextual metrics |
-| `ground_truth` | Recall and precision style metrics, especially DeepEval contextual metrics |
+| `contexts` | `faithfulness`, retrieval-focused metrics, contextual metrics, `hallucination` |
+| `ground_truth` | Recall and precision style metrics, DeepEval contextual metrics, `exact_match` |
 | `prompt_id` | Generated datasets that came from prompt expansion |
+
+!!! note "Metric-level params vs dataset fields"
+    `pattern_match` and `json_correctness` are configured through metric params (`pattern` and `expected_schema`) rather than dataset fields. See [Thresholds and params](#thresholds-and-params) for examples.
 
 ### Agent evaluation datasets
 
@@ -94,7 +102,7 @@ If a metric needs fields that are missing from your samples, it will fail at eva
 ### Provider selection
 
 - Use `ragas` when you want the default provider for common answer and retrieval metrics.
-- Use `deepeval` when you want its contextual metrics or prefer its scoring behavior.
+- Use `deepeval` when you want its contextual metrics, output-validation metrics (`exact_match`, `pattern_match`, `json_correctness`), safety checks (`toxicity`, `hallucination`), or prefer its scoring behavior.
 - Use `builtin` for agent-specific judge metrics.
 - Use `custom` for domain-specific checks you write yourself.
 
@@ -124,6 +132,36 @@ evaluation = Evaluation(
         "ragas:answer_relevancy",
     ],
 )
+```
+
+```yaml
+# Output-validation and safety metrics (DeepEval)
+evaluation_config:
+  metrics:
+    - provider: "deepeval"
+      id: "exact_match"
+      params:
+        threshold: 1.0
+    - provider: "deepeval"
+      id: "pattern_match"
+      params:
+        threshold: 1.0
+        pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+    - provider: "deepeval"
+      id: "hallucination"
+      params:
+        threshold: 0.5
+        include_reason: true
+    - provider: "deepeval"
+      id: "toxicity"
+      params:
+        threshold: 0.5
+        include_reason: true
+    - provider: "deepeval"
+      id: "json_correctness"
+      params:
+        threshold: 1.0
+        include_reason: true
 ```
 
 ---
