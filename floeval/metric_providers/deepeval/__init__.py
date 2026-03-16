@@ -14,9 +14,9 @@ from floeval.metric_providers.deepeval.metrics import (
     ContextualRelevancyDeepEvalMetric,
     ExactMatchDeepEvalMetric,
     FaithfulnessDeepEvalMetric,
+    HallucinationDeepEvalMetric,
     JsonCorrectnessDeepEvalMetric,
     PatternMatchDeepEvalMetric,
-    HallucinationDeepEvalMetric,
     ToxicityDeepEvalMetric,
 )
 

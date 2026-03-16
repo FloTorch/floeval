@@ -13,9 +13,9 @@ from deepeval.metrics import (
     ContextualRelevancyMetric,
     ExactMatchMetric,
     FaithfulnessMetric,
+    HallucinationMetric,
     JsonCorrectnessMetric,
     PatternMatchMetric,
-    HallucinationMetric,
     ToxicityMetric,
 )
 
