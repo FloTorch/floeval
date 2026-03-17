@@ -15,6 +15,7 @@ Use `floeval evaluate` for full datasets and for partial datasets that Floeval s
 | Full dataset | `floeval evaluate -c config.yaml -d full_dataset.json -o results.json` | You already have `llm_response` values |
 | Partial dataset | `floeval evaluate -c config.yaml -d partial_dataset.json -o results.json` | You want Floeval to generate missing responses before scoring |
 | Two-step generation | `floeval generate -c config.yaml -d partial_dataset.json -o complete.json` | You want to inspect or reuse generated outputs |
+| Prompt evaluation | `floeval evaluate -c prompt_config.yaml -d partial_dataset.json -o results.json` | Dataset has `prompt_ids`, config has `prompts_file` |
 
 CLI evaluation auto-detects partial datasets by checking whether samples are missing `llm_response`.
 
@@ -27,6 +28,14 @@ floeval evaluate -c agent_config.yaml -d agent_dataset.json --agent -o agent_res
 ```
 
 For partial agent datasets in CLI mode, include `evaluation_config.agent_name` in the config.
+
+### Agentic workflow evaluation
+
+Same `--agent` flag, but the config includes `agent_workflow_config` instead of `agent_name`:
+
+```bash
+floeval evaluate -c workflow_config.yaml -d agent_dataset.json --agent -o workflow_results.json
+```
 
 ---
 
@@ -72,6 +81,54 @@ evaluation_config:
   metrics:
     - "goal_achievement"
     - "ragas:tool_call_accuracy"
+```
+
+### Prompt eval config (multi-prompt)
+
+```yaml
+llm_config:
+  base_url: "https://api.openai.com/v1"
+  api_key: "your-api-key"
+  chat_model: "gpt-4o-mini"
+  embedding_model: "text-embedding-3-small"
+
+evaluation_config:
+  default_provider: "ragas"
+  metrics:
+    - "answer_relevancy"
+  prompts_file: "prompts.yaml"
+
+dataset_generation_config:
+  generator_model: "gpt-4o-mini"
+```
+
+### Agentic workflow config
+
+```yaml
+llm_config:
+  base_url: "https://gateway.example/openai/v1"
+  api_key: "your-gateway-key"
+  chat_model: "gpt-4o-mini"
+
+evaluation_config:
+  metrics:
+    - "goal_achievement"
+    - "ragas:agent_goal_accuracy"
+
+agent_workflow_config:
+  dataset_url: "https://your-storage/agent_dataset.json"
+  config:
+    uid: "eval-workflow-001"
+    name: "Triage Workflow"
+    nodes:
+      - {id: "start",    type: "START", label: "Start"}
+      - {id: "classify", type: "AGENT", label: "Classify", agentName: "classifier-agent:latest"}
+      - {id: "respond",  type: "AGENT", label: "Respond",  agentName: "responder-agent:latest"}
+      - {id: "end",      type: "END",   label: "End"}
+    edges:
+      - {sourceNodeId: "start",    targetNodeId: "classify"}
+      - {sourceNodeId: "classify", targetNodeId: "respond"}
+      - {sourceNodeId: "respond",  targetNodeId: "end"}
 ```
 
 ---
@@ -220,104 +277,6 @@ evaluation = Evaluation(
 )
 ```
 
-### DeepEval output-validation metrics
-
-These metrics check output structure, format, and safety without needing retrieval contexts.
-
-```python
-from floeval import Evaluation, DatasetLoader
-from floeval.config.schemas.io.llm import OpenAIProviderConfig
-
-llm_config = OpenAIProviderConfig(
-    base_url="https://api.openai.com/v1",
-    api_key="your-api-key",
-    chat_model="gpt-4o-mini",
-    embedding_model="text-embedding-3-small",
-)
-
-dataset = DatasetLoader.from_samples(
-    [
-        {
-            "user_input": "What is your support email?",
-            "llm_response": "support@example.com",
-            "ground_truth": "support@example.com",
-        },
-        {
-            "user_input": "What is the office zip code?",
-            "llm_response": "The zip code is 10001.",
-            "ground_truth": "10001",
-        },
-    ],
-    partial_dataset=False,
-)
-
-evaluation = Evaluation(
-    dataset=dataset,
-    llm_config=llm_config,
-    metrics=[
-        {"id": "exact_match", "provider": "deepeval"},
-        {
-            "id": "pattern_match",
-            "provider": "deepeval",
-            "params": {"pattern": r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"},
-        },
-        {"id": "toxicity", "provider": "deepeval", "params": {"threshold": 0.5}},
-    ],
-)
-
-results = evaluation.run()
-print(results.aggregate_scores)
-```
-
-### DeepEval hallucination check
-
-```python
-dataset = DatasetLoader.from_samples(
-    [
-        {
-            "user_input": "What year was Python created?",
-            "llm_response": "Python was created in 1991.",
-            "contexts": ["Python was first released in 1991 by Guido van Rossum."],
-        }
-    ],
-    partial_dataset=False,
-)
-
-evaluation = Evaluation(
-    dataset=dataset,
-    llm_config=llm_config,
-    metrics=[
-        {"id": "hallucination", "provider": "deepeval", "params": {"include_reason": True}},
-    ],
-)
-
-results = evaluation.run()
-```
-
-### DeepEval JSON correctness
-
-```python
-dataset = DatasetLoader.from_samples(
-    [
-        {
-            "user_input": "What is the capital of France?",
-            "llm_response": '{"answer": "Paris"}',
-        }
-    ],
-    partial_dataset=False,
-)
-
-evaluation = Evaluation(
-    dataset=dataset,
-    llm_config=llm_config,
-    metrics=[
-        {"id": "json_correctness", "provider": "deepeval", "params": {"include_reason": True}},
-    ],
-)
-
-results = evaluation.run()
-```
-
 ### Async execution
 
 ```python
@@ -400,6 +359,81 @@ evaluation = AgentEvaluation(
 results = evaluation.run()
 ```
 
+### Agentic workflow with `WorkflowRunner`
+
+```python
+import json
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset, PartialAgentSample
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.flotorch import WorkflowRunner
+
+llm_config = OpenAIProviderConfig(
+    base_url="https://gateway.example/openai/v1",
+    api_key="your-gateway-key",
+    chat_model="gpt-4o-mini",
+)
+
+dag_config = json.loads(open("workflow_config.json").read())
+runner = WorkflowRunner(dag_config=dag_config, llm_config=llm_config)
+
+dataset = AgentDataset(
+    samples=[
+        PartialAgentSample(
+            user_input="My order has not arrived after two weeks.",
+            reference_outcome="Apology and escalation to shipping team.",
+        )
+    ]
+)
+
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    agent_runner=runner,
+    llm_config=llm_config,
+    metrics=["goal_achievement", "ragas:agent_goal_accuracy"],
+)
+
+results = evaluation.run()
+print(results.summary)
+```
+
+### Prompt evaluation (multi-prompt, Python)
+
+```python
+from floeval import Evaluation, DatasetLoader
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+
+llm_config = OpenAIProviderConfig(
+    base_url="https://api.openai.com/v1",
+    api_key="your-api-key",
+    chat_model="gpt-4o-mini",
+    embedding_model="text-embedding-3-small",
+)
+
+partial_dataset = DatasetLoader.from_samples(
+    [
+        {
+            "user_input": "Summarize this customer support ticket.",
+            "prompt_ids": ["concise", "detailed"],
+        }
+    ],
+    partial_dataset=True,
+)
+
+evaluation = Evaluation(
+    dataset=partial_dataset,
+    llm_config=llm_config,
+    default_provider="ragas",
+    metrics=["answer_relevancy"],
+    dataset_generator_model="gpt-4o-mini",
+    prompts_file="prompts.yaml",
+)
+
+results = evaluation.run()
+for row in results.sample_results:
+    print(row["prompt_id"], row["metrics"]["answer_relevancy"]["score"])
+```
+
 ---
 
 ## Save and inspect results
@@ -424,6 +458,8 @@ python -m json.tool complete.json
 ## Related references
 
 - [Minimal Examples](copy-run.md) for shorter examples
+- [Prompt Evaluation](prompt-evaluation.md) for prompt variant workflows
 - [Agent Evaluation](agent-evaluation.md) for dataset shapes and CLI details
+- [Agentic Workflow](agentic-workflow.md) for multi-agent DAG evaluation
 - [Agent Tracing](agent-tracing.md) for trace capture helpers
 - [Metrics](metrics.md) for the current metric catalog

@@ -1,0 +1,2235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Floeval User Guide v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2a2e3f;
+    --accent: #5af2a0;
+    --accent2: #4d9fff;
+    --accent3: #ff6b6b;
+    --text: #e8eaf2;
+    --muted: #7a7f99;
+    --card: #1e2235;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 20px;
+    background-image: radial-gradient(ellipse at 20% 10%, rgba(90,242,160,0.06) 0%, transparent 50%),
+                      radial-gradient(ellipse at 80% 80%, rgba(77,159,255,0.06) 0%, transparent 50%);
+  }
+
+  .container { max-width: 920px; margin: 0 auto; }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+    animation: fadeUp 0.6s ease forwards;
+  }
+
+  .badge {
+    display: inline-block;
+    background: rgba(90,242,160,0.12);
+    border: 1px solid rgba(90,242,160,0.3);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+
+  h1 {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 300;
+    max-width: 560px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    animation: fadeUp 0.6s ease 0.1s both;
+  }
+
+  .tab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab:hover { border-color: var(--accent); color: var(--accent); }
+  .tab.active {
+    background: rgba(90,242,160,0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .phase { display: none; animation: fadeUp 0.4s ease forwards; }
+  .phase.active { display: block; }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .phase-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--accent);
+    color: #0f1117;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .phase-title { font-size: 1.2rem; font-weight: 600; }
+  .phase-desc { color: var(--muted); font-size: 0.88rem; margin-top: 2px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-bottom: 24px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .card:hover { border-color: var(--accent2); transform: translateY(-2px); }
+
+  .card-icon { font-size: 1.4rem; margin-bottom: 10px; }
+  .card-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; }
+  .card-body { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+  .checklist { display: flex; flex-direction: column; gap: 10px; }
+
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    transition: border-color 0.2s;
+  }
+
+  .check-item:hover { border-color: var(--accent); }
+
+  .check-box {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+  }
+
+  .check-label { font-size: 0.88rem; font-weight: 500; }
+  .check-sub { font-size: 0.78rem; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  .code-block {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0;
+    margin: 12px 0;
+    overflow-x: auto;
+  }
+
+  .code-block pre {
+    margin: 0;
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--text);
+    line-height: 1.6;
+    white-space: pre;
+    overflow-x: auto;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  .code-block code {
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  .flow-card .code-block pre {
+    padding: 12px;
+    font-size: 0.75rem;
+  }
+
+  .code-block .lang-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted);
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-block .copy-hint {
+    font-size: 0.65rem;
+    color: var(--muted);
+    padding: 4px 16px 8px;
+    opacity: 0.8;
+  }
+
+  .code-block .comment { color: var(--muted); }
+  .code-block .key { color: var(--accent2); }
+  .code-block .str { color: var(--accent); }
+
+  .flow-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px 0;
+  }
+
+  @media (max-width: 700px) { .flow-grid { grid-template-columns: 1fr; } }
+
+  .flow-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .flow-card h4 {
+    color: var(--accent);
+    margin-bottom: 12px;
+    font-size: 0.95rem;
+  }
+
+  .flow-card pre {
+    font-size: 0.78rem;
+    background: var(--surface);
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-top: 8px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  td { color: var(--text); }
+
+  .tip-box {
+    background: rgba(77,159,255,0.08);
+    border: 1px solid rgba(77,159,255,0.25);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 0.83rem;
+    color: #a0c4ff;
+    line-height: 1.6;
+    margin: 16px 0;
+  }
+
+  .tip-box strong { color: var(--accent2); }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  .nav-btns { display: flex; justify-content: space-between; margin-top: 28px; }
+
+  .btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 10px 22px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0f1117;
+    font-weight: 700;
+  }
+  .btn.primary:hover { background: #3de088; }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .step-list { counter-reset: step; }
+  .step-list li {
+    list-style: none;
+    padding-left: 40px;
+    position: relative;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .step-list li::before {
+    counter-increment: step;
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    width: 24px; height: 24px;
+    background: var(--accent);
+    color: #0f1117;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="badge">📦 FLOEVAL</div>
+    <h1>User Guide <span>Documentation</span></h1>
+    <p class="subtitle">Evaluate LLM responses and AI agents using Floeval. Five evaluation types: LLM, RAG, Prompt, Agent (single), and Agentic Workflow (multi-agent DAG).</p>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" onclick="switchTab(0)">01 · Overview</div>
+    <div class="tab" onclick="switchTab(1)">02 · Prerequisites & Setup</div>
+    <div class="tab" onclick="switchTab(2)">03 · Flow 1: CLI</div>
+    <div class="tab" onclick="switchTab(3)">04 · Flow 2: Python</div>
+    <div class="tab" onclick="switchTab(4)">05 · Metrics & Custom</div>
+    <div class="tab" onclick="switchTab(5)">06 · All Options</div>
+    <div class="tab" onclick="switchTab(6)">07 · Copy & Run</div>
+  </div>
+
+  <!-- Phase 0: Overview -->
+  <div class="phase active" id="phase-0">
+    <div class="phase-header">
+      <div class="phase-num">1</div>
+      <div>
+        <div class="phase-title">What is Floeval?</div>
+        <div class="phase-desc">Floeval supports five evaluation types: LLM, RAG, Prompt, Agent (single), and Agentic Workflow (multi-agent DAG). Each maps to a different dataset shape and set of metrics.</div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">📄</div>
+        <div class="card-title">LLM evaluation</div>
+        <div class="card-body">Direct question-answer quality without retrieval. Use <code>answer_relevancy</code>. Dataset: <code>user_input</code> + <code>llm_response</code>.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔍</div>
+        <div class="card-title">RAG evaluation</div>
+        <div class="card-body">Answer quality and retrieval performance. Use <code>faithfulness</code>, <code>context_precision</code>, <code>context_recall</code>. Dataset includes <code>contexts</code>.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📝</div>
+        <div class="card-title">Prompt evaluation</div>
+        <div class="card-body">Compare one or many system-prompt variants at scale. Define prompts in a file; dataset uses <code>prompt_ids</code>. Works with or without RAG.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🤖</div>
+        <div class="card-title">Agent evaluation</div>
+        <div class="card-body">Single agent trace scoring: goal achievement, coherence, and tool call accuracy. Dataset: <code>AgentDataset</code> with full or partial samples.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔗</div>
+        <div class="card-title">Agentic workflow</div>
+        <div class="card-body">Multi-agent DAG pipelines. Define a DAG with nodes and edges; each AGENT node is scored independently. Uses <code>WorkflowRunner</code>.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🛠️</div>
+        <div class="card-title">Two ways to use</div>
+        <div class="card-body"><strong>Flow 1: CLI</strong> — Run from config + dataset files.<br><strong>Flow 2: Python</strong> — Integrate directly into your app.</div>
+      </div>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Eval type quick reference</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Eval type</th><th>Key metrics</th><th>Dataset needs</th></tr>
+        <tr><td>llm</td><td>answer_relevancy</td><td>user_input + llm_response</td></tr>
+        <tr><td>rag</td><td>faithfulness, context_precision, context_recall</td><td>user_input + llm_response + contexts</td></tr>
+        <tr><td>prompt (no RAG)</td><td>answer_relevancy</td><td>partial dataset + prompts_file</td></tr>
+        <tr><td>prompt (with RAG)</td><td>faithfulness + retrieval metrics</td><td>partial dataset + prompts_file + vectorstore</td></tr>
+        <tr><td>agent</td><td>goal_achievement, response_coherence, agent_goal_accuracy, tool_call_accuracy</td><td>AgentDataset (full or partial)</td></tr>
+        <tr><td>agentic_workflow</td><td>same 4 agent metrics</td><td>AgentDataset + DAG config</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Quick decision</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>I want to...</th><th>Use</th></tr>
+        <tr><td>Score LLM answers quickly</td><td>LLM eval + CLI (Flow 1)</td></tr>
+        <tr><td>Score RAG answers with retrieval context</td><td>RAG eval</td></tr>
+        <tr><td>Compare system prompt variants</td><td>Prompt eval with prompts_file</td></tr>
+        <tr><td>Integrate into my app</td><td>Python API (Flow 2)</td></tr>
+        <tr><td>Evaluate agent traces I already have</td><td>Agent eval (Mode 1, pre-captured traces)</td></tr>
+        <tr><td>Run my agent and evaluate it</td><td>Agent eval (Mode 2 Python callable or Mode 4 FloTorch)</td></tr>
+        <tr><td>Evaluate a multi-agent pipeline</td><td>Agentic Workflow eval + WorkflowRunner</td></tr>
+        <tr><td>Check tool call correctness</td><td>tool_call_accuracy metric</td></tr>
+        <tr><td>Create my own check</td><td>Custom metrics</td></tr>
+      </table>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn" disabled>← Previous</button>
+      <button class="btn primary" onclick="switchTab(1)">Next: Setup →</button>
+    </div>
+  </div>
+
+  <!-- Phase 1: Prerequisites & Setup -->
+  <div class="phase" id="phase-1">
+    <div class="phase-header">
+      <div class="phase-num">2</div>
+      <div>
+        <div class="phase-title">Prerequisites & Setup</div>
+        <div class="phase-desc">What you need before starting. Complete these steps once.</div>
+      </div>
+    </div>
+
+    <div class="checklist">
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="check-label">Python 3.11 or higher</div>
+          <div class="check-sub">Check: <code>python --version</code></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="check-label">LLM API key (OpenAI or compatible)</div>
+          <div class="check-sub">Get from OpenAI Platform or your provider. Pass in config file (<code>llm_config.api_key</code>) or Python script—your choice.</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="check-label">Install Floeval</div>
+          <div class="check-sub"><code>pip install --pre floeval</code> or <code>pip install floeval-0.2.0b1-py3-none-any.whl</code></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="check-label">Verify installation</div>
+          <div class="check-sub"><code>floeval --version</code> → should show <code>floeval 0.2.0b1</code></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="check-label">FloTorch hosted agent (optional)</div>
+          <div class="check-sub">Optional: <code>pip install floeval[flotorch]</code> for running agents via FloTorch gateway. Required only if you use <code>agent_runner</code> with <code>create_flotorch_runner()</code>.</div>
+        </div>
+      </div>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Setup commands</h4>
+    <div class="code-block">
+      <span class="lang-label">Shell (Linux/macOS)</span>
+      <pre><code># Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate
+
+# Install
+pip install floeval</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Shell (Windows)</span>
+      <pre><code># Create virtual environment (recommended)
+python -m venv venv
+venv\Scripts\activate
+
+# Install
+pip install floeval</code></pre>
+    </div>
+
+    <div class="tip-box">
+      <strong>💡 Pro tip:</strong> Pass your API key in the config file (<code>llm_config.api_key</code>) or in your Python script. Load from env/secrets if you prefer—Floeval just needs the dict structure. All code blocks below can be selected and copied (triple-click or click-drag).
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn" onclick="switchTab(0)">← Previous</button>
+      <button class="btn primary" onclick="switchTab(2)">Next: CLI →</button>
+    </div>
+  </div>
+
+  <!-- Phase 2: Flow 1 - CLI -->
+  <div class="phase" id="phase-2">
+    <div class="phase-header">
+      <div class="phase-num">3</div>
+      <div>
+        <div class="phase-title">Flow 1: Using CLI</div>
+        <div class="phase-desc">Run evaluations from the command line. No Python code needed.</div>
+      </div>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">CLI command</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 10px;"><strong>Standard (LLM/RAG/Prompt) flow:</strong></p>
+    <div class="code-block">
+      <span class="lang-label">Command</span>
+      <pre><code>floeval evaluate -c CONFIG_FILE -d DATASET_FILE [-o OUTPUT_FILE]</code></pre>
+    </div>
+    <p style="font-size: 0.88rem; color: var(--muted); margin: 12px 0 10px;"><strong>Agent flow:</strong></p>
+    <div class="code-block">
+      <span class="lang-label">Command</span>
+      <pre><code>floeval evaluate --agent -c CONFIG_FILE -d DATASET_FILE [-o OUTPUT_FILE]</code></pre>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Option</th><th>Required</th><th>Description</th></tr>
+        <tr><td><code>--agent</code></td><td>No</td><td>Use Agent or Agentic Workflow evaluation flow. Omit for standard LLM/RAG/Prompt evaluation.</td></tr>
+        <tr><td><code>-c, --config</code></td><td>Yes</td><td>Path to config file (YAML or JSON)</td></tr>
+        <tr><td><code>-d, --dataset</code></td><td>Yes</td><td>Path to dataset file (JSON or JSONL)</td></tr>
+        <tr><td><code>-o, --output</code></td><td>No</td><td>Save results to JSON file. If omitted, prints to terminal.</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Standard flow: Full vs Partial dataset</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Type</th><th>Description</th><th>When to use</th></tr>
+        <tr><td><strong>Full dataset</strong></td><td>Each sample has <code>llm_response</code>. Evaluation runs directly.</td><td>You already have LLM answers (e.g. from your app).</td></tr>
+        <tr><td><strong>Partial dataset</strong></td><td>Samples have only <code>user_input</code> (question). <code>llm_response</code> is omitted. Floeval generates it at runtime, then evaluates.</td><td>You have questions but no answers yet. Floeval calls your LLM to generate responses internally.</td></tr>
+      </table>
+    </div>
+    <p style="font-size: 0.88rem; color: var(--muted); margin: 8px 0 16px; line-height: 1.6;"><strong>Partial dataset flow:</strong> For each sample, Floeval sends <code>user_input</code> as the prompt to your LLM (with optional <code>system_prompt</code> from config). The LLM returns a response, which is stored as <code>llm_response</code>. Then metrics (answer_relevancy, faithfulness, etc.) run on that generated response. Config must include <code>dataset_generation_config.generator_model</code> for partial datasets.</p>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 16px; line-height: 1.6;"><strong>Capability:</strong> For partial datasets, only <code>user_input</code> is required. <code>contexts</code>, <code>ground_truth</code> are optional (add them if you need faithfulness or reference comparison).</p>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agent flow: Agent dataset format</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 10px;">Agent datasets use JSON with a <code>samples</code> array. Each sample has <code>user_input</code> and either a full trace or a partial (no trace).</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Type</th><th>Description</th><th>When to use</th></tr>
+        <tr><td><strong>Full (trace present)</strong></td><td>Each sample has <code>user_input</code>, <code>trace</code>, optionally <code>reference_outcome</code>, <code>reference_tool_calls</code>. Evaluation runs directly.</td><td>Pre-captured traces — you already have the conversation logs.</td></tr>
+        <tr><td><strong>Partial (no trace)</strong></td><td>Samples have <code>user_input</code>, <code>reference_outcome</code>, optionally <code>reference_tool_calls</code>. Trace omitted. Config must include <code>evaluation_config.agent_name</code> for FloTorch hosted agents.</td><td>Run agent at evaluation time (in-process or FloTorch hosted).</td></tr>
+      </table>
+    </div>
+    <p style="font-size: 0.88rem; color: var(--muted); margin: 8px 0 16px; line-height: 1.6;"><strong>Agent config:</strong> For agent flow, config requires <code>evaluation_config.metrics</code> (no default). For partial agent datasets, set <code>evaluation_config.agent_name</code> to use FloTorch gateway agent.</p>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Step-by-step</h4>
+    <ol class="step-list">
+      <li><strong>Create config.yaml</strong> — See config structure below.</li>
+      <li><strong>Create dataset.json</strong> — Full (with llm_response) or Partial (questions only). See examples below.</li>
+      <li><strong>Run:</strong> <code>floeval evaluate -c config.yaml -d dataset.json</code></li>
+      <li><strong>Optional:</strong> Add <code>-o results.json</code> to save results.</li>
+    </ol>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Config file (YAML)</h4>
+    <div class="code-block">
+      <span class="lang-label">config.yaml</span>
+      <pre><code>llm_config:
+  base_url: "https://api.openai.com/v1"
+  api_key: "your-api-key"
+  chat_model: gpt-4o-mini
+  embedding_model: text-embedding-3-small
+  system_prompt: "You are a helpful assistant."  # optional
+
+evaluation_config:
+  default_provider: "ragas"   # optional; see Config field notes below
+  metrics:
+    - ragas:answer_relevancy
+    - ragas:faithfulness
+  metric_params:
+    answer_relevancy:
+      threshold: 0.7
+
+# Omit for full datasets. Required only for partial datasets (no llm_response).
+dataset_generation_config:
+  generator_model: gpt-4o-mini</code></pre>
+      <p style="font-size: 0.82rem; color: var(--muted); margin: 10px 0 0; padding: 0 16px 12px; line-height: 1.5;"><strong>Config field notes:</strong><br>
+      <code>default_provider</code> — optional. Used when metrics are plain strings (e.g. <code>answer_relevancy</code>) and the metric exists in multiple providers. If omitted: auto-picks when only one provider has it; if ambiguous, use <code>ragas:answer_relevancy</code> or set default_provider.<br>
+      <code>metric_params</code> — optional. Override per-metric parameters.<br>
+      <code>dataset_generation_config</code> — omit for full datasets; required for partial.</p>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">config.json — alternative format</span>
+      <pre><code>{
+  "llm_config": {
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "your-api-key",
+    "chat_model": "gpt-4o-mini",
+    "embedding_model": "text-embedding-3-small",
+    "system_prompt": "You are a helpful assistant."
+  },
+  "evaluation_config": {
+    "default_provider": "ragas",
+    "metrics": ["ragas:answer_relevancy", "ragas:faithfulness"],
+    "metric_params": {
+      "answer_relevancy": {"threshold": 0.7}
+    }
+  },
+  "dataset_generation_config": {
+    "generator_model": "gpt-4o-mini"
+  }
+}</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Dataset file (JSON)</h4>
+    <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 6px;"><strong>LLM/RAG/Prompt sample fields:</strong> <code>user_input</code> (or <code>question</code>) — always required. <code>llm_response</code> — required for full datasets; omit for partial (Floeval generates it). <code>contexts</code> — optional; needed for faithfulness. <code>ground_truth</code> (or <code>answer</code>) — optional; used by reference metrics.</p>
+    <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 10px;">Full dataset — samples with <code>llm_response</code>:</p>
+    <div class="code-block">
+      <span class="lang-label">full_dataset.json — full (has llm_response)</span>
+      <pre><code>{
+  "samples": [
+    {
+      "user_input": "What is Python?",
+      "llm_response": "Python is a programming language.",
+      "contexts": ["Python is widely used."],
+      "ground_truth": "A programming language"
+    },
+    {
+      "user_input": "What is RAG?",
+      "llm_response": "RAG stands for Retrieval-Augmented Generation.",
+      "contexts": ["RAG combines retrieval with generation."]
+    }
+  ]
+}</code></pre>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--muted); margin: 12px 0 10px;">Partial dataset — only <code>user_input</code> required; <code>llm_response</code> generated at runtime:</p>
+    <div class="code-block">
+      <span class="lang-label">partial_dataset.json — partial (no llm_response; Floeval generates it)</span>
+      <pre><code>{
+  "samples": [
+    {
+      "user_input": "What is Python?",
+      "contexts": ["Python is widely used."],
+      "ground_truth": "A programming language"
+    },
+    {
+      "user_input": "What is RAG?",
+      "contexts": ["RAG combines retrieval with generation."]
+    }
+  ]
+}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">dataset.jsonl — one sample per line (full or partial)</span>
+      <pre><code>{"user_input": "Q1?", "llm_response": "A1.", "contexts": ["..."]}
+{"user_input": "Q2?", "llm_response": "A2.", "contexts": ["..."]}</code></pre>
+      <p style="font-size: 0.78rem; color: var(--muted); padding: 8px 16px; margin: 0;">Partial JSONL: omit <code>llm_response</code> from each line. CLI auto-detects.</p>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agent config file (YAML)</h4>
+    <div class="code-block">
+      <span class="lang-label">agent_config.yaml — for floeval evaluate --agent</span>
+      <pre><code>llm_config:
+  base_url: "https://api.openai.com/v1"
+  api_key: "your-api-key"
+  chat_model: gpt-4o-mini
+  embedding_model: text-embedding-3-small
+
+evaluation_config:
+  agent_name: "my-agent"   # Required for partial datasets with FloTorch hosted agent
+  default_provider: "builtin"   # optional; defaults to "builtin" for agent metrics
+  metrics:
+    - goal_achievement
+    - response_coherence
+    - ragas:tool_call_accuracy   # requires reference_tool_calls in samples</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agent dataset file (JSON)</h4>
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">How to prepare agent datasets</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;"><strong>Full dataset</strong> — you have conversation logs. Export each run as a sample with <code>user_input</code> + <code>trace</code>. <strong>Partial dataset</strong> — you have test cases (user_input + expected outcome). Omit trace; Floeval runs your agent at eval time and captures the trace.</p>
+    <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 8px;"><strong>Where do traces come from?</strong> (1) Your app — log messages as they happen. (2) LangChain — <code>wrap_langchain_agent</code> captures automatically. (3) Custom agents — use <code>@capture_trace</code> + <code>log_turn</code>/<code>log_tool_result</code>.</p>
+    <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 8px;"><strong>reference_tool_calls</strong> format: use <code>"name"</code> not <code>"tool"</code>. Example: <code>[{"name": "get_weather", "args": {"city": "Tokyo"}}]</code></p>
+    <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 10px;"><strong>Full dataset</strong> — trace is the conversation log. Each message has <code>role</code> (human|ai|tool), <code>content</code>. AI messages include <code>tool_calls</code> with <code>name</code> and <code>args</code>. Tool messages include <code>tool_name</code>, <code>tool_call_id</code>.</p>
+    <div class="code-block">
+      <span class="lang-label">agent_dataset_full.json — full (complete trace example)</span>
+      <pre><code>{
+  "samples": [
+    {
+      "user_input": "Get the weather for London",
+      "trace": {
+        "messages": [
+          {"role": "human", "content": "Get the weather for London"},
+          {"role": "ai", "content": "", "tool_calls": [{"name": "get_weather", "args": {"city": "London"}}]},
+          {"role": "tool", "content": "Sunny, 22°C", "tool_name": "get_weather", "tool_call_id": "call_1"},
+          {"role": "ai", "content": "The weather in London is sunny with 22°C.", "tool_calls": []}
+        ],
+        "final_response": "The weather in London is sunny with 22°C.",
+        "metadata": {}
+      },
+      "reference_outcome": "Provides London weather",
+      "reference_tool_calls": [{"name": "get_weather", "args": {"city": "London"}}]
+    }
+  ]
+}</code></pre>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--muted); margin: 12px 0 10px;"><strong>Partial dataset</strong> — omit <code>trace</code>. Agent runs at evaluation time (in-process or FloTorch hosted):</p>
+    <div class="code-block">
+      <span class="lang-label">agent_dataset_partial.json — partial (no trace)</span>
+      <pre><code>{
+  "samples": [
+    {
+      "user_input": "Get the weather for London",
+      "reference_outcome": "Provides London weather",
+      "reference_tool_calls": [{"name": "get_weather", "args": {"city": "London"}}]
+    }
+  ]
+}</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Prompt evaluation config (YAML)</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Single system prompt (inline in llm_config) or multi-prompt via <code>prompts_file</code>. Dataset uses <code>prompt_ids</code> to list which prompts to apply per sample.</p>
+    <div class="code-block">
+      <span class="lang-label">YAML config — multi-prompt</span>
+      <pre><code>llm_config:
+  base_url: "https://api.openai.com/v1"
+  api_key: "your-api-key"
+  chat_model: "gpt-4o-mini"
+  embedding_model: "text-embedding-3-small"
+
+evaluation_config:
+  metrics:
+    - "ragas:answer_relevancy"
+  prompts_file: "prompts.yaml"
+
+dataset_generation_config:
+  generator_model: "gpt-4o-mini"</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">prompts.yaml</span>
+      <pre><code>prompts:
+  concise:
+    template: "Answer in one short paragraph."
+  detailed:
+    template: "Answer in detail with at least three points."</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Dataset with prompt_ids (partial_dataset.json)</span>
+      <pre><code>{
+  "samples": [
+    {
+      "user_input": "What is RAG?",
+      "prompt_ids": ["concise", "detailed"]
+    }
+  ]
+}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Bash</span>
+      <pre><code>floeval evaluate -c prompt_config.yaml -d partial_dataset.json -o prompt_results.json</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agentic Workflow config (YAML)</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Use <code>agent_workflow_config</code> with a DAG config. Requires <code>pip install "floeval[flotorch]"</code>.</p>
+    <div class="code-block">
+      <span class="lang-label">YAML config</span>
+      <pre><code>llm_config:
+  base_url: "https://gateway.example/openai/v1"
+  api_key: "your-gateway-key"
+  chat_model: "gpt-4o-mini"
+
+evaluation_config:
+  metrics:
+    - "goal_achievement"
+    - "ragas:agent_goal_accuracy"
+
+agent_workflow_config:
+  dataset_url: "https://your-storage/agent_dataset.json"
+  config:
+    uid: "workflow-001"
+    name: "Triage Workflow"
+    nodes:
+      - {id: "start",    type: "START", label: "Start"}
+      - {id: "classify", type: "AGENT", label: "Classify", agentName: "classifier-agent:latest"}
+      - {id: "respond",  type: "AGENT", label: "Respond",  agentName: "responder-agent:latest"}
+      - {id: "end",      type: "END",   label: "End"}
+    edges:
+      - {sourceNodeId: "start",    targetNodeId: "classify"}
+      - {sourceNodeId: "classify", targetNodeId: "respond"}
+      - {sourceNodeId: "respond",  targetNodeId: "end"}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Bash</span>
+      <pre><code>floeval evaluate -c workflow_config.yaml -d agent_dataset.json --agent -o workflow_results.json</code></pre>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn" onclick="switchTab(1)">← Previous</button>
+      <button class="btn primary" onclick="switchTab(3)">Next: Python →</button>
+    </div>
+  </div>
+
+  <!-- Phase 3: Flow 2 - Python -->
+  <div class="phase" id="phase-3">
+    <div class="phase-header">
+      <div class="phase-num">4</div>
+      <div>
+        <div class="phase-title">Flow 2: Using Python</div>
+        <div class="phase-desc">Integrate Floeval into your application. Full control over evaluation.</div>
+      </div>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Evaluation classes</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Class</th><th>Use for</th><th>Dataset</th><th>Key fields</th></tr>
+        <tr><td><code>Evaluation</code></td><td>LLM/RAG/Prompt response evaluation</td><td><code>DatasetLoader</code></td><td>user_input, llm_response, contexts</td></tr>
+        <tr><td><code>AgentEvaluation</code></td><td>Agent evaluation (traces, tool use)</td><td><code>AgentDataset</code></td><td>trace, reference_outcome, reference_tool_calls</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Imports</h4>
+    <div class="code-block">
+      <span class="lang-label">Python — LLM/RAG/Prompt</span>
+      <pre><code>from floeval import Evaluation, DatasetLoader
+from floeval.config.schemas.io.llm import OpenAIProviderConfig</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Python — Agent</span>
+      <pre><code>from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset
+from floeval.config.schemas.io.llm import OpenAIProviderConfig</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Ways to load dataset</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Method</th><th>Use when</th></tr>
+        <tr><td><code>DatasetLoader.from_json("file.json")</code></td><td>Load LLM/RAG/Prompt dataset from JSON</td></tr>
+        <tr><td><code>DatasetLoader.from_file("file.jsonl")</code></td><td>Auto-detect JSON or JSONL from extension</td></tr>
+        <tr><td><code>DatasetLoader.from_samples([{...}, {...}])</code></td><td>Build LLM/RAG/Prompt dataset from list of dicts</td></tr>
+        <tr><td><code>DatasetLoader.from_dict({"samples": [...]})</code></td><td>Build LLM/RAG/Prompt dataset from dict with "samples" key</td></tr>
+        <tr><td><code>AgentDataset.from_file("file.json")</code></td><td>Load agent dataset from JSON</td></tr>
+        <tr><td><code>AgentDataset.from_file("file.jsonl")</code></td><td>Load agent dataset from JSONL (one sample per line)</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">LLM/RAG/Prompt evaluation approaches</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Approach</th><th>Dataset</th><th>Config</th><th>When to use</th></tr>
+        <tr><td><strong>Full dataset</strong></td><td>Samples have <code>llm_response</code></td><td>llm_config</td><td>You already have LLM answers. Evaluate directly.</td></tr>
+        <tr><td><strong>Partial dataset</strong></td><td>Samples have only <code>user_input</code></td><td>llm_config, <code>dataset_generator_model</code></td><td>You have questions but no answers yet. Floeval generates <code>llm_response</code> at runtime, then evaluates.</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agent evaluation approaches</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Approach</th><th>Dataset</th><th>Agent</th><th>When to use</th></tr>
+        <tr><td>Pre-captured traces</td><td>Full (trace present)</td><td>None</td><td>You already have conversation logs. Evaluate directly.</td></tr>
+        <tr><td>In-process agent</td><td>Partial</td><td>Callable (e.g. wrapped LangChain agent)</td><td>Your agent runs in Python with <code>@capture_trace</code> or <code>TraceCollector</code>.</td></tr>
+        <tr><td>FloTorch hosted</td><td>Partial</td><td>agent_runner (<code>create_flotorch_runner</code>)</td><td>Agent runs on FloTorch gateway. Requires <code>pip install floeval[flotorch]</code>.</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agent: Trace capture tiers</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">When running agents in-process (partial dataset + <code>agent=</code>), traces can be captured in three ways:</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Tier</th><th>How</th><th>Use when</th></tr>
+        <tr><td><strong>Tier 1: Auto</strong></td><td><code>wrap_langchain_agent(agent)</code> — LangChain callbacks capture traces automatically</td><td>Using LangChain agents with tools</td></tr>
+        <tr><td><strong>Tier 2: Semi-Auto</strong></td><td><code>@capture_trace</code> + <code>log_turn</code>, <code>log_tool_result</code> — you log turns and tool results manually</td><td>Custom agents (HTTP, orchestration, etc.)</td></tr>
+        <tr><td><strong>Tier 3: Manual</strong></td><td>Return <code>AgentTrace</code> directly, or use <code>TraceContext</code> API</td><td>Full control over trace structure</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">LLM config (Python)</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Build config from a dict. Load from env, file, or secrets—your choice.</p>
+    <div class="code-block">
+      <span class="lang-label">Python</span>
+      <pre><code>from floeval.config.schemas.io.llm import OpenAIProviderConfig
+
+LLM_CONFIG = {
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "your-api-key",
+    "chat_model": "gpt-4o-mini",
+    "embedding_model": "text-embedding-3-small",
+    "system_prompt": "You are a helpful assistant."  # optional
+}
+llm_config = OpenAIProviderConfig(**LLM_CONFIG)</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Full vs Partial dataset (Python)</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 12px;">Same as CLI: <strong>Full</strong> = samples have <code>llm_response</code>. <strong>Partial</strong> = only <code>user_input</code>; Floeval generates <code>llm_response</code> at runtime by calling your LLM with each <code>user_input</code>. Use <code>partial_dataset=True</code> and pass <code>dataset_generator_model</code>.</p>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Basic Python example — Full dataset</h4>
+    <div class="code-block">
+      <span class="lang-label">Python — samples already have llm_response</span>
+      <pre><code>from floeval import Evaluation, DatasetLoader
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+
+LLM_CONFIG = {
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "your-api-key",
+    "chat_model": "gpt-4o-mini",
+    "embedding_model": "text-embedding-3-small",
+}
+llm_config = OpenAIProviderConfig(**LLM_CONFIG)
+
+dataset = DatasetLoader.from_samples([
+    {"user_input": "What is Python?", "llm_response": "Python is a programming language."},
+    {"user_input": "What is RAG?", "llm_response": "RAG stands for Retrieval-Augmented Generation."}
+], partial_dataset=False)
+
+evaluation = Evaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    metrics=["answer_relevancy"],
+    default_provider="ragas"
+)
+
+results = evaluation.run()
+print(results.aggregate_scores)</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Basic Python example — Partial dataset</h4>
+    <div class="code-block">
+      <span class="lang-label">Python — no llm_response; Floeval generates at runtime</span>
+      <pre><code># Partial: only user_input required. contexts, ground_truth optional
+partial_ds = DatasetLoader.from_samples([
+    {"user_input": "What is Python?", "contexts": ["Python is widely used."]},
+    {"user_input": "What is RAG?", "contexts": ["RAG combines retrieval with generation."]}
+], partial_dataset=True)
+
+evaluation = Evaluation(
+    dataset=partial_ds,
+    llm_config=llm_config,
+    metrics=["answer_relevancy", "faithfulness"],
+    default_provider="ragas",
+    dataset_generator_model="gpt-4o-mini",  # required for partial
+)
+
+results = evaluation.run()
+# Internally: for each sample, Floeval sends user_input to LLM,
+# gets llm_response, then runs metrics on it
+print(results.aggregate_scores)</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agent: Pre-captured traces from file</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Use when you already have traces (from your app logs, LangChain callbacks, or manual export). <strong>Create <code>agent_traces_full.json</code> first</strong> — save it in the same folder as your script. Format below. Use <code>"name"</code> not <code>"tool"</code> in reference_tool_calls.</p>
+    <div class="code-block">
+      <span class="lang-label">Create agent_traces_full.json — full format (with trace)</span>
+      <pre><code>{
+  "samples": [{
+    "user_input": "Get weather for London",
+    "trace": {
+      "messages": [
+        {"role": "human", "content": "Get weather for London"},
+        {"role": "ai", "content": "", "tool_calls": [{"name": "get_weather", "args": {"city": "London"}}]},
+        {"role": "tool", "content": "Sunny, 22°C", "tool_name": "get_weather", "tool_call_id": "call_1"},
+        {"role": "ai", "content": "The weather in London is sunny.", "tool_calls": []}
+      ],
+      "final_response": "The weather in London is sunny.",
+      "metadata": {}
+    },
+    "reference_outcome": "Provides London weather",
+    "reference_tool_calls": [{"name": "get_weather", "args": {"city": "London"}}]
+  }]
+}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Python — pre-captured traces</span>
+      <pre><code>from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+
+llm_config = OpenAIProviderConfig(
+    base_url="https://api.openai.com/v1",
+    api_key="your-api-key",
+    chat_model="gpt-4o-mini",
+    embedding_model="text-embedding-3-small",
+)
+
+dataset = AgentDataset.from_file("agent_traces_full.json")  # create this file first (see above)
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    metrics=["goal_achievement", "response_coherence"],
+    default_provider="builtin",
+)
+results = evaluation.run()
+print(results.summary["aggregate_scores"])</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agent: Partial + FloTorch hosted agent</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Requires <code>pip install floeval[flotorch]</code> and a FloTorch gateway. <strong>Create <code>agent_partial.json</code> first</strong> — save in same folder as script. Partial = no trace; agent runs at eval time:</p>
+    <div class="code-block">
+      <span class="lang-label">Create agent_partial.json — partial format (no trace)</span>
+      <pre><code>{
+  "samples": [{
+    "user_input": "What is the weather in Tokyo?",
+    "reference_outcome": "Provides Tokyo weather",
+    "reference_tool_calls": [{"name": "get_weather", "args": {"city": "Tokyo"}}]
+  }]
+}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Python — requires floeval[flotorch]</span>
+      <pre><code>from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.flotorch import create_flotorch_runner
+
+llm_config = OpenAIProviderConfig(
+    base_url="https://your-gateway/v1",
+    api_key="your-api-key",
+    chat_model="gpt-4o-mini",
+    embedding_model="text-embedding-3-small",
+)
+
+runner = create_flotorch_runner("my-agent", llm_config=llm_config)
+dataset = AgentDataset.from_file("agent_partial.json")  # create this file first (see above)
+
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    metrics=["goal_achievement", "tool_call_accuracy"],
+    default_provider="builtin",
+    agent_runner=runner,
+)
+results = evaluation.run()
+print(results.summary["aggregate_scores"])</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agent: In-process with LangChain (Tier 1 — auto capture)</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;"><code>wrap_langchain_agent(agent)</code> captures traces automatically. Requires <code>langchain</code>, <code>langchain-openai</code>. <strong>Create <code>partial.jsonl</code> first</strong> — save in same folder as script. JSONL = one JSON object per line; partial = no trace:</p>
+    <div class="code-block">
+      <span class="lang-label">Create partial.jsonl — one JSON object per line</span>
+      <pre><code>{"user_input": "What is 15 * 7 + 3?", "reference_outcome": "Uses calculator, returns 108", "reference_tool_calls": [{"name": "calculator", "args": {"expression": "15 * 7 + 3"}}]}
+{"user_input": "What's the weather in Paris?", "reference_outcome": "Uses get_weather", "reference_tool_calls": [{"name": "get_weather", "args": {"city": "Paris"}}]}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Python — LangChain agent + tools, auto trace capture</span>
+      <pre><code>from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langchain_core.tools import tool
+
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.utils.agent_trace import wrap_langchain_agent
+
+@tool
+def calculator(expression: str) -> str:
+    """Evaluate a mathematical expression."""
+    try:
+        return str(eval(expression))
+    except Exception as e:
+        return f"Error: {e}"
+
+@tool
+def get_weather(city: str) -> str:
+    """Get weather for a city."""
+    db = {"paris": "18°C", "tokyo": "22°C", "london": "14°C"}
+    return db.get(city.lower(), f"{city}: No data")
+
+llm = ChatOpenAI(model="gpt-4o-mini", api_key="your-key", base_url="https://api.openai.com/v1")
+agent = create_agent(model=llm, tools=[calculator, get_weather], system_prompt="Use tools when needed.")
+llm_config = OpenAIProviderConfig(base_url="https://api.openai.com/v1", api_key="your-key", chat_model="gpt-4o-mini")
+
+dataset = AgentDataset.from_file("partial.jsonl")  # create this file first (see above)
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    metrics=["goal_achievement", "response_coherence", "ragas:tool_call_accuracy"],
+    llm_config=llm_config,
+    agent=wrap_langchain_agent(agent),
+)
+results = evaluation.run()
+print(results.summary["aggregate_scores"])</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agent: In-process with @capture_trace (Tier 2 — semi-auto)</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Use <code>@capture_trace</code> + <code>log_turn</code>, <code>log_tool_result</code> for custom agents. <strong>Create <code>agent_partial.json</code> first</strong> — partial format. Match <code>reference_tool_calls</code> to your agent's tools (here: "search"):</p>
+    <div class="code-block">
+      <span class="lang-label">Create agent_partial.json — partial format (matches search tool)</span>
+      <pre><code>{
+  "samples": [{
+    "user_input": "What is Python?",
+    "reference_outcome": "Explains Python",
+    "reference_tool_calls": [{"name": "search", "args": {"query": "What is Python?"}}]
+  }]
+}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Python — custom agent with manual trace logging</span>
+      <pre><code>from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset, ToolCall
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.utils.agent_trace import capture_trace, log_turn, log_tool_result
+
+llm_config = OpenAIProviderConfig(base_url="https://api.openai.com/v1", api_key="your-key", chat_model="gpt-4o-mini")
+
+@capture_trace
+def my_agent(user_input: str) -> str:
+    search_result = f"Mock search for: {user_input}"
+    log_tool_result("search", search_result)
+    final = f"Answer based on: {search_result}"
+    log_turn(output=final, tool_calls=[ToolCall(name="search", args={"query": user_input})])
+    return final
+
+partial_ds = AgentDataset.from_file("agent_partial.json")  # create this file first (see above)
+evaluation = AgentEvaluation(
+    dataset=partial_ds,
+    llm_config=llm_config,
+    agent=my_agent,
+    metrics=["goal_achievement"],
+    default_provider="builtin",
+)
+results = evaluation.run()</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Ways to specify metrics</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Format</th><th>Example</th></tr>
+        <tr><td>String (uses default_provider)</td><td><code>["answer_relevancy", "faithfulness"]</code></td></tr>
+        <tr><td>Provider:metric</td><td><code>["ragas:answer_relevancy", "deepeval:faithfulness"]</code></td></tr>
+        <tr><td>Dict with params</td><td><code>[{"id": "answer_relevancy", "provider": "ragas", "params": {"threshold": 0.8}}]</code></td></tr>
+        <tr><td>Metric instance</td><td><code>[my_custom_metric, "answer_relevancy"]</code></td></tr>
+      </table>
+    </div>
+    <p style="font-size: 0.82rem; color: var(--muted); margin: 6px 0 0;">When using plain strings: set <code>default_provider</code> if the metric exists in multiple providers (e.g. answer_relevancy in ragas and deepeval). Use <code>provider:metric</code> to avoid ambiguity without setting default_provider.</p>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Async evaluation</h4>
+    <div class="code-block">
+      <span class="lang-label">Python</span>
+      <pre><code>results = await evaluation.arun()</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Prompt evaluation (Python — multi-prompt)</h4>
+    <div class="code-block">
+      <span class="lang-label">Python</span>
+      <pre><code>from floeval import Evaluation, DatasetLoader
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+
+llm_config = OpenAIProviderConfig(
+    base_url="https://api.openai.com/v1",
+    api_key="your-api-key",
+    chat_model="gpt-4o-mini",
+    embedding_model="text-embedding-3-small",
+)
+
+# Each sample references prompt IDs; Floeval generates one response per prompt
+partial_dataset = DatasetLoader.from_samples([
+    {
+        "user_input": "Summarize this support ticket.",
+        "prompt_ids": ["concise", "detailed"]
+    }
+], partial_dataset=True)
+
+evaluation = Evaluation(
+    dataset=partial_dataset,
+    llm_config=llm_config,
+    default_provider="ragas",
+    metrics=["answer_relevancy"],
+    dataset_generator_model="gpt-4o-mini",
+    prompts_file="prompts.yaml",   # see prompts_file format in CLI tab
+)
+
+results = evaluation.run()
+# One result row per (sample × prompt_id)
+for row in results.sample_results:
+    print(row["prompt_id"], row["metrics"]["answer_relevancy"]["score"])</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agentic Workflow (Python)</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Requires <code>pip install "floeval[flotorch]"</code>.</p>
+    <div class="code-block">
+      <span class="lang-label">Python</span>
+      <pre><code>import json
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset, PartialAgentSample
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.flotorch import WorkflowRunner
+
+llm_config = OpenAIProviderConfig(
+    base_url="https://gateway.example/openai/v1",
+    api_key="your-gateway-key",
+    chat_model="gpt-4o-mini",
+)
+
+with open("workflow_config.json") as f:
+    dag_config = json.load(f)   # see CLI tab for the DAG JSON shape
+
+runner = WorkflowRunner(dag_config=dag_config, llm_config=llm_config)
+
+dataset = AgentDataset(samples=[
+    PartialAgentSample(
+        user_input="My order has not arrived after two weeks.",
+        reference_outcome="An apology and a case escalation to the shipping team.",
+    )
+])
+
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    agent_runner=runner,
+    llm_config=llm_config,
+    metrics=["goal_achievement", "response_coherence", "ragas:agent_goal_accuracy"],
+)
+
+results = evaluation.run()
+print("Summary:", results.summary)
+
+# Per-sample: agent_traces (one per DAG node) and workflow_execution dict
+for row in results.sample_results:
+    print("Final response:", row.get("final_response"))
+    print("Agent traces:", len(row.get("agent_traces", [])), "nodes")</code></pre>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn" onclick="switchTab(2)">← Previous</button>
+      <button class="btn primary" onclick="switchTab(4)">Next: Metrics →</button>
+    </div>
+  </div>
+
+  <!-- Phase 4: Metrics & Custom -->
+  <div class="phase" id="phase-4">
+    <div class="phase-header">
+      <div class="phase-num">5</div>
+      <div>
+        <div class="phase-title">Metrics & Custom Metrics</div>
+        <div class="phase-desc">Built-in metrics and how to create your own.</div>
+      </div>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Metrics by eval type</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Eval type</th><th>Provider</th><th>Recommended metrics</th></tr>
+        <tr><td>llm</td><td>ragas, deepeval</td><td>answer_relevancy</td></tr>
+        <tr><td>rag</td><td>ragas</td><td>answer_relevancy, faithfulness, context_precision, context_recall, context_entity_recall, noise_sensitivity</td></tr>
+        <tr><td>rag</td><td>deepeval</td><td>answer_relevancy, faithfulness, contextual_precision, contextual_recall, contextual_relevancy</td></tr>
+        <tr><td>prompt (no RAG)</td><td>ragas, deepeval</td><td>answer_relevancy</td></tr>
+        <tr><td>prompt (with RAG)</td><td>ragas, deepeval</td><td>Same as rag above</td></tr>
+        <tr><td>agent / agentic_workflow</td><td>builtin, ragas</td><td>goal_achievement, response_coherence, agent_goal_accuracy, tool_call_accuracy</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">LLM/RAG built-in metrics — full list</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Metric</th><th>Provider</th><th>Required fields</th><th>What it measures</th></tr>
+        <tr><td>answer_relevancy</td><td>ragas, deepeval</td><td>user_input, llm_response</td><td>How relevant is the answer to the question?</td></tr>
+        <tr><td>faithfulness</td><td>ragas, deepeval</td><td>user_input, llm_response, <strong>contexts</strong></td><td>Is the answer grounded in the retrieved context?</td></tr>
+        <tr><td>context_precision</td><td>ragas</td><td>user_input, llm_response, contexts, ground_truth</td><td>Are relevant contexts ranked before irrelevant ones?</td></tr>
+        <tr><td>context_recall</td><td>ragas</td><td>user_input, llm_response, contexts, ground_truth</td><td>Does context cover the reference information?</td></tr>
+        <tr><td>context_entity_recall</td><td>ragas</td><td>user_input, llm_response, contexts, ground_truth</td><td>Are entities from the reference covered in context?</td></tr>
+        <tr><td>noise_sensitivity</td><td>ragas</td><td>user_input, llm_response, contexts, ground_truth</td><td>How often does noisy context cause incorrect claims?</td></tr>
+        <tr><td>contextual_precision</td><td>deepeval</td><td>user_input, llm_response, contexts, ground_truth</td><td>Context precision (DeepEval implementation)</td></tr>
+        <tr><td>contextual_recall</td><td>deepeval</td><td>user_input, llm_response, contexts, ground_truth</td><td>Context recall (DeepEval implementation)</td></tr>
+        <tr><td>contextual_relevancy</td><td>deepeval</td><td>user_input, llm_response, contexts</td><td>Is retrieved context relevant to the question?</td></tr>
+        <tr><td>hallucination</td><td>deepeval</td><td>user_input, llm_response, contexts</td><td>Factual contradictions versus context</td></tr>
+        <tr><td>toxicity</td><td>deepeval</td><td>user_input, llm_response</td><td>Toxic or harmful content in response</td></tr>
+        <tr><td>exact_match</td><td>deepeval</td><td>llm_response, ground_truth</td><td>Exact string match (no LLM required)</td></tr>
+        <tr><td>pattern_match</td><td>deepeval</td><td>llm_response</td><td>Regex pattern match (no LLM required)</td></tr>
+        <tr><td>json_correctness</td><td>deepeval</td><td>llm_response</td><td>JSON schema validation of response</td></tr>
+      </table>
+    </div>
+    <p style="font-size: 0.82rem; color: var(--muted); margin: 4px 0 12px;">Field aliases accepted: <code>question</code> → <code>user_input</code>, <code>answer</code> → <code>ground_truth</code></p>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agent &amp; Agentic Workflow metrics</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Metric</th><th>Provider</th><th>Required fields</th><th>What it measures</th></tr>
+        <tr><td>goal_achievement</td><td>builtin</td><td>trace, user_input</td><td>Did the agent achieve the goal? (LLM-as-judge; reference_outcome helps)</td></tr>
+        <tr><td>response_coherence</td><td>builtin</td><td>trace</td><td>Is the final response consistent with the conversation trace?</td></tr>
+        <tr><td>agent_goal_accuracy</td><td>ragas</td><td>trace, reference_outcome</td><td>RAGAS goal accuracy vs expected outcome</td></tr>
+        <tr><td>tool_call_accuracy</td><td>ragas</td><td>trace, reference_tool_calls</td><td>Were tool calls correct? Skips (null) if no reference_tool_calls.</td></tr>
+      </table>
+    </div>
+    <p style="font-size: 0.82rem; color: var(--muted); margin: 6px 0 0;">All agent metrics need <code>llm_config</code>. Agent dataset field aliases: <code>question</code> → <code>user_input</code>, <code>answer</code> → <code>reference_outcome</code>.</p>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Sample fields reference</h4>
+    <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 8px;"><strong>LLM/RAG/Prompt sample fields:</strong></p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+        <tr><td>user_input</td><td>Yes</td><td>Question or prompt</td></tr>
+        <tr><td>llm_response</td><td>Yes (full); generated (partial)</td><td>LLM's answer. For partial datasets, omit — Floeval generates at runtime.</td></tr>
+        <tr><td>contexts</td><td>For faithfulness</td><td>List of retrieved documents</td></tr>
+        <tr><td>ground_truth</td><td>Optional</td><td>Expected answer</td></tr>
+        <tr><td>metadata</td><td>Optional</td><td>Extra metadata</td></tr>
+      </table>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--muted); margin: 12px 0 8px;"><strong>Agent sample fields:</strong></p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+        <tr><td>user_input</td><td>Yes</td><td>User query or goal</td></tr>
+        <tr><td>trace</td><td>Full dataset</td><td>Pre-captured conversation trace (messages, tool calls, final_response)</td></tr>
+        <tr><td>reference_outcome</td><td>For goal_achievement, agent_goal_accuracy</td><td>Expected outcome to compare against</td></tr>
+        <tr><td>reference_tool_calls</td><td>For tool_call_accuracy</td><td>Expected tool calls for comparison</td></tr>
+        <tr><td>metadata</td><td>Optional</td><td>Extra metadata</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Custom metrics — two types</h4>
+
+    <div class="flow-grid">
+      <div class="flow-card">
+        <h4>1. @custom_metric decorator</h4>
+        <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 8px;">Function-based metric. Supports params: response, question, contexts, context (MetricContext), llm (SimpleLLMHelper), sample.</p>
+        <div class="code-block" style="font-size: 0.75rem;">
+          <span class="lang-label">Python — LLM/RAG/Prompt (response maps to llm_response)</span>
+          <pre><code>from floeval.api.metrics.custom import custom_metric
+
+@custom_metric(threshold=0.5)
+def response_length(response: str) -> float:
+    return min(len(response) / 100.0, 1.0)</code></pre>
+        </div>
+      </div>
+      <div class="flow-card">
+        <h4>2. criteria() — LLM-as-judge</h4>
+        <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 8px;">Natural language description. LLM evaluates.</p>
+        <div class="code-block" style="font-size: 0.75rem;">
+          <span class="lang-label">Python</span>
+          <pre><code>from floeval.api.metrics.custom import criteria
+
+empathy = criteria(
+    name="empathy",
+    description="Rate empathy 0-1",
+    threshold=0.7
+)</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Custom metrics for AgentEvaluation</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Agent samples use <code>trace.final_response</code>, not <code>llm_response</code>. Use the <code>sample</code> parameter to access agent fields:</p>
+    <div class="code-block">
+      <span class="lang-label">Python — agent custom metric using sample</span>
+      <pre><code>from floeval.api.metrics.custom import custom_metric
+
+@custom_metric(threshold=0.5)
+def agent_response_length(sample) -> float:
+    # AgentSample has trace.final_response, not llm_response
+    response = sample.trace.final_response if hasattr(sample, "trace") else ""
+    return min(len(response) / 100.0, 1.0)
+
+# Use with AgentEvaluation
+evaluation = AgentEvaluation(
+    dataset=agent_dataset,
+    metrics=["goal_achievement", "agent_response_length"],
+    llm_config=llm_config,
+)
+results = evaluation.run()</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">custom_metric options</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Parameter</th><th>Description</th></tr>
+        <tr><td><code>threshold</code></td><td>Pass/fail threshold (0-1). Default: 0.5</td></tr>
+        <tr><td><code>execute_via</code></td><td>"ragas" or "deepeval" to run via provider. Default: standalone</td></tr>
+        <tr><td><code>name</code></td><td>Metric name (defaults to function name)</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Function result formats</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Your custom metric can return: <code>float</code>, <code>dict</code> with "score" and "metadata", or <code>MetricResult</code>.</p>
+
+    <div class="nav-btns">
+      <button class="btn" onclick="switchTab(3)">← Previous</button>
+      <button class="btn primary" onclick="switchTab(5)">Next: All Options →</button>
+    </div>
+  </div>
+
+  <!-- Phase 5: All Options -->
+  <div class="phase" id="phase-5">
+    <div class="phase-header">
+      <div class="phase-num">6</div>
+      <div>
+        <div class="phase-title">All Options & Reference</div>
+        <div class="phase-desc">Complete reference for config, CLI, and API.</div>
+      </div>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">LLM config fields (OpenAIProviderConfig / llm_config)</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Field</th><th>Description</th><th>When needed</th></tr>
+        <tr><td>base_url</td><td>API endpoint (e.g. https://api.openai.com/v1)</td><td>Required when using LLM-based metrics</td></tr>
+        <tr><td>api_key</td><td>Your API key</td><td>Required when using LLM-based metrics</td></tr>
+        <tr><td>chat_model</td><td>LLM model name (e.g. gpt-4o-mini)</td><td>Required for criteria, RAGAS, DeepEval metrics; optional for simple custom metrics</td></tr>
+        <tr><td>embedding_model</td><td>Embedding model (e.g. text-embedding-3-small)</td><td>Required for RAGAS metrics (answer_relevancy, faithfulness)</td></tr>
+        <tr><td>system_prompt</td><td>System prompt for the LLM</td><td>Optional. Used when generating responses for partial datasets</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Evaluation config fields (evaluation_config)</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Field</th><th>Description</th><th>When needed</th></tr>
+        <tr><td>metrics</td><td>List of metric specs (e.g. ragas:answer_relevancy, faithfulness)</td><td>Required. No default.</td></tr>
+        <tr><td>default_provider</td><td>Provider name when using plain metric names (e.g. "ragas")</td><td>Optional. Only used when metrics are plain strings like <code>answer_relevancy</code> and the metric exists in multiple providers. If all metrics use <code>provider:metric</code>, omit. If ambiguous, Floeval will error—use explicit <code>ragas:answer_relevancy</code> or set default_provider.</td></tr>
+        <tr><td>metric_params</td><td>Dict of metric_name → params (e.g. {"answer_relevancy": {"threshold": 0.7}})</td><td>Optional. Override parameters for specific metrics.</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Dataset config (when required)</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Config</th><th>When required</th></tr>
+        <tr><td>dataset_generation_config.generator_model</td><td>Only for partial LLM/RAG/Prompt datasets (samples without llm_response). Omit for full datasets.</td></tr>
+        <tr><td>evaluation_config.agent_name</td><td>Only for partial agent datasets using FloTorch hosted agent. Omit for pre-captured traces or in-process agent.</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Agent dataset sample structure</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">How to create agent samples for JSON/JSONL files:</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Type</th><th>Required fields</th><th>Optional fields</th><th>Example</th></tr>
+        <tr><td><strong>Full</strong> (pre-captured)</td><td>user_input, trace</td><td>reference_outcome, reference_tool_calls</td><td><code>{"user_input": "Q?", "trace": {"messages": [...], "final_response": "A"}, "reference_outcome": "Expected"}</code></td></tr>
+        <tr><td><strong>Partial</strong> (run agent)</td><td>user_input</td><td>reference_outcome, reference_tool_calls</td><td><code>{"user_input": "Q?", "reference_outcome": "Expected", "reference_tool_calls": [{"name":"tool", "args":{}}]}</code></td></tr>
+      </table>
+    </div>
+    <p style="font-size: 0.82rem; color: var(--muted); margin: 6px 0 0;"><strong>trace.messages</strong>: <code>human</code> → <code>{"role":"human","content":"..."}</code>; <code>ai</code> → <code>{"role":"ai","content":"...","tool_calls":[{"name":"...","args":{}}]}</code>; <code>tool</code> → <code>{"role":"tool","content":"...","tool_name":"...","tool_call_id":"..."}</code>. <strong>reference_tool_calls</strong>: <code>[{"name":"tool_name","args":{"key":"val"}}]</code> — use <code>name</code> not <code>tool</code>.</p>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Evaluation constructor</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Parameter</th><th>Description</th></tr>
+        <tr><td>dataset</td><td>Dataset or PartialDataset (required)</td></tr>
+        <tr><td>llm_config</td><td>OpenAIProviderConfig or compatible (required for RAGAS/DeepEval/criteria)</td></tr>
+        <tr><td>metrics</td><td>List of metric specs (required)</td></tr>
+        <tr><td>default_provider</td><td>Optional. Used when metrics are plain strings (e.g. answer_relevancy) and metric exists in multiple providers. Use <code>ragas:answer_relevancy</code> or set default_provider to avoid ambiguity.</td></tr>
+        <tr><td>metric_params</td><td>Dict of metric_name → params</td></tr>
+        <tr><td>dataset_generator_model</td><td>Required for PartialDataset. Label for response generation provider.</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">AgentEvaluation constructor</h4>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Parameter</th><th>Description</th></tr>
+        <tr><td>dataset</td><td>AgentDataset (required)</td></tr>
+        <tr><td>metrics</td><td>List of metric specs (required, no default)</td></tr>
+        <tr><td>llm_config</td><td>OpenAIProviderConfig (required for RAGAS agent metrics, criteria)</td></tr>
+        <tr><td>agent</td><td>Callable for in-process agent execution</td></tr>
+        <tr><td>agent_runner</td><td>FloTorchRunner for FloTorch hosted agent (from create_flotorch_runner)</td></tr>
+        <tr><td>default_provider</td><td>Optional. Defaults to "builtin". Used when metrics are plain strings (e.g. goal_achievement). Use <code>builtin:goal_achievement</code> or set default_provider.</td></tr>
+        <tr><td>metric_params</td><td>Dict of metric_name → params</td></tr>
+      </table>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Results structure</h4>
+    <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 8px;"><strong>EvaluationResult (LLM/RAG/Prompt):</strong></p>
+    <div class="code-block">
+      <span class="lang-label">Python</span>
+      <pre><code>results.aggregate_scores   # {"ragas:answer_relevancy": 0.91, ...}
+results.sample_results     # List of {user_input, llm_response, metrics: {...}}
+results.summary            # {total_samples, providers_used, pass_rates, aggregate_scores}</code></pre>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--muted); margin: 12px 0 8px;"><strong>AgentEvaluationResult:</strong></p>
+    <div class="code-block">
+      <span class="lang-label">Python</span>
+      <pre><code>results.sample_results           # List of per-sample results (unchanged)
+results.summary["aggregate_scores"]  # {"goal_achievement": 0.9, ...}
+results.summary["total_samples"]    # Total sample count</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">MetricRegistry (optional)</h4>
+    <div class="code-block">
+      <span class="lang-label">Python</span>
+      <pre><code>from floeval.api.metrics.registry import MetricRegistry
+
+MetricRegistry.list_providers()      # ['ragas', 'deepeval', 'custom']
+MetricRegistry.list_metrics("ragas") # ['answer_relevancy', 'faithfulness']
+MetricRegistry.list_all_metrics()    # All metric names</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">All usage flows summary</h4>
+    <div class="cards">
+      <div class="card">
+        <div class="card-title">Flow A: CLI (LLM / RAG)</div>
+        <div class="card-body">Config + dataset → <code>floeval evaluate -c config.yaml -d dataset.json</code></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Flow B: CLI (Prompt)</div>
+        <div class="card-body">Config with <code>prompts_file</code> + partial dataset with <code>prompt_ids</code> → <code>floeval evaluate</code></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Flow C: CLI (Agent)</div>
+        <div class="card-body">Agent config + agent dataset → <code>floeval evaluate --agent -c config.yaml -d dataset.json</code></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Flow D: CLI (Agentic Workflow)</div>
+        <div class="card-body">Config with <code>agent_workflow_config</code> (DAG + dataset_url) → <code>floeval evaluate --agent</code></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Flow E: Python (LLM / RAG / Prompt)</div>
+        <div class="card-body">DatasetLoader.from_file() + OpenAIProviderConfig + Evaluation (+ prompts_file for prompt eval)</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Flow F: Python (Agent)</div>
+        <div class="card-body">AgentDataset.from_file() + AgentEvaluation + agent or create_flotorch_runner()</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Flow G: Python (Agentic Workflow)</div>
+        <div class="card-body">AgentDataset + WorkflowRunner(dag_config, llm_config) + AgentEvaluation(agent_runner=runner)</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Flow H: Custom metrics</div>
+        <div class="card-body">@custom_metric or criteria() + mix with built-in metrics in any eval type</div>
+      </div>
+    </div>
+
+    <div class="tip-box">
+      <strong>🚀 Quick start:</strong> 1) <code>pip install floeval</code> 2) Create config with llm_config (api_key, base_url, etc.) 3) Create dataset.json 4) <code>floeval evaluate -c config.yaml -d dataset.json</code><br>
+      <strong>Agent dry run:</strong> Copy Example B from Copy & Run — no API key needed.
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn" onclick="switchTab(4)">← Previous</button>
+      <button class="btn primary" onclick="switchTab(6)">Next: Copy & Run →</button>
+    </div>
+  </div>
+
+  <!-- Phase 6: Copy & Run -->
+  <div class="phase" id="phase-6">
+    <div class="phase-header">
+      <div class="phase-num">7</div>
+      <div>
+        <div class="phase-title">Copy & Run Examples</div>
+        <div class="phase-desc">Copy-paste any script below and run it. No reading required — just run and see what happens!</div>
+      </div>
+    </div>
+
+    <div class="tip-box">
+      <strong>💡 Prerequisites:</strong> <code>pip install floeval</code>. For examples that need API: set <code>api_key</code> in the script or <code>export OPENAI_API_KEY=sk-...</code>
+    </div>
+    <div class="table-wrap" style="margin-bottom: 16px;">
+      <table>
+        <tr><th>Example</th><th>API key?</th><th>Extra files?</th><th>Steps</th></tr>
+        <tr><td>1, 3, 4, 5, 6</td><td>Yes</td><td>None — inline data</td><td>Copy script, set api_key, run</td></tr>
+        <tr><td>2, 7</td><td>No</td><td>None</td><td>Copy script, run</td></tr>
+        <tr><td>A</td><td>Yes</td><td>None — inline</td><td>Copy script, set api_key, run</td></tr>
+        <tr><td>A2</td><td>Yes</td><td>agent_full.json</td><td>Create JSON (copy below), save script, run</td></tr>
+        <tr><td>B</td><td>No</td><td>None</td><td>Copy script, run (dry run)</td></tr>
+        <tr><td>C</td><td>Yes</td><td>agent_partial.jsonl</td><td>pip install langchain langchain-openai, create JSONL, save script, run</td></tr>
+        <tr><td>D</td><td>Yes</td><td>agent_flotorch_partial.json</td><td>Requires FloTorch gateway. Create JSON, configure gateway URL, run</td></tr>
+        <tr><td>E</td><td>Yes</td><td>prompts.yaml + partial_dataset.json</td><td>Create files (copy below), set api_key, run CLI command</td></tr>
+        <tr><td>F</td><td>Yes</td><td>workflow_config.json + agent_dataset.json</td><td>pip install "floeval[flotorch]", create files, set gateway URL, run</td></tr>
+      </table>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 12px;">If you have the Floeval repo: <code>phase1_scripts/verify_mode1.py</code>, <code>phase1_scripts/verify_mode2.py</code>, <code>phase2_scripts/verify_mode1.py</code> — uncomment one use case, run from repo root.</p>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example 1: Built-in RAGAS metrics</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">answer_relevancy + faithfulness. Needs llm_config with API key.</p>
+    <div class="code-block">
+      <span class="lang-label">Python — save as run.py and: python run.py</span>
+      <pre><code>#!/usr/bin/env python3
+"""Built-in RAGAS metrics (answer_relevancy, faithfulness). Set OPENAI_API_KEY or api_key below."""
+import os
+from floeval import Evaluation, DatasetLoader
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+
+LLM_CONFIG = {
+    "base_url": os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+    "api_key": os.getenv("OPENAI_API_KEY", "your-api-key-here"),
+    "chat_model": os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+    "embedding_model": "text-embedding-3-small",
+}
+llm_config = OpenAIProviderConfig(**LLM_CONFIG)
+
+dataset = DatasetLoader.from_samples([
+    {
+        "user_input": "What is RAG?",
+        "llm_response": "RAG stands for Retrieval-Augmented Generation.",
+        "contexts": ["RAG combines retrieval with generation."]
+    },
+    {
+        "user_input": "How does photosynthesis work?",
+        "llm_response": "Photosynthesis converts sunlight into energy.",
+        "contexts": ["Plants use chlorophyll.", "Converts CO2 and water into glucose."]
+    }
+], partial_dataset=False)
+
+evaluation = Evaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    metrics=["answer_relevancy", "faithfulness"],
+    default_provider="ragas"
+)
+
+results = evaluation.run()
+print("\n📊 Aggregate Scores:", results.aggregate_scores)
+print("✅ Done!")</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example 2: Simple custom metric — NO API KEY!</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">@custom_metric, function-based. No LLM required.</p>
+    <div class="code-block">
+      <span class="lang-label">Python — run immediately, no API key needed</span>
+      <pre><code>#!/usr/bin/env python3
+"""Simple custom metric — NO API KEY NEEDED!"""
+from floeval import Evaluation, DatasetLoader
+from floeval.api.metrics.custom import custom_metric
+
+@custom_metric(threshold=0.3)
+def response_length(response: str) -> float:
+    return min(len(response) / 100.0, 1.0)
+
+@custom_metric(threshold=0.5)
+def politeness(response: str) -> float:
+    polite_words = ["please", "thank you", "thanks"]
+    count = sum(1 for w in polite_words if w in response.lower())
+    return min(count / 3.0, 1.0)
+
+dataset = DatasetLoader.from_samples([
+    {"user_input": "Help?", "llm_response": "Please let me help. Thank you for asking."},
+    {"user_input": "What?", "llm_response": "No idea."},
+])
+
+evaluation = Evaluation(dataset=dataset, metrics=["politeness", "response_length"])
+results = evaluation.run()
+print("\n📊 Scores:", results.aggregate_scores)
+print("✅ Done! (No API key used)")</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example 3: Criteria-based (LLM-as-judge)</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">criteria() natural language evaluation. Needs llm_config.</p>
+    <div class="code-block">
+      <span class="lang-label">Python — needs llm_config with API key</span>
+      <pre><code>#!/usr/bin/env python3
+"""Criteria-based metric (LLM-as-judge). Set OPENAI_API_KEY or api_key below."""
+import os
+from floeval import Evaluation, DatasetLoader
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.api.metrics.custom import criteria
+
+llm_config = OpenAIProviderConfig(
+    base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+    api_key=os.getenv("OPENAI_API_KEY", "your-api-key-here"),
+    chat_model=os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+    embedding_model="text-embedding-3-small",
+)
+
+empathy = criteria(
+    name="empathy",
+    description="Rate empathy 0-1. Consider acknowledgment, understanding, support.",
+    threshold=0.6
+)
+
+dataset = DatasetLoader.from_samples([
+    {"user_input": "I'm stressed.", "llm_response": "I understand. Would you like to talk?"},
+    {"user_input": "I'm stressed.", "llm_response": "Just work harder."},
+])
+
+evaluation = Evaluation(dataset=dataset, llm_config=llm_config, metrics=[empathy])
+results = evaluation.run()
+print("\n📊 Scores:", results.aggregate_scores)
+print("✅ Done!")</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example 4: Custom with llm.generate()</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Custom metric using llm parameter. Needs llm_config.</p>
+    <div class="code-block">
+      <span class="lang-label">Python — needs llm_config with API key</span>
+      <pre><code>#!/usr/bin/env python3
+"""Custom metric with llm.generate(). Set OPENAI_API_KEY or api_key below."""
+import os
+from floeval import Evaluation, DatasetLoader
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.api.metrics.custom import custom_metric
+
+llm_config = OpenAIProviderConfig(
+    base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+    api_key=os.getenv("OPENAI_API_KEY", "your-api-key-here"),
+    chat_model=os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+    embedding_model="text-embedding-3-small",
+)
+
+@custom_metric(threshold=0.5)
+def is_professional(response: str, llm) -> float:
+    answer = llm.generate(f"""
+        Is this professional for business? Answer only 'yes' or 'no'.
+        Response: {response}
+    """)
+    return 1.0 if "yes" in answer.lower() else 0.0
+
+dataset = DatasetLoader.from_samples([
+    {"user_input": "Opinion?", "llm_response": "Based on data, I recommend caution."},
+    {"user_input": "Opinion?", "llm_response": "LOL that's dumb!"},
+])
+
+evaluation = Evaluation(dataset=dataset, llm_config=llm_config, metrics=["is_professional"])
+results = evaluation.run()
+print("\n📊 Scores:", results.aggregate_scores)
+print("✅ Done!")</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example 5: Mixed built-in + custom</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Combine built-in RAGAS metrics with custom function. Needs API key.</p>
+    <div class="code-block">
+      <span class="lang-label">Python — needs API key</span>
+      <pre><code>#!/usr/bin/env python3
+"""Mixed: custom + built-in metrics together."""
+import os
+from floeval import Evaluation, DatasetLoader
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.api.metrics.custom import custom_metric
+
+@custom_metric(threshold=0.3)
+def response_length(response: str) -> float:
+    return min(len(response) / 80.0, 1.0)
+
+dataset = DatasetLoader.from_samples([
+    {
+        "user_input": "What is Python?",
+        "llm_response": "Python is a programming language for data science and web dev.",
+        "contexts": ["Python is widely used."]
+    },
+    {"user_input": "What is JS?", "llm_response": "JavaScript.", "contexts": ["JS runs in browsers."]}
+])
+
+llm_config = OpenAIProviderConfig(
+    base_url=os.getenv("FLOEVAL_GATEWAY_BASE_URL", "https://api.openai.com/v1"),
+    api_key=os.getenv("OPENAI_API_KEY"),
+    chat_model=os.getenv("FLOEVAL_LLM_MODEL", "gpt-4o-mini"),
+    embedding_model=os.getenv("FLOEVAL_EMBEDDING_MODEL", "text-embedding-3-small"),
+)
+
+evaluation = Evaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    metrics=["response_length", "answer_relevancy", "faithfulness"],
+    default_provider="ragas",
+)
+
+results = evaluation.run()
+print("\n📊 Scores:", results.aggregate_scores)
+print("✅ Done!")</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example 6: Partial dataset — questions only, Floeval generates answers</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Only <code>user_input</code> required. Floeval calls your LLM at runtime to get <code>llm_response</code>, then runs metrics. Needs <code>dataset_generator_model</code>.</p>
+    <div class="code-block">
+      <span class="lang-label">Python — partial_dataset=True, dataset_generator_model required</span>
+      <pre><code>#!/usr/bin/env python3
+"""Partial dataset: Floeval generates llm_response, then evaluates. Set OPENAI_API_KEY."""
+import os
+from floeval import Evaluation, DatasetLoader
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+
+LLM_CONFIG = {
+    "base_url": os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+    "api_key": os.getenv("OPENAI_API_KEY", "your-api-key-here"),
+    "chat_model": os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+    "embedding_model": "text-embedding-3-small",
+}
+llm_config = OpenAIProviderConfig(**LLM_CONFIG)
+
+# Partial: no llm_response; contexts optional
+partial_ds = DatasetLoader.from_samples([
+    {"user_input": "What is Python?", "contexts": ["Python is widely used."]},
+    {"user_input": "What is RAG?", "contexts": ["RAG combines retrieval with generation."]}
+], partial_dataset=True)
+
+evaluation = Evaluation(
+    dataset=partial_ds,
+    llm_config=llm_config,
+    metrics=["answer_relevancy", "faithfulness"],
+    default_provider="ragas",
+    dataset_generator_model="gpt-4o-mini",
+)
+results = evaluation.run()
+print("\n📊 Aggregate Scores:", results.aggregate_scores)
+print("✅ Done!")</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example 7: Custom with multiple params — NO API KEY!</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Custom metric with response, question, contexts. No LLM required.</p>
+    <div class="code-block">
+      <span class="lang-label">Python — run immediately, no API key needed</span>
+      <pre><code>#!/usr/bin/env python3
+"""Custom metric with question + contexts. NO API KEY!"""
+from floeval import Evaluation, DatasetLoader
+from floeval.api.metrics.custom import custom_metric
+
+@custom_metric(threshold=0.4)
+def context_relevance(response: str, question: str, contexts: list) -> float:
+    if not response or not question:
+        return 0.0
+    q_words = set(question.lower().split())
+    r_words = set(response.lower().split())
+    q_match = len(q_words & r_words) / max(len(q_words), 1)
+    ctx_usage = 0.0
+    if contexts:
+        ctx_text = " ".join(contexts).lower()
+        ctx_words = set(ctx_text.split())
+        ctx_usage = min(len(ctx_words & r_words) / max(len(r_words), 1) * 2, 1.0)
+    return min(q_match * 0.6 + ctx_usage * 0.4, 1.0)
+
+dataset = DatasetLoader.from_samples([
+    {
+        "user_input": "What is RAG?",
+        "llm_response": "RAG stands for Retrieval-Augmented Generation.",
+        "contexts": ["RAG combines retrieval with generation."]
+    },
+    {
+        "user_input": "How does ML work?",
+        "llm_response": "Machine learning uses algorithms.",
+        "contexts": ["RAG stands for Retrieval-Augmented Generation."]
+    }
+])
+
+evaluation = Evaluation(dataset=dataset, metrics=["context_relevance"])
+results = evaluation.run()
+print("\n📊 Scores:", results.aggregate_scores)
+print("✅ Done! (No API key)")</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example A: Agent — pre-captured traces (inline, NO FILE)</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Build agent dataset inline. Needs llm_config for goal_achievement. Copy-paste and run anywhere.</p>
+    <div class="code-block">
+      <span class="lang-label">Python — inline AgentDataset, no file needed</span>
+      <pre><code>#!/usr/bin/env python3
+"""Agent evaluation: pre-captured traces (inline dataset)."""
+import os
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import (
+    AgentDataset,
+    AgentSample,
+    AgentTrace,
+    HumanMessage,
+    AIMessage,
+)
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+
+llm_config = OpenAIProviderConfig(
+    base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+    api_key=os.getenv("OPENAI_API_KEY", "your-api-key"),
+    chat_model=os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+)
+
+# Build dataset inline (no file)
+trace1 = AgentTrace(
+    messages=[
+        HumanMessage(content="What is 2+2?"),
+        AIMessage(content="4", tool_calls=[]),
+    ],
+    final_response="4",
+    metadata={},
+)
+trace2 = AgentTrace(
+    messages=[
+        HumanMessage(content="What is the capital of France?"),
+        AIMessage(content="The capital of France is Paris.", tool_calls=[]),
+    ],
+    final_response="The capital of France is Paris.",
+    metadata={},
+)
+samples = [
+    AgentSample(user_input="What is 2+2?", trace=trace1, reference_outcome="Answered with 4"),
+    AgentSample(user_input="What is the capital of France?", trace=trace2, reference_outcome="Mentions Paris"),
+]
+dataset = AgentDataset(samples=samples)
+
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    metrics=["goal_achievement", "response_coherence"],
+    default_provider="builtin",
+)
+results = evaluation.run()
+print("\n📊 Aggregate scores:", results.summary["aggregate_scores"])
+print("Sample results:", results.sample_results)
+print("✅ Done!")</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example A2: Agent — pre-captured traces from file</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Same as A but loads from JSON file. <strong>Step 1:</strong> Create <code>agent_full.json</code> (copy content below). <strong>Step 2:</strong> Save the Python script in the <strong>same folder</strong>. <strong>Step 3:</strong> <code>python run_agent_a2.py</code></p>
+    <div class="code-block">
+      <span class="lang-label">Step 1 — Save as agent_full.json (same folder as script)</span>
+      <pre><code>{
+  "samples": [
+    {
+      "user_input": "Get the weather for London",
+      "trace": {
+        "messages": [
+          {"role": "human", "content": "Get the weather for London"},
+          {"role": "ai", "content": "", "tool_calls": [{"name": "get_weather", "args": {"city": "London"}}]},
+          {"role": "tool", "content": "Sunny, 22°C", "tool_name": "get_weather", "tool_call_id": "call_1"},
+          {"role": "ai", "content": "The weather in London is sunny with 22°C.", "tool_calls": []}
+        ],
+        "final_response": "The weather in London is sunny with 22°C.",
+        "metadata": {}
+      },
+      "reference_outcome": "Provides London weather",
+      "reference_tool_calls": [{"name": "get_weather", "args": {"city": "London"}}]
+    }
+  ]
+}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Step 2 — Save as run_agent_a2.py (same folder as agent_full.json)</span>
+      <pre><code>#!/usr/bin/env python3
+"""Agent: pre-captured traces from file. Set OPENAI_API_KEY."""
+import os
+from pathlib import Path
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+
+DATA_FILE = Path(__file__).resolve().parent / "agent_full.json"
+llm_config = OpenAIProviderConfig(
+    base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+    api_key=os.getenv("OPENAI_API_KEY", "your-api-key"),
+    chat_model=os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+)
+
+dataset = AgentDataset.from_file(DATA_FILE)
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    metrics=["goal_achievement", "response_coherence", "ragas:tool_call_accuracy"],
+    default_provider="builtin",
+)
+results = evaluation.run()
+print("Summary:", results.summary)</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example B: Agent — in-process with @capture_trace (NO API for dry run)</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Partial dataset + in-process agent. Uses <code>PassMetric</code> so no API key needed. Add <code>goal_achievement</code> + llm_config for real eval.</p>
+    <div class="code-block">
+      <span class="lang-label">Python — dry run, no API key</span>
+      <pre><code>#!/usr/bin/env python3
+"""Agent: in-process agent with @capture_trace. Dry run (PassMetric, no API)."""
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.api.metrics.base import BaseMetric, MetricResult
+from floeval.config.schemas.io.agent_dataset import AgentDataset, PartialAgentSample, ToolCall
+from floeval.utils.agent_trace import capture_trace, log_turn, log_tool_result
+
+class PassMetric(BaseMetric):
+    """Dummy metric for dry run — always passes, no API needed."""
+    def __init__(self):
+        super().__init__(name="pass")
+    def evaluate(self, sample, **kwargs):
+        return MetricResult(score=1.0, metadata={})
+
+@capture_trace
+def mock_agent(user_input: str) -> str:
+    log_tool_result("search", f"Mock result for: {user_input}")
+    final = f"Answer: {user_input}"
+    log_turn(output=final, tool_calls=[ToolCall(name="search", args={"q": user_input})])
+    return final
+
+# Partial dataset (no trace — agent will run)
+dataset = AgentDataset(samples=[
+    PartialAgentSample(user_input="What is Python?", reference_outcome="Explains Python"),
+])
+
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    metrics=[PassMetric()],
+    agent=mock_agent,
+)
+results = evaluation.run()
+print("Sample results:", results.sample_results)
+print("✅ Done! (No API key)")</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example C: Agent — LangChain agent with tools</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Uses <code>wrap_langchain_agent</code> for auto trace capture. Needs <code>pip install langchain langchain-openai langchain-core</code>. <strong>Step 1:</strong> Create <code>agent_partial.jsonl</code> (copy content below). <strong>Step 2:</strong> Save the Python script in the same folder. <strong>Step 3:</strong> Set <code>OPENAI_API_KEY</code> and run <code>python run_agent_c.py</code></p>
+    <div class="code-block">
+      <span class="lang-label">Step 1 — Save as agent_partial.jsonl (partial = no trace; agent runs at eval time)</span>
+      <pre><code>{"user_input": "What is 15 * 7 + 3? Use the calculator.", "reference_outcome": "Uses calculator, returns 108", "reference_tool_calls": [{"name": "calculator", "args": {"expression": "15 * 7 + 3"}}]}
+{"user_input": "What's the weather in Paris?", "reference_outcome": "Uses get_weather", "reference_tool_calls": [{"name": "get_weather", "args": {"city": "Paris"}}]}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Step 2 — Save as run_agent_c.py (same folder as agent_partial.jsonl)</span>
+      <pre><code>#!/usr/bin/env python3
+"""Agent: LangChain agent with tools. Partial dataset — agent runs at eval time."""
+import os
+from pathlib import Path
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langchain_core.tools import tool
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.utils.agent_trace import wrap_langchain_agent
+
+@tool
+def calculator(expression: str) -> str:
+    """Evaluate a mathematical expression."""
+    try:
+        return str(eval(expression))
+    except Exception as e:
+        return f"Error: {e}"
+
+@tool
+def get_weather(city: str) -> str:
+    """Get weather for a city."""
+    db = {"paris": "18°C", "tokyo": "22°C", "london": "14°C"}
+    return db.get(city.lower(), f"{city}: No data")
+
+llm_config = OpenAIProviderConfig(
+    base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+    api_key=os.getenv("OPENAI_API_KEY", "your-api-key"),
+    chat_model=os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+)
+llm = ChatOpenAI(
+    model=llm_config.chat_model,
+    api_key=llm_config.api_key,
+    base_url=llm_config.base_url,
+)
+agent = create_agent(
+    model=llm,
+    tools=[calculator, get_weather],
+    system_prompt="Use tools when needed. Answer accurately.",
+)
+
+DATA_FILE = Path(__file__).resolve().parent / "agent_partial.jsonl"
+dataset = AgentDataset.from_file(DATA_FILE)
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    metrics=["goal_achievement", "response_coherence", "ragas:tool_call_accuracy"],
+    llm_config=llm_config,
+    agent=wrap_langchain_agent(agent),
+)
+results = evaluation.run()
+print("Summary:", results.summary)</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example D: Agent — partial + FloTorch hosted</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Requires <code>pip install floeval[flotorch]</code> and a <strong>FloTorch gateway</strong> with a deployed agent. Use when your agent runs on FloTorch. <strong>Step 1:</strong> Create <code>agent_flotorch_partial.json</code>. <strong>Step 2:</strong> Save the script. <strong>Step 3:</strong> Update base_url, api_key, agent name for your gateway. Run <code>python run_agent_d.py</code></p>
+    <div class="code-block">
+      <span class="lang-label">Step 1 — Save as agent_flotorch_partial.json</span>
+      <pre><code>{
+  "samples": [
+    {
+      "user_input": "What is the weather in Tokyo?",
+      "reference_outcome": "Provides Tokyo weather"
+    }
+  ]
+}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Step 2 — Save as run_agent_d.py (same folder)</span>
+      <pre><code>#!/usr/bin/env python3
+"""Agent: FloTorch hosted. Requires FloTorch gateway with deployed agent."""
+from pathlib import Path
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.flotorch import create_flotorch_runner
+
+DATA_FILE = Path(__file__).resolve().parent / "agent_flotorch_partial.json"
+llm_config = OpenAIProviderConfig(
+    base_url="https://your-gateway/v1",
+    api_key="your-api-key",
+    chat_model="gpt-4o-mini",
+    embedding_model="text-embedding-3-small",
+)
+
+runner = create_flotorch_runner("my-agent", llm_config=llm_config)
+dataset = AgentDataset.from_file(DATA_FILE)
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    llm_config=llm_config,
+    agent_runner=runner,
+    metrics=["goal_achievement", "response_coherence"],
+    default_provider="builtin",
+)
+results = evaluation.run()
+print("Summary:", results.summary["aggregate_scores"])</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example E: Prompt evaluation — compare two system prompts (needs API key)</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Create <code>prompts.yaml</code>, <code>partial_dataset.json</code>, and <code>prompt_config.yaml</code> from the blocks below, then run the CLI command.</p>
+    <div class="code-block">
+      <span class="lang-label">File: prompts.yaml</span>
+      <pre><code>prompts:
+  direct:
+    template: "Answer the question directly and concisely."
+  explanatory:
+    template: "Answer the question with a brief explanation of your reasoning."</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">File: partial_dataset.json</span>
+      <pre><code>{
+  "samples": [
+    {
+      "user_input": "What is the capital of France?",
+      "prompt_ids": ["direct", "explanatory"]
+    },
+    {
+      "user_input": "What is RAG in machine learning?",
+      "prompt_ids": ["direct", "explanatory"]
+    }
+  ]
+}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">File: prompt_config.yaml — set api_key</span>
+      <pre><code>llm_config:
+  base_url: "https://api.openai.com/v1"
+  api_key: "your-api-key-here"
+  chat_model: "gpt-4o-mini"
+  embedding_model: "text-embedding-3-small"
+
+evaluation_config:
+  metrics:
+    - "ragas:answer_relevancy"
+  prompts_file: "prompts.yaml"
+
+dataset_generation_config:
+  generator_model: "gpt-4o-mini"</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Shell — run after creating the files above</span>
+      <pre><code>floeval evaluate -c prompt_config.yaml -d partial_dataset.json -o prompt_results.json
+python -m json.tool prompt_results.json</code></pre>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; color: var(--accent);">Example F: Agentic Workflow evaluation (needs FloTorch gateway + floeval[flotorch])</h4>
+    <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 8px;">Install <code>pip install "floeval[flotorch]"</code>. Create the files below, set your gateway URL and key, then run.</p>
+    <div class="code-block">
+      <span class="lang-label">File: workflow_config.json</span>
+      <pre><code>{
+  "uid": "demo-workflow-001",
+  "name": "Demo Triage Workflow",
+  "nodes": [
+    {"id": "start",   "type": "START", "label": "Start"},
+    {"id": "agent_a", "type": "AGENT", "label": "Agent A", "agentName": "my-agent:latest"},
+    {"id": "end",     "type": "END",   "label": "End"}
+  ],
+  "edges": [
+    {"sourceNodeId": "start",   "targetNodeId": "agent_a"},
+    {"sourceNodeId": "agent_a", "targetNodeId": "end"}
+  ]
+}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">File: agent_dataset.json</span>
+      <pre><code>{
+  "samples": [
+    {
+      "user_input": "What is the status of order #12345?",
+      "reference_outcome": "The order is shipped and arriving tomorrow."
+    }
+  ]
+}</code></pre>
+    </div>
+    <div class="code-block">
+      <span class="lang-label">Python — save as run_workflow.py and run: python run_workflow.py</span>
+      <pre><code>#!/usr/bin/env python3
+"""Agentic Workflow evaluation. Requires: pip install "floeval[flotorch]". Set gateway URL and key."""
+import json
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.flotorch import WorkflowRunner
+
+llm_config = OpenAIProviderConfig(
+    base_url="https://gateway.example/openai/v1",  # change to your gateway
+    api_key="your-gateway-key-here",
+    chat_model="gpt-4o-mini",
+)
+
+with open("workflow_config.json") as f:
+    dag_config = json.load(f)
+
+runner = WorkflowRunner(dag_config=dag_config, llm_config=llm_config)
+dataset = AgentDataset.from_file("agent_dataset.json")
+
+evaluation = AgentEvaluation(
+    dataset=dataset,
+    agent_runner=runner,
+    llm_config=llm_config,
+    metrics=["goal_achievement", "ragas:agent_goal_accuracy"],
+)
+
+results = evaluation.run()
+print("Summary:", results.summary)
+for row in results.sample_results:
+    print("---")
+    print("Input:", row["user_input"])
+    print("Response:", row.get("final_response"))
+    print("Metrics:", row["metrics"])</code></pre>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn" onclick="switchTab(5)">← Previous</button>
+      <button class="btn" disabled>Done! ✅</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentTab = 0;
+
+  function switchTab(idx) {
+    document.querySelectorAll('.phase').forEach((p, i) => {
+      p.classList.toggle('active', i === idx);
+    });
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', i === idx);
+    });
+    currentTab = idx;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>

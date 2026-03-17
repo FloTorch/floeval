@@ -1,6 +1,8 @@
 # Agent Evaluation
 
-Use this guide for trace-based agent evaluation, tool-call checks, and outcome scoring.
+Use this guide for single-agent trace evaluation, tool-call checks, and outcome scoring.
+
+For multi-agent DAG pipelines where multiple agents collaborate, see [Agentic Workflow](agentic-workflow.md).
 
 ---
 
@@ -8,7 +10,14 @@ Use this guide for trace-based agent evaluation, tool-call checks, and outcome s
 
 `AgentEvaluation` is intended for datasets that capture agent behavior rather than plain `llm_response` outputs.
 
-Floeval currently supports three implemented agent-evaluation modes:
+### Single-agent vs agentic workflow
+
+| Scenario | Use |
+|----------|-----|
+| One agent answers questions end-to-end | This page |
+| Multiple agents work in sequence or parallel (DAG) | [Agentic Workflow](agentic-workflow.md) |
+
+Floeval currently supports three implemented agent-evaluation modes for single-agent eval:
 
 | Mode | Input | How traces are obtained | Typical entry point |
 |------|-------|-------------------------|---------------------|
@@ -147,12 +156,14 @@ Use a partial dataset when Floeval should run the agent and convert the results 
 
 | Field | Used in | Notes |
 |-------|---------|-------|
-| `user_input` | Full and partial datasets | Can be a string or structured object |
+| `user_input` | Full and partial datasets | Also accepted as `question` (alias) |
 | `trace.messages` | Full datasets | Message roles must be `human`, `ai`, or `tool` |
 | `trace.final_response` | Full datasets | Final user-facing answer from the agent |
-| `reference_outcome` | Optional | Helps goal-oriented metrics compare expected outcome vs actual result |
+| `reference_outcome` | Optional | Helps goal-oriented metrics; also accepted as `answer` (alias) |
 | `reference_tool_calls` | Optional but required for `tool_call_accuracy` | Expected tool calls for the sample |
 | `metadata` | Optional | Extra information carried through into results |
+
+Dataset field aliases: `question` is treated as `user_input`, and `answer` is treated as `reference_outcome`. You can supply datasets using either the alias format or the full field names.
 
 ---
 
@@ -324,6 +335,7 @@ The summary contains the average score for each metric that completed successful
 
 ## Related references
 
-- [Agent Tracing](agent-tracing.md)
-- [Metrics](metrics.md)
-- [API Reference](api-reference.md)
+- [Agentic Workflow](agentic-workflow.md) for multi-agent DAG evaluation
+- [Agent Tracing](agent-tracing.md) for trace capture helpers
+- [Metrics](metrics.md) for the full metric catalog
+- [API Reference](api-reference.md) for constructors and config shapes

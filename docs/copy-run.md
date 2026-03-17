@@ -230,40 +230,110 @@ print(evaluation.run().summary)
 
 ---
 
-## Example 7: DeepEval exact match and pattern match (no API key needed)
+---
+
+## Example 7: Prompt evaluation — compare two system prompts
+
+No RAG, no vectorstore. Uses two prompt variants against the same question. Does not need an API key if you swap out the LLM metrics for a custom one.
+
+```yaml
+# prompts.yaml
+prompts:
+  direct:
+    template: "Answer the question directly and concisely."
+  explanatory:
+    template: "Answer the question with a brief explanation of your reasoning."
+```
+
+```json
+{
+  "samples": [
+    {
+      "user_input": "What is the capital of France?",
+      "prompt_ids": ["direct", "explanatory"]
+    }
+  ]
+}
+```
+
+```yaml
+# config.yaml
+llm_config:
+  base_url: "https://api.openai.com/v1"
+  api_key: "your-api-key"
+  chat_model: "gpt-4o-mini"
+  embedding_model: "text-embedding-3-small"
+
+evaluation_config:
+  metrics:
+    - "ragas:answer_relevancy"
+  prompts_file: "prompts.yaml"
+
+dataset_generation_config:
+  generator_model: "gpt-4o-mini"
+```
+
+```bash
+floeval evaluate -c config.yaml -d partial_dataset.json -o results.json
+python -m json.tool results.json
+```
+
+---
+
+## Example 8: Agentic workflow (skeleton — needs FloTorch gateway)
+
+Requires `pip install "floeval[flotorch]"` and access to a FloTorch gateway with two agents deployed.
+
+```json
+{
+  "uid": "demo-workflow",
+  "name": "Demo Workflow",
+  "nodes": [
+    {"id": "start",   "type": "START", "label": "Start"},
+    {"id": "agent_a", "type": "AGENT", "label": "Agent A", "agentName": "my-agent-a:latest"},
+    {"id": "end",     "type": "END",   "label": "End"}
+  ],
+  "edges": [
+    {"sourceNodeId": "start",   "targetNodeId": "agent_a"},
+    {"sourceNodeId": "agent_a", "targetNodeId": "end"}
+  ]
+}
+```
 
 ```python
-from floeval import Evaluation, DatasetLoader
+import json
+from floeval.api.agent_evaluation import AgentEvaluation
+from floeval.config.schemas.io.agent_dataset import AgentDataset, PartialAgentSample
+from floeval.config.schemas.io.llm import OpenAIProviderConfig
+from floeval.flotorch import WorkflowRunner
 
-dataset = DatasetLoader.from_samples(
-    [
-        {
-            "user_input": "What is your support email?",
-            "llm_response": "support@example.com",
-            "ground_truth": "support@example.com",
-        },
-        {
-            "user_input": "What is the office pin code?",
-            "llm_response": "560001",
-            "ground_truth": "560001",
-        },
-    ],
-    partial_dataset=False,
+llm_config = OpenAIProviderConfig(
+    base_url="https://gateway.example/openai/v1",
+    api_key="your-gateway-key",
+    chat_model="gpt-4o-mini",
 )
 
-evaluation = Evaluation(
+dag_config = json.loads(open("workflow_config.json").read())
+runner = WorkflowRunner(dag_config=dag_config, llm_config=llm_config)
+
+dataset = AgentDataset(
+    samples=[
+        PartialAgentSample(
+            user_input="What is the status of order #12345?",
+            reference_outcome="The order is shipped and arriving tomorrow.",
+        )
+    ]
+)
+
+evaluation = AgentEvaluation(
     dataset=dataset,
-    metrics=[
-        {"id": "exact_match", "provider": "deepeval"},
-        {
-            "id": "pattern_match",
-            "provider": "deepeval",
-            "params": {"pattern": r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"},
-        },
-    ],
+    agent_runner=runner,
+    llm_config=llm_config,
+    metrics=["goal_achievement", "ragas:agent_goal_accuracy"],
 )
 
-print(evaluation.run().aggregate_scores)
+results = evaluation.run()
+print(results.summary)
 ```
 
 ---
@@ -271,5 +341,7 @@ print(evaluation.run().aggregate_scores)
 ## Next steps
 
 - [Examples](examples.md) for fuller workflows
+- [Prompt Evaluation](prompt-evaluation.md) for prompt variant workflows
 - [Agent Evaluation](agent-evaluation.md) for trace dataset formats
+- [Agentic Workflow](agentic-workflow.md) for multi-agent DAG evaluation
 - [Metrics](metrics.md) for the current metric catalog
