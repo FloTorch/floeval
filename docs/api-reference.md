@@ -19,6 +19,9 @@ from floeval.api.agent_evaluation import AgentEvaluation
 from floeval.api.metrics.custom import custom_metric, criteria
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
 from floeval.utils.agent_trace import capture_trace, log_turn, log_tool_result, wrap_langchain_agent
+
+# Agentic workflow (requires floeval[flotorch])
+from floeval.flotorch import WorkflowRunner, create_flotorch_runner
 ```
 
 ---
@@ -78,8 +81,43 @@ Floeval's CLI reads YAML, YML, or JSON config files.
 | Field | Required | Notes |
 |-------|----------|-------|
 | `generator_model` | Yes for generation flows | Model used to populate missing `llm_response` values |
-| `batch_size` | No | Defaults are handled in the generation layer |
-| `max_concurrency` | No | Controls async generation fan-out |
+| `batch_size` | No | Number of samples per generation batch; default `20` |
+| `max_concurrency` | No | Max concurrent async generation calls; default `10` |
+
+### `agent_workflow_config`
+
+Use this section instead of `agent_name` when running agentic workflow evaluation.
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `dataset_url` | Yes | URL or path to the agent dataset file |
+| `config` | Yes | The DAG config object with `uid`, `name`, `nodes`, `edges` |
+
+#### DAG config shape
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `uid` | string | Unique workflow ID |
+| `name` | string | Human-readable workflow name |
+| `nodes` | list | Each node: `{id, type, label}` + `agentName` for AGENT nodes |
+| `edges` | list | Each edge: `{sourceNodeId, targetNodeId}` |
+
+Node types: `START`, `AGENT`, `END`.
+
+```yaml
+agent_workflow_config:
+  dataset_url: "https://your-storage/agent_dataset.json"
+  config:
+    uid: "workflow-001"
+    name: "Triage Workflow"
+    nodes:
+      - {id: "start",   type: "START", label: "Start"}
+      - {id: "agent_a", type: "AGENT", label: "Agent A", agentName: "my-agent:latest"}
+      - {id: "end",     type: "END",   label: "End"}
+    edges:
+      - {sourceNodeId: "start",   targetNodeId: "agent_a"}
+      - {sourceNodeId: "agent_a", targetNodeId: "end"}
+```
 
 ### Example config
 
@@ -200,6 +238,43 @@ results = await evaluation.arun()
 
 ---
 
+## `WorkflowRunner`
+
+Use `WorkflowRunner` for multi-agent DAG evaluation. Requires `pip install "floeval[flotorch]"`.
+
+```python
+from floeval.flotorch import WorkflowRunner
+
+runner = WorkflowRunner(
+    dag_config=dag_config,       # dict: full DAG JSON object
+    llm_config=llm_config,       # OpenAIProviderConfig
+    app_name="floeval-workflow", # optional
+)
+```
+
+| Parameter | Required | Notes |
+|-----------|----------|-------|
+| `dag_config` | Yes | Dict with `uid`, `name`, `nodes`, `edges` |
+| `llm_config` | Yes | LLM credentials for all agent nodes |
+| `app_name` | No | Log label; defaults to `"floeval-workflow"` |
+
+Pass the runner to `AgentEvaluation` via the `agent_runner=` parameter.
+
+### `create_flotorch_runner`
+
+Convenience factory for single-agent FloTorch evaluation:
+
+```python
+from floeval.flotorch import create_flotorch_runner
+
+runner = create_flotorch_runner(
+    agent_name="support-agent",
+    llm_config=llm_config,   # optional; falls back to FLOTORCH_BASE_URL env var
+)
+```
+
+---
+
 ## `AgentEvaluation`
 
 Use `AgentEvaluation` for agent traces and partial agent datasets.
@@ -276,10 +351,10 @@ dataset = DatasetLoader.from_samples(
 
 | Field | Notes |
 |-------|-------|
-| `user_input` | Required |
+| `user_input` | Required. Also accepted as `question` (alias). |
 | `llm_response` | Required for full datasets |
 | `contexts` | Optional, used by grounding and retrieval metrics |
-| `ground_truth` | Optional, used by some recall and precision metrics |
+| `ground_truth` | Optional, used by some recall and precision metrics. Also accepted as `answer` (alias). |
 | `metadata` | Optional |
 | `prompt_id` | Present after prompt-driven generation |
 
@@ -305,6 +380,8 @@ Agent trace message roles in saved datasets must be:
 - `human`
 - `ai`
 - `tool`
+
+Agent dataset field aliases: `question` maps to `user_input`, `answer` maps to `reference_outcome`. Both formats are accepted in `.json`, `.jsonl`, and JSON array root files.
 
 ---
 
@@ -336,7 +413,14 @@ agent_results.sample_results
 agent_results.summary
 ```
 
-Agent summaries currently contain per-metric averages for successful metric runs.
+Agent summaries contain per-metric averages for successful metric runs.
+
+For agentic workflow results, each sample in `sample_results` also contains:
+
+| Field | Notes |
+|-------|-------|
+| `agent_traces` | List of `AgentTrace` objects — one per completed AGENT node in the DAG |
+| `workflow_execution` | Dict of per-agent summaries: `{agent_name, input, output, tool_calls, turn_count, tool_call_count}` |
 
 ---
 
@@ -368,6 +452,8 @@ print(MetricRegistry.list_all_metrics())
 ## Related references
 
 - [Examples](examples.md)
+- [Prompt Evaluation](prompt-evaluation.md)
 - [Agent Evaluation](agent-evaluation.md)
+- [Agentic Workflow](agentic-workflow.md)
 - [Metrics](metrics.md)
 - [Troubleshooting](troubleshooting.md)

@@ -1,4 +1,4 @@
-"""Floeval - Multi-backend evaluation framework for LLM and RAG systems."""
+"""Floeval - Multi-backend evaluation framework for LLM, RAG, prompt, and agent systems."""
 
 from floeval.api import Evaluation, Dataset, DatasetLoader, MetricRegistry
 

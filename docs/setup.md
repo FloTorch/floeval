@@ -24,7 +24,7 @@ Examples in this docs site use placeholder keys. In real projects, prefer loadin
 
 ### Optional FloTorch support
 
-Install the `flotorch` extra only if you need Mode 4 agent evaluation:
+Install the `flotorch` extra only if you need Mode 4 agent evaluation or agentic workflow evaluation:
 
 ```bash
 pip install "floeval[flotorch]"
@@ -34,7 +34,7 @@ pip install "floeval[flotorch]"
 
 ## Install Floeval
 
-Package version `0.1.0b1` is a pre-release, so installation from PyPI may require `--pre`:
+Package version `0.2.0b1` is a pre-release, so installation from PyPI may require `--pre`:
 
 ```bash
 pip install --pre floeval
@@ -58,7 +58,7 @@ pip install -e .[dev]
 floeval --version
 ```
 
-You should see a beta version such as `floeval 0.1.0b1`.
+You should see a beta version such as `floeval 0.2.0b1`.
 
 ---
 
