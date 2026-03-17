@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="Multi-backend evaluation framework for LLM and RAG systems" /><link rel="canonical" href="https://github.com/FloTorch/floeval/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="Multi-backend evaluation framework for LLM, RAG, prompt, and agent systems" /><link rel="canonical" href="https://github.com/FloTorch/floeval/" />
       <link rel="shortcut icon" href="img/favicon.ico" />
     <title>Floeval</title>
     <link rel="stylesheet" href="css/theme.css" />
@@ -48,9 +48,13 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="#">Home</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#supported-evaluation-types">Supported evaluation types</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#supported-workflows">Supported workflows</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#core-capabilities">Core capabilities</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#metrics-by-eval-type-quick-reference">Metrics by eval type (quick reference)</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#documentation-map">Documentation map</a>
     </li>
@@ -74,7 +78,15 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="prompt-evaluation/">Prompt Evaluation</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="agent-evaluation/">Agent Evaluation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="agentic-workflow/">Agentic Workflow</a>
                 </li>
               </ul>
               <ul>
@@ -121,10 +133,48 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="floeval-user-guide">Floeval User Guide</h1>
-<p>Floeval supports evaluation workflows for LLM, RAG, and agent systems.</p>
+<p>Floeval is a multi-backend evaluation framework for LLM, RAG, prompt, and agent systems.</p>
+<hr />
+<h2 id="supported-evaluation-types">Supported evaluation types</h2>
+<p>Floeval supports five distinct evaluation types. Each maps to a different dataset shape and set of metrics.</p>
+<table>
+<thead>
+<tr>
+<th>Eval type</th>
+<th>What you are scoring</th>
+<th>Typical dataset</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>LLM</strong></td>
+<td>Direct question-answer quality without retrieval</td>
+<td><code>user_input</code> + <code>llm_response</code></td>
+</tr>
+<tr>
+<td><strong>RAG</strong></td>
+<td>Answer quality and retrieval performance with context</td>
+<td><code>user_input</code> + <code>llm_response</code> + <code>contexts</code></td>
+</tr>
+<tr>
+<td><strong>Prompt</strong></td>
+<td>One or more system prompts against the same dataset</td>
+<td>Partial dataset + <code>prompts_file</code> or inline prompts</td>
+</tr>
+<tr>
+<td><strong>Agent</strong></td>
+<td>Single-agent trace quality, tool use, and goal achievement</td>
+<td><code>AgentDataset</code> with full or partial samples</td>
+</tr>
+<tr>
+<td><strong>Agentic Workflow</strong></td>
+<td>Multi-agent DAG: each agent node is a step in the pipeline</td>
+<td><code>AgentDataset</code> + DAG config</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="supported-workflows">Supported workflows</h2>
-<p>Floeval supports the following workflows:</p>
 <table>
 <thead>
 <tr>
@@ -145,9 +195,19 @@
 <td><code>Evaluation(...)</code></td>
 </tr>
 <tr>
+<td>Prompt evaluation</td>
+<td>Compare system-prompt variants at scale</td>
+<td><code>Evaluation(..., prompts_file=...)</code></td>
+</tr>
+<tr>
 <td>Agent evaluation</td>
 <td>Scoring traces, tool use, and final outcomes</td>
 <td><code>AgentEvaluation(...)</code> or <code>floeval evaluate --agent</code></td>
+</tr>
+<tr>
+<td>Agentic workflow evaluation</td>
+<td>Multi-agent DAG scoring</td>
+<td><code>AgentEvaluation(..., agent_runner=WorkflowRunner(...))</code></td>
 </tr>
 <tr>
 <td>Trace capture</td>
@@ -159,13 +219,52 @@
 <hr />
 <h2 id="core-capabilities">Core capabilities</h2>
 <ul>
-<li>Run <code>ragas</code>, <code>deepeval</code>, builtin, and custom metrics in the same project</li>
+<li>Run <code>ragas</code>, <code>deepeval</code>, <code>builtin</code>, and <code>custom</code> metrics in the same project</li>
 <li>Evaluate full datasets that already contain <code>llm_response</code></li>
 <li>Evaluate partial datasets and let Floeval generate missing responses automatically</li>
 <li>Expand partial datasets across prompt variants with <code>prompt_ids</code> and <code>prompts_file</code></li>
-<li>Score agent traces with agent-specific metrics</li>
-<li>Capture traces from Python callables, LangChain-style agents, or optional FloTorch runners</li>
+<li>Score agent traces with agent-specific metrics (goal achievement, tool accuracy, coherence)</li>
+<li>Run multi-agent DAG workflows and evaluate the combined output</li>
+<li>Capture traces from Python callables, LangChain-style agents, or FloTorch runners</li>
+<li>Define custom scoring logic using function decorators or LLM-as-judge criteria</li>
 </ul>
+<hr />
+<h2 id="metrics-by-eval-type-quick-reference">Metrics by eval type (quick reference)</h2>
+<table>
+<thead>
+<tr>
+<th>Eval type</th>
+<th>Recommended metrics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>llm</code></td>
+<td><code>ragas:answer_relevancy</code>, <code>deepeval:answer_relevancy</code></td>
+</tr>
+<tr>
+<td><code>rag</code></td>
+<td><code>ragas:faithfulness</code>, <code>ragas:context_precision</code>, <code>ragas:context_recall</code>, <code>deepeval:contextual_precision</code>, <code>deepeval:contextual_relevancy</code> (plus others)</td>
+</tr>
+<tr>
+<td><code>prompt (no RAG)</code></td>
+<td><code>ragas:answer_relevancy</code>, <code>deepeval:answer_relevancy</code></td>
+</tr>
+<tr>
+<td><code>prompt (with RAG)</code></td>
+<td>Same as <code>rag</code></td>
+</tr>
+<tr>
+<td><code>agent</code></td>
+<td><code>builtin:goal_achievement</code>, <code>builtin:response_coherence</code>, <code>ragas:agent_goal_accuracy</code>, <code>ragas:tool_call_accuracy</code></td>
+</tr>
+<tr>
+<td><code>agentic_workflow</code></td>
+<td>Same 4 agent metrics</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="metrics/">Metrics</a> for the complete catalog.</p>
 <hr />
 <h2 id="documentation-map">Documentation map</h2>
 <table>
@@ -177,8 +276,32 @@
 </thead>
 <tbody>
 <tr>
+<td>Install and set up Floeval</td>
+<td><a href="setup/">Prerequisites &amp; Setup</a></td>
+</tr>
+<tr>
+<td>Run a quick example</td>
+<td><a href="copy-run/">Minimal Examples</a></td>
+</tr>
+<tr>
 <td>Run evaluation from files</td>
 <td><a href="examples/#cli-workflows">Examples</a></td>
+</tr>
+<tr>
+<td>Evaluate with system prompts</td>
+<td><a href="prompt-evaluation/">Prompt Evaluation</a></td>
+</tr>
+<tr>
+<td>Evaluate an agent trace dataset</td>
+<td><a href="agent-evaluation/">Agent Evaluation</a></td>
+</tr>
+<tr>
+<td>Evaluate a multi-agent DAG workflow</td>
+<td><a href="agentic-workflow/">Agentic Workflow</a></td>
+</tr>
+<tr>
+<td>Add trace capture to an agent</td>
+<td><a href="agent-tracing/">Agent Tracing</a></td>
 </tr>
 <tr>
 <td>Compare providers or metric IDs</td>
@@ -189,16 +312,12 @@
 <td><a href="custom-metrics/">Custom Metrics</a></td>
 </tr>
 <tr>
-<td>Evaluate an agent trace dataset</td>
-<td><a href="agent-evaluation/">Agent Evaluation</a></td>
-</tr>
-<tr>
-<td>Add trace capture to an agent</td>
-<td><a href="agent-tracing/">Agent Tracing</a></td>
-</tr>
-<tr>
 <td>Check config fields and constructors</td>
 <td><a href="api-reference/">API Reference</a></td>
+</tr>
+<tr>
+<td>Diagnose errors and failures</td>
+<td><a href="troubleshooting/">Troubleshooting</a></td>
 </tr>
 </tbody>
 </table>
@@ -206,9 +325,9 @@
 <h2 id="basic-workflow">Basic workflow</h2>
 <ol>
 <li>Install Floeval. See <a href="setup/">Prerequisites &amp; Setup</a> for version and environment details.</li>
-<li>Create a config file with <code>llm_config</code> and <code>evaluation_config</code></li>
-<li>Create a dataset file in <code>.json</code> or <code>.jsonl</code></li>
-<li>Run <code>floeval evaluate -c config.yaml -d dataset.json</code></li>
+<li>Create a config file with <code>llm_config</code> and <code>evaluation_config</code>.</li>
+<li>Create a dataset file in <code>.json</code> or <code>.jsonl</code>.</li>
+<li>Run <code>floeval evaluate -c config.yaml -d dataset.json</code>.</li>
 </ol>
 <div class="admonition note">
 <p class="admonition-title">Credential handling</p>
@@ -226,19 +345,27 @@
 <tbody>
 <tr>
 <td><a href="setup/">Prerequisites &amp; Setup</a></td>
-<td>installation, beta versioning, credentials, optional FloTorch setup</td>
+<td>Installation, beta versioning, credentials, optional FloTorch setup</td>
 </tr>
 <tr>
 <td><a href="copy-run/">Minimal Examples</a></td>
-<td>short copy-paste examples</td>
+<td>Short copy-paste examples for all eval types</td>
 </tr>
 <tr>
 <td><a href="examples/">Examples</a></td>
-<td>CLI, Python, prompt expansion, mixed providers, and agent flows</td>
+<td>CLI, Python, prompt expansion, mixed providers, agent, and workflow flows</td>
+</tr>
+<tr>
+<td><a href="prompt-evaluation/">Prompt Evaluation</a></td>
+<td>Single and multi-prompt eval, <code>prompts_file</code>, <code>prompt_ids</code>, RAG vs no-RAG</td>
 </tr>
 <tr>
 <td><a href="agent-evaluation/">Agent Evaluation</a></td>
-<td>dataset shapes, CLI <code>--agent</code>, Python callable mode, FloTorch mode</td>
+<td>Single-agent dataset shapes, CLI <code>--agent</code>, Python callable, FloTorch runner</td>
+</tr>
+<tr>
+<td><a href="agentic-workflow/">Agentic Workflow</a></td>
+<td>Multi-agent DAG config, <code>WorkflowRunner</code>, traces per node</td>
 </tr>
 <tr>
 <td><a href="agent-tracing/">Agent Tracing</a></td>
@@ -246,15 +373,19 @@
 </tr>
 <tr>
 <td><a href="metrics/">Metrics</a></td>
-<td>the current metric catalog by provider</td>
+<td>Full metric catalog by provider and eval type</td>
+</tr>
+<tr>
+<td><a href="custom-metrics/">Custom Metrics</a></td>
+<td><code>@custom_metric</code> decorator, <code>criteria()</code> LLM-as-judge</td>
 </tr>
 <tr>
 <td><a href="api-reference/">API Reference</a></td>
-<td>config keys, dataset models, CLI signatures, and public APIs</td>
+<td>Config keys, dataset models, CLI signatures, and public APIs</td>
 </tr>
 <tr>
 <td><a href="troubleshooting/">Troubleshooting</a></td>
-<td>install, config, dataset, generation, and agent-eval fixes</td>
+<td>Install, config, dataset, generation, prompt, and agent-eval fixes</td>
 </tr>
 </tbody>
 </table>
@@ -306,5 +437,5 @@
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2026-03-09 08:13:24.750554+00:00
+Build Date UTC : 2026-03-17 10:05:49.712166+00:00
 -->

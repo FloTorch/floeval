@@ -62,7 +62,15 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../prompt-evaluation/">Prompt Evaluation</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../agent-evaluation/">Agent Evaluation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agentic-workflow/">Agentic Workflow</a>
                 </li>
               </ul>
               <ul>
@@ -72,6 +80,8 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="#">Metrics</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#metrics-by-eval-type">Metrics by eval type</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#how-to-specify-metrics">How to specify metrics</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#standard-llm-and-rag-metrics">Standard LLM and RAG metrics</a>
@@ -100,8 +110,6 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#choosing-a-provider">Choosing a provider</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#provider-selection">Provider selection</a>
-    </li>
     <li class="toctree-l3"><a class="reference internal" href="#example-configurations">Example configurations</a>
     </li>
         </ul>
@@ -153,7 +161,81 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="available-metrics">Available Metrics</h1>
-<p>Floeval currently registers metrics across <code>ragas</code>, <code>deepeval</code>, and <code>builtin</code>, plus any <code>custom</code> metrics you define at runtime.</p>
+<p>Floeval registers metrics across <code>ragas</code>, <code>deepeval</code>, and <code>builtin</code>, plus any <code>custom</code> metrics you define at runtime.</p>
+<hr />
+<h2 id="metrics-by-eval-type">Metrics by eval type</h2>
+<p>Use this table as a quick reference to pick metrics for each evaluation type.</p>
+<table>
+<thead>
+<tr>
+<th>Eval type</th>
+<th>Provider</th>
+<th>Metrics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>llm</code></td>
+<td>ragas</td>
+<td><code>answer_relevancy</code></td>
+</tr>
+<tr>
+<td><code>llm</code></td>
+<td>deepeval</td>
+<td><code>answer_relevancy</code></td>
+</tr>
+<tr>
+<td><code>rag</code></td>
+<td>ragas</td>
+<td><code>answer_relevancy</code>, <code>faithfulness</code>, <code>context_precision</code>, <code>context_recall</code>, <code>context_entity_recall</code>, <code>noise_sensitivity</code></td>
+</tr>
+<tr>
+<td><code>rag</code></td>
+<td>deepeval</td>
+<td><code>answer_relevancy</code>, <code>faithfulness</code>, <code>contextual_precision</code>, <code>contextual_recall</code>, <code>contextual_relevancy</code></td>
+</tr>
+<tr>
+<td><code>prompt (no RAG)</code></td>
+<td>ragas</td>
+<td><code>answer_relevancy</code></td>
+</tr>
+<tr>
+<td><code>prompt (no RAG)</code></td>
+<td>deepeval</td>
+<td><code>answer_relevancy</code></td>
+</tr>
+<tr>
+<td><code>prompt (with RAG)</code></td>
+<td>ragas</td>
+<td>Same as <code>rag</code></td>
+</tr>
+<tr>
+<td><code>prompt (with RAG)</code></td>
+<td>deepeval</td>
+<td>Same as <code>rag</code></td>
+</tr>
+<tr>
+<td><code>agent</code></td>
+<td>builtin</td>
+<td><code>goal_achievement</code>, <code>response_coherence</code></td>
+</tr>
+<tr>
+<td><code>agent</code></td>
+<td>ragas</td>
+<td><code>agent_goal_accuracy</code>, <code>tool_call_accuracy</code></td>
+</tr>
+<tr>
+<td><code>agentic_workflow</code></td>
+<td>builtin</td>
+<td><code>goal_achievement</code>, <code>response_coherence</code></td>
+</tr>
+<tr>
+<td><code>agentic_workflow</code></td>
+<td>ragas</td>
+<td><code>agent_goal_accuracy</code>, <code>tool_call_accuracy</code></td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="how-to-specify-metrics">How to specify metrics</h2>
 <p>You can reference metrics in four ways:</p>
@@ -197,39 +279,39 @@
 <tr>
 <th>Metric</th>
 <th>Best for</th>
-<th>Notes</th>
+<th>Required fields</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>answer_relevancy</code></td>
 <td>General LLM answer quality</td>
-<td>Works on standard evaluation datasets</td>
+<td><code>user_input</code>, <code>llm_response</code></td>
 </tr>
 <tr>
 <td><code>faithfulness</code></td>
 <td>Grounding against retrieved context</td>
-<td>Use when samples include <code>contexts</code></td>
+<td><code>user_input</code>, <code>llm_response</code>, <code>contexts</code></td>
 </tr>
 <tr>
 <td><code>context_precision</code></td>
-<td>Retrieval ranking quality</td>
-<td>Retrieval-focused metric</td>
+<td>Whether relevant contexts are ranked first</td>
+<td><code>user_input</code>, <code>llm_response</code>, <code>contexts</code>, <code>ground_truth</code></td>
 </tr>
 <tr>
 <td><code>context_recall</code></td>
-<td>Coverage of relevant information</td>
-<td>Retrieval-focused metric</td>
+<td>Coverage of reference information by retrieved contexts</td>
+<td><code>user_input</code>, <code>llm_response</code>, <code>contexts</code>, <code>ground_truth</code></td>
 </tr>
 <tr>
 <td><code>context_entity_recall</code></td>
-<td>Entity-level recall from context</td>
-<td>Useful when preserving entities matters</td>
+<td>Entity-level coverage in retrieved contexts</td>
+<td><code>user_input</code>, <code>llm_response</code>, <code>contexts</code>, <code>ground_truth</code></td>
 </tr>
 <tr>
 <td><code>noise_sensitivity</code></td>
-<td>Robustness to noisy or irrelevant context</td>
-<td>Retrieval-focused stress metric</td>
+<td>How often the model produces incorrect claims from noisy context</td>
+<td><code>user_input</code>, <code>llm_response</code>, <code>contexts</code>, <code>ground_truth</code></td>
 </tr>
 </tbody>
 </table>
@@ -239,59 +321,87 @@
 <tr>
 <th>Metric</th>
 <th>Best for</th>
-<th>Notes</th>
+<th>Required fields</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>answer_relevancy</code></td>
 <td>General LLM answer quality</td>
-<td>Alternate implementation to RAGAS</td>
+<td><code>user_input</code>, <code>llm_response</code></td>
 </tr>
 <tr>
 <td><code>faithfulness</code></td>
 <td>Grounding against context</td>
-<td>Uses DeepEval's test-case flow</td>
+<td><code>user_input</code>, <code>llm_response</code>, <code>contexts</code></td>
 </tr>
 <tr>
 <td><code>contextual_precision</code></td>
-<td>Retrieval precision</td>
-<td>Typically uses <code>contexts</code> and <code>ground_truth</code></td>
+<td>Retrieval ranking precision</td>
+<td><code>user_input</code>, <code>llm_response</code>, <code>contexts</code>, <code>ground_truth</code></td>
 </tr>
 <tr>
 <td><code>contextual_recall</code></td>
-<td>Retrieval recall</td>
-<td>Typically uses <code>contexts</code> and <code>ground_truth</code></td>
+<td>Retrieval recall against ground truth</td>
+<td><code>user_input</code>, <code>llm_response</code>, <code>contexts</code>, <code>ground_truth</code></td>
 </tr>
 <tr>
 <td><code>contextual_relevancy</code></td>
-<td>Whether retrieved context is relevant</td>
-<td>Typically uses <code>contexts</code></td>
+<td>Whether retrieved context is relevant to the question</td>
+<td><code>user_input</code>, <code>llm_response</code>, <code>contexts</code></td>
+</tr>
+<tr>
+<td><code>hallucination</code></td>
+<td>Factual contradictions versus the provided context</td>
+<td><code>user_input</code>, <code>llm_response</code>, <code>contexts</code></td>
+</tr>
+<tr>
+<td><code>toxicity</code></td>
+<td>Toxic, harmful, or offensive content</td>
+<td><code>user_input</code>, <code>llm_response</code></td>
+</tr>
+<tr>
+<td><code>exact_match</code></td>
+<td>Exact string match against ground truth (no LLM required)</td>
+<td><code>llm_response</code>, <code>ground_truth</code></td>
+</tr>
+<tr>
+<td><code>pattern_match</code></td>
+<td>Regex pattern match against the response (no LLM required)</td>
+<td><code>llm_response</code></td>
+</tr>
+<tr>
+<td><code>json_correctness</code></td>
+<td>JSON schema validation of the response</td>
+<td><code>llm_response</code></td>
 </tr>
 </tbody>
 </table>
 <hr />
 <h2 id="agent-metrics">Agent metrics</h2>
-<p>These metrics are intended for <code>AgentEvaluation</code>, not standard <code>Evaluation</code>.</p>
+<p>These metrics are for <code>AgentEvaluation</code> only. Do not use them with standard <code>Evaluation</code>.</p>
 <h3 id="builtin">Builtin</h3>
 <table>
 <thead>
 <tr>
 <th>Metric</th>
 <th>Best for</th>
+<th>Required fields</th>
 <th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>goal_achievement</code></td>
-<td>Did the agent satisfy the request?</td>
-<td>Uses an LLM judge; <code>reference_outcome</code> helps</td>
+<td>Did the agent satisfy the user request?</td>
+<td><code>trace</code>, <code>user_input</code></td>
+<td>Uses an LLM judge; <code>reference_outcome</code> helps when available</td>
 </tr>
 <tr>
 <td><code>response_coherence</code></td>
-<td>Is the final answer consistent with the trace?</td>
-<td>Uses the conversation trace and final response</td>
+<td>Is the final answer consistent with the conversation trace?</td>
+<td><code>trace</code></td>
+<td>No <code>reference_outcome</code> needed; scores coherence of the trace itself</td>
 </tr>
 </tbody>
 </table>
@@ -301,19 +411,22 @@
 <tr>
 <th>Metric</th>
 <th>Best for</th>
+<th>Required fields</th>
 <th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>agent_goal_accuracy</code></td>
-<td>Compare the agent's result to an expected outcome</td>
-<td>Best with <code>reference_outcome</code></td>
+<td>Compare the agent's final result to an expected outcome</td>
+<td><code>trace</code>, <code>user_input</code>, <code>reference_outcome</code></td>
+<td>Best when <code>reference_outcome</code> is present</td>
 </tr>
 <tr>
 <td><code>tool_call_accuracy</code></td>
-<td>Compare actual tool use to expected tool use</td>
-<td>Requires <code>reference_tool_calls</code></td>
+<td>Check whether actual tool calls match expected tool calls</td>
+<td><code>trace</code>, <code>reference_tool_calls</code></td>
+<td>Silently skips samples that have no <code>reference_tool_calls</code>; score is <code>null</code> for those samples</td>
 </tr>
 </tbody>
 </table>
@@ -350,6 +463,7 @@
 </tr>
 </tbody>
 </table>
+<p>Dataset field aliases are also accepted: <code>question</code> is treated as <code>user_input</code>, and <code>answer</code> is treated as <code>ground_truth</code>.</p>
 <h3 id="agent-evaluation-datasets">Agent evaluation datasets</h3>
 <table>
 <thead>
@@ -377,10 +491,10 @@
 </tr>
 </tbody>
 </table>
-<p>If a metric needs fields that are missing from your samples, it will fail at evaluation time and the failure will be recorded in that sample's metric metadata.</p>
+<p>Agent dataset field aliases: <code>question</code> maps to <code>user_input</code>, <code>answer</code> maps to <code>reference_outcome</code>.</p>
+<p>If a metric needs fields that are missing from your samples, the failure is recorded in that sample's metric metadata and the overall run continues.</p>
 <hr />
 <h2 id="choosing-a-provider">Choosing a provider</h2>
-<h3 id="provider-selection">Provider selection</h3>
 <ul>
 <li>Use <code>ragas</code> when you want the default provider for common answer and retrieval metrics.</li>
 <li>Use <code>deepeval</code> when you want its contextual metrics or prefer its scoring behavior.</li>
@@ -481,7 +595,9 @@
 <h2 id="next-steps">Next steps</h2>
 <ul>
 <li><a href="../examples/">Examples</a> for provider-routing examples</li>
+<li><a href="../prompt-evaluation/">Prompt Evaluation</a> for prompt-specific metric choices</li>
 <li><a href="../agent-evaluation/">Agent Evaluation</a> for agent-only metrics</li>
+<li><a href="../agentic-workflow/">Agentic Workflow</a> for multi-agent DAG evaluation</li>
 <li><a href="../custom-metrics/">Custom Metrics</a> for user-defined scoring</li>
 </ul>
               

@@ -100,7 +100,15 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../prompt-evaluation/">Prompt Evaluation</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../agent-evaluation/">Agent Evaluation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agentic-workflow/">Agentic Workflow</a>
                 </li>
               </ul>
               <ul>
@@ -159,12 +167,12 @@
 <p>Most built-in provider-backed metrics require an OpenAI or OpenAI-compatible endpoint plus an API key.</p>
 <p>Examples in this docs site use placeholder keys. In real projects, prefer loading secrets from environment variables or a secrets manager and injecting them into your config or Python code at runtime.</p>
 <h3 id="optional-flotorch-support">Optional FloTorch support</h3>
-<p>Install the <code>flotorch</code> extra only if you need Mode 4 agent evaluation:</p>
+<p>Install the <code>flotorch</code> extra only if you need Mode 4 agent evaluation or agentic workflow evaluation:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;floeval[flotorch]&quot;</span>
 </code></pre></div>
 <hr />
 <h2 id="install-floeval">Install Floeval</h2>
-<p>Package version <code>0.1.0b1</code> is a pre-release, so installation from PyPI may require <code>--pre</code>:</p>
+<p>Package version <code>0.2.0b1</code> is a pre-release, so installation from PyPI may require <code>--pre</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>--pre<span class="w"> </span>floeval
 </code></pre></div>
 <p>From local source:</p>
@@ -176,7 +184,7 @@
 <h3 id="verify-installation">Verify installation</h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>floeval<span class="w"> </span>--version
 </code></pre></div>
-<p>You should see a beta version such as <code>floeval 0.1.0b1</code>.</p>
+<p>You should see a beta version such as <code>floeval 0.2.0b1</code>.</p>
 <hr />
 <h2 id="recommended-setup-commands">Recommended setup commands</h2>
 <h3 id="linux-or-macos">Linux or macOS</h3>

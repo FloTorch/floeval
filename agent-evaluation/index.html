@@ -61,10 +61,18 @@
                 <li class="toctree-l1"><a class="reference internal" href="../examples/">All Examples</a>
                 </li>
               </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../prompt-evaluation/">Prompt Evaluation</a>
+                </li>
+              </ul>
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="#">Agent Evaluation</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#scope">Scope</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#single-agent-vs-agentic-workflow">Single-agent vs agentic workflow</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#cli-workflow">CLI workflow</a>
         <ul>
@@ -112,6 +120,10 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agentic-workflow/">Agentic Workflow</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../agent-tracing/">Agent Tracing</a>
                 </li>
               </ul>
@@ -155,11 +167,31 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="agent-evaluation">Agent Evaluation</h1>
-<p>Use this guide for trace-based agent evaluation, tool-call checks, and outcome scoring.</p>
+<p>Use this guide for single-agent trace evaluation, tool-call checks, and outcome scoring.</p>
+<p>For multi-agent DAG pipelines where multiple agents collaborate, see <a href="../agentic-workflow/">Agentic Workflow</a>.</p>
 <hr />
 <h2 id="scope">Scope</h2>
 <p><code>AgentEvaluation</code> is intended for datasets that capture agent behavior rather than plain <code>llm_response</code> outputs.</p>
-<p>Floeval currently supports three implemented agent-evaluation modes:</p>
+<h3 id="single-agent-vs-agentic-workflow">Single-agent vs agentic workflow</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One agent answers questions end-to-end</td>
+<td>This page</td>
+</tr>
+<tr>
+<td>Multiple agents work in sequence or parallel (DAG)</td>
+<td><a href="../agentic-workflow/">Agentic Workflow</a></td>
+</tr>
+</tbody>
+</table>
+<p>Floeval currently supports three implemented agent-evaluation modes for single-agent eval:</p>
 <table>
 <thead>
 <tr>
@@ -302,7 +334,7 @@
 <tr>
 <td><code>user_input</code></td>
 <td>Full and partial datasets</td>
-<td>Can be a string or structured object</td>
+<td>Also accepted as <code>question</code> (alias)</td>
 </tr>
 <tr>
 <td><code>trace.messages</code></td>
@@ -317,7 +349,7 @@
 <tr>
 <td><code>reference_outcome</code></td>
 <td>Optional</td>
-<td>Helps goal-oriented metrics compare expected outcome vs actual result</td>
+<td>Helps goal-oriented metrics; also accepted as <code>answer</code> (alias)</td>
 </tr>
 <tr>
 <td><code>reference_tool_calls</code></td>
@@ -331,6 +363,7 @@
 </tr>
 </tbody>
 </table>
+<p>Dataset field aliases: <code>question</code> is treated as <code>user_input</code>, and <code>answer</code> is treated as <code>reference_outcome</code>. You can supply datasets using either the alias format or the full field names.</p>
 <hr />
 <h2 id="python-api">Python API</h2>
 <p>Import <code>AgentEvaluation</code> directly from <code>floeval.api.agent_evaluation</code>:</p>
@@ -500,16 +533,17 @@
 <hr />
 <h2 id="related-references">Related references</h2>
 <ul>
-<li><a href="../agent-tracing/">Agent Tracing</a></li>
-<li><a href="../metrics/">Metrics</a></li>
-<li><a href="../api-reference/">API Reference</a></li>
+<li><a href="../agentic-workflow/">Agentic Workflow</a> for multi-agent DAG evaluation</li>
+<li><a href="../agent-tracing/">Agent Tracing</a> for trace capture helpers</li>
+<li><a href="../metrics/">Metrics</a> for the full metric catalog</li>
+<li><a href="../api-reference/">API Reference</a> for constructors and config shapes</li>
 </ul>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../examples/" class="btn btn-neutral float-left" title="All Examples"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../agent-tracing/" class="btn btn-neutral float-right" title="Agent Tracing">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../prompt-evaluation/" class="btn btn-neutral float-left" title="Prompt Evaluation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../agentic-workflow/" class="btn btn-neutral float-right" title="Agentic Workflow">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -532,10 +566,10 @@
   <span class="rst-current-version" data-toggle="rst-current-version">
     
     
-      <span><a href="../examples/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../prompt-evaluation/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../agent-tracing/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../agentic-workflow/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

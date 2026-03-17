@@ -62,7 +62,15 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../prompt-evaluation/">Prompt Evaluation</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../agent-evaluation/">Agent Evaluation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../agentic-workflow/">Agentic Workflow</a>
                 </li>
               </ul>
               <ul>
@@ -155,6 +163,28 @@
     <li class="toctree-l3"><a class="reference internal" href="#verify-an-agent-dataset-loads">Verify an agent dataset loads</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#smoke-test-your-own-files">Smoke-test your own files</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#prompt-evaluation-issues">Prompt evaluation issues</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#no-responses-generated-for-prompt-variants">No responses generated for prompt variants</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#rag-metrics-fail-in-prompt-evaluation">RAG metrics fail in prompt evaluation</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#agentic-workflow-issues">Agentic workflow issues</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#flotorch-extras-required">FloTorch extras required</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#agent-node-not-found">Agent node not found</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#dag-never-reaches-the-end">DAG never reaches the end</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#empty-agent_traces-in-results">Empty agent_traces in results</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#tool_call_accuracy-is-null-for-all-workflow-samples">tool_call_accuracy is null for all workflow samples</a>
     </li>
         </ul>
     </li>
@@ -365,10 +395,105 @@
 </code></pre></div>
 <p>Replace <code>your_config.yaml</code> and <code>your_dataset.json</code> with real files from your project.</p>
 <hr />
+<hr />
+<h2 id="prompt-evaluation-issues">Prompt evaluation issues</h2>
+<h3 id="no-responses-generated-for-prompt-variants">No responses generated for prompt variants</h3>
+<p>Symptom:</p>
+<ul>
+<li>evaluation completes but <code>prompt_id</code> is missing from results</li>
+<li>only one result row per sample instead of one per prompt</li>
+</ul>
+<p>Check all of the following:</p>
+<ul>
+<li>samples in the dataset include <code>prompt_ids</code> (list of IDs, not a single string)</li>
+<li><code>evaluation_config.prompts_file</code> is set and points to a real file</li>
+<li>prompt IDs in <code>prompt_ids</code> all exist in the prompts file</li>
+<li><code>dataset_generation_config.generator_model</code> is set (required for partial datasets)</li>
+</ul>
+<p>Minimal working dataset:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="p">{</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">&quot;samples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">      </span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What is RAG?&quot;</span><span class="p">,</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">      </span><span class="nt">&quot;prompt_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;concise&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;detailed&quot;</span><span class="p">]</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="p">}</span>
+</code></pre></div>
+<p>Minimal prompts file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">prompts</span><span class="p">:</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">concise</span><span class="p">:</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Answer</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">one</span><span class="nv"> </span><span class="s">sentence.&quot;</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="nt">detailed</span><span class="p">:</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Answer</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">detail.&quot;</span>
+</code></pre></div>
+<h3 id="rag-metrics-fail-in-prompt-evaluation">RAG metrics fail in prompt evaluation</h3>
+<p>Prompt (with RAG) needs either:</p>
+<ul>
+<li><code>contexts</code> in each sample, or</li>
+<li>a configured <code>vectorstore_id</code> (passed through <code>data.vectorstore_id</code> in the worker config)</li>
+</ul>
+<p>If neither is present, use no-RAG metrics only (<code>answer_relevancy</code>).</p>
+<hr />
+<h2 id="agentic-workflow-issues">Agentic workflow issues</h2>
+<h3 id="flotorch-extras-required">FloTorch extras required</h3>
+<p>Symptom:</p>
+<ul>
+<li><code>ImportError</code> or runtime error mentioning <code>google-adk</code> or <code>FloTorch</code></li>
+</ul>
+<p>Fix:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;floeval[flotorch]&quot;</span>
+</code></pre></div>
+<h3 id="agent-node-not-found">Agent node not found</h3>
+<p>Symptom:</p>
+<ul>
+<li>workflow execution fails with a message about the agent not being found</li>
+</ul>
+<p>Check:</p>
+<ul>
+<li><code>agentName</code> in the DAG node matches the name of an agent deployed in your FloTorch gateway</li>
+<li><code>llm_config.base_url</code> points to the correct gateway</li>
+</ul>
+<h3 id="dag-never-reaches-the-end">DAG never reaches the end</h3>
+<p>Symptom:</p>
+<ul>
+<li>workflow hangs or times out</li>
+</ul>
+<p>Check:</p>
+<ul>
+<li>there are no cycles in the <code>edges</code> list</li>
+<li>every non-START node has at least one incoming edge</li>
+<li>the DAG has exactly one <code>END</code> node</li>
+</ul>
+<h3 id="empty-agent_traces-in-results">Empty <code>agent_traces</code> in results</h3>
+<p>Symptom:</p>
+<ul>
+<li><code>agent_traces</code> is empty or missing from sample results</li>
+</ul>
+<p>Check that the DAG config has at least one <code>AGENT</code> type node:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">nodes</span><span class="p">:</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;start&quot;</span><span class="p p-Indicator">,</span><span class="nt">   type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;START&quot;</span><span class="p p-Indicator">,</span><span class="nt"> label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Start&quot;</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;agent_a&quot;</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;AGENT&quot;</span><span class="p p-Indicator">,</span><span class="nt"> label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Agent</span><span class="nv"> </span><span class="s">A&quot;</span><span class="p p-Indicator">,</span><span class="nt"> agentName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;my-agent:latest&quot;</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;end&quot;</span><span class="p p-Indicator">,</span><span class="nt">     type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;END&quot;</span><span class="p p-Indicator">,</span><span class="nt">   label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;End&quot;</span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<p>A DAG with only <code>START</code> and <code>END</code> nodes will produce no agent traces.</p>
+<h3 id="tool_call_accuracy-is-null-for-all-workflow-samples"><code>tool_call_accuracy</code> is null for all workflow samples</h3>
+<p>This metric silently skips samples that have no <code>reference_tool_calls</code>. Add expected tool calls to your dataset:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p">{</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">&quot;user_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What is the order status?&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">&quot;reference_outcome&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;The order is shipped.&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span><span class="nt">&quot;reference_tool_calls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">    </span><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;get_order_status&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;order_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;12345&quot;</span><span class="p">}}</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
 <h2 id="related-references">Related references</h2>
 <ul>
 <li><a href="../examples/">Examples</a></li>
+<li><a href="../prompt-evaluation/">Prompt Evaluation</a></li>
 <li><a href="../agent-evaluation/">Agent Evaluation</a></li>
+<li><a href="../agentic-workflow/">Agentic Workflow</a></li>
 <li><a href="../metrics/">Metrics</a></li>
 <li><a href="../api-reference/">API Reference</a></li>
 </ul>
