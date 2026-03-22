@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 
 from floeval.config.schemas.io.dataset import (
     Dataset,
@@ -159,9 +160,7 @@ def populate_llm_responses(
     Returns:
         Dataset: A dataset with llm_response field filled in all samples
     """
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
+    def _run() -> Dataset:
         return asyncio.run(
             apopulate_llm_responses(
                 partial_dataset=partial_dataset,
@@ -172,7 +171,9 @@ def populate_llm_responses(
             )
         )
 
-    raise RuntimeError(
-        "populate_llm_responses cannot be called from a running event loop. "
-        "Use `await apopulate_llm_responses(...)` instead."
-    )
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return _run()
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        return pool.submit(_run).result()
