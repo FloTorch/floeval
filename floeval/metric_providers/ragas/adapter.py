@@ -231,7 +231,7 @@ class RAGASAdapter:
 
         # Extract fields with defaults
         user_input = sample_data.get("user_input", "")
-        contexts = sample_data.get("contexts", [])
+        contexts = sample_data.get("contexts") or []
         llm_response = sample_data.get("llm_response", "")
         ground_truth = sample_data.get("ground_truth", "")
 
