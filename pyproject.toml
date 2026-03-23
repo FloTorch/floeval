@@ -34,6 +34,7 @@ dev = [
     "build>=1.4.0",
     "mkdocs>=1.6.1",
     "mypy>=1.19.1",
+    "pylance>=3.0.1",
     "pylint>=4.0.4",
     "pymdown-extensions>=10.21",
     "pytest>=8.0.0",
