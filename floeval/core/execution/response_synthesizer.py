@@ -1,7 +1,4 @@
 import asyncio
-import concurrent.futures
-from collections.abc import Callable, Coroutine
-from typing import Any, TypeVar
 
 from floeval.config.schemas.io.dataset import (
     Dataset,
@@ -12,9 +9,9 @@ from floeval.config.schemas.io.dataset import (
 )
 from floeval.config.schemas.prompts import PromptFile
 from floeval.core.execution.base import BaseLLMProvider
+from floeval.utils.asyncio_compat import run_coroutine_sync
 
 GenerationWorkItem = tuple[int, PartialSample, str | None, str | None]
-T = TypeVar("T")
 
 
 def _resolve_system_prompt(
@@ -143,26 +140,6 @@ async def apopulate_llm_responses(
     return Dataset(samples=[sample for sample in ordered_samples if sample is not None])
 
 
-def _run_coroutine_sync(coro_factory: Callable[[], Coroutine[Any, Any, T]]) -> T:
-    """Run a coroutine from synchronous code.
-
-    If no event loop is running in this thread, this uses ``asyncio.run``.
-    If a loop is already running (for example in Jupyter), this falls back
-    to running the coroutine in a worker thread.
-    """
-
-    def _run() -> T:
-        return asyncio.run(coro_factory())
-
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return _run()
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        return pool.submit(_run).result()
-
-
 def populate_llm_responses(
     partial_dataset: PartialDataset,
     llm_provider: BaseLLMProvider,
@@ -194,7 +171,7 @@ def populate_llm_responses(
     Returns:
         Dataset: A dataset with llm_response field filled in all samples
     """
-    return _run_coroutine_sync(
+    return run_coroutine_sync(
         lambda: apopulate_llm_responses(
             partial_dataset=partial_dataset,
             llm_provider=llm_provider,

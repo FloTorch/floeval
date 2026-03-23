@@ -7,7 +7,6 @@ agent uses MCP tools. See MODE4_FLOW_ANALYSIS.md for flow and root cause.
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from typing import TYPE_CHECKING
 
@@ -18,6 +17,7 @@ from floeval.config.schemas.io.agent_dataset import (
     _to_display_str,
 )
 from floeval.flotorch.adk.utils.adk_utils import process_session_events
+from floeval.utils.asyncio_compat import run_coroutine_sync
 
 if TYPE_CHECKING:
     from google.adk.agents import BaseAgent
@@ -68,7 +68,7 @@ class FloTorchRunner:
 
     def run(self, user_input: str) -> AgentTrace:
         """Run agent once and return trace (sync)."""
-        return asyncio.run(self.arun(user_input))
+        return run_coroutine_sync(lambda: self.arun(user_input))
 
     async def arun(self, user_input: str) -> AgentTrace:
         """Run agent once and return trace (async)."""
