@@ -27,7 +27,7 @@ class OpenAIProvider(BaseLLMProvider):
 
     Key design:
     - No ThreadPoolExecutor — sync client is natively sync (httpx.Client)
-    - No asyncio.run() — async client is natively async (httpx.AsyncClient)
+    - No sync/async loop bridging — async client is natively async (httpx.AsyncClient)
     - Lazy client initialization — clients created on first use
     - Separate client instances — no shared state between sync and async paths
     """

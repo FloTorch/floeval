@@ -9,6 +9,7 @@ from floeval.config.schemas.io.dataset import (
 )
 from floeval.config.schemas.prompts import PromptFile
 from floeval.core.execution.base import BaseLLMProvider
+from floeval.utils.asyncio_compat import run_coroutine_sync
 
 GenerationWorkItem = tuple[int, PartialSample, str | None, str | None]
 
@@ -98,7 +99,10 @@ async def apopulate_llm_responses(
     batch_size: int = 20,
     max_concurrency: int = 10,
 ) -> Dataset:
-    """Async LLM response generation with bounded batching/concurrency.
+    """Populate missing LLM responses asynchronously.
+
+    This is the primary API for async callers, including notebooks with
+    top-level ``await``.
 
     Args:
         partial_dataset: Dataset with missing llm_response fields.
@@ -145,9 +149,17 @@ def populate_llm_responses(
 ) -> Dataset:
     """Generate LLM responses, optionally using prompt templates.
 
+    This is a synchronous convenience wrapper around
+    ``apopulate_llm_responses``.
+
     If prompt_ids is provided on a sample, generates one response per prompt_id,
     expanding the dataset accordingly. If prompt_ids is not provided, generates
     a single response without system prompt injection (current behavior).
+
+    Note:
+        In async code or notebook cells with a running event loop, prefer
+        ``await apopulate_llm_responses(...)`` to avoid sync-over-async
+        bridging overhead.
 
     Args:
         partial_dataset: Dataset with missing llm_response fields
@@ -159,20 +171,12 @@ def populate_llm_responses(
     Returns:
         Dataset: A dataset with llm_response field filled in all samples
     """
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(
-            apopulate_llm_responses(
-                partial_dataset=partial_dataset,
-                llm_provider=llm_provider,
-                prompts=prompts,
-                batch_size=batch_size,
-                max_concurrency=max_concurrency,
-            )
+    return run_coroutine_sync(
+        lambda: apopulate_llm_responses(
+            partial_dataset=partial_dataset,
+            llm_provider=llm_provider,
+            prompts=prompts,
+            batch_size=batch_size,
+            max_concurrency=max_concurrency,
         )
-
-    raise RuntimeError(
-        "populate_llm_responses cannot be called from a running event loop. "
-        "Use `await apopulate_llm_responses(...)` instead."
     )
