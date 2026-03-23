@@ -9,7 +9,6 @@ from floeval.api import DatasetLoader, Evaluation
 from floeval.api.metrics.custom import criteria, custom_metric
 from floeval.config.schemas.io.dataset import Dataset, PartialDataset
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
-
 from tests.conftest import resolve_env_placeholders
 
 pytestmark = pytest.mark.integration

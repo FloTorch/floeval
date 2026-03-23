@@ -12,7 +12,6 @@ from floeval.config.schemas.io.dataset import PartialDataset
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
 from floeval.core.execution.llm_executor import OpenAIProvider
 from floeval.core.execution.response_synthesizer import populate_llm_responses
-
 from tests.conftest import resolve_env_placeholders
 
 pytestmark = pytest.mark.integration
