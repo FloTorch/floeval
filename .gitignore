@@ -217,3 +217,4 @@ __marimo__/
 # deepeval metrics tests
 .deepeval/
 tests/output/
+.env.*
