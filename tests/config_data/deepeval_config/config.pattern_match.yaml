@@ -1,0 +1,7 @@
+evaluation_config:
+  metrics:
+    - provider: "deepeval"
+      id: "pattern_match"
+      params:
+        threshold: 1.0
+        pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"

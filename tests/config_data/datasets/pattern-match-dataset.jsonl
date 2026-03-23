@@ -1,0 +1,8 @@
+{"user_input": "What is your support email?", "llm_response": "support@example.com", "ground_truth": "support@example.com"}
+{"user_input": "What is the office pin code?", "llm_response": "560001", "ground_truth": "560001"}
+{"user_input": "Give me the office coordinates.", "llm_response": "12.9716, 77.5946", "ground_truth": "12.9716, 77.5946"}
+{"user_input": "What is the customer service number?", "llm_response": "+1-800-555-0199", "ground_truth": "+1-800-555-0199"}
+{"user_input": "Send the invoice to which email?", "llm_response": "billing@company.org", "ground_truth": "billing@company.org"}
+{"user_input": "What is the headquarters zip code?", "llm_response": "The zip code is 10001.", "ground_truth": "10001"}
+{"user_input": "Provide the admin contact.", "llm_response": "admin@internal.net", "ground_truth": "admin@internal.net"}
+{"user_input": "What is the emergency hotline?", "llm_response": "Please call 911 for emergencies.", "ground_truth": "911"}

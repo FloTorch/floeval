@@ -1,0 +1,5 @@
+prompts:
+  v1_concise:
+    template: "Be concise."
+  v2_detailed:
+    template: "Be detailed."

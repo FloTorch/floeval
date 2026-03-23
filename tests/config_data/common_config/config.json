@@ -1,0 +1,20 @@
+{
+    "llm_config": {
+        "floeval_gateway_base_url": "https://gateway.flotorch.cloud/",
+        "llm_api_key": "${FLOEVAL_API_KEY}",
+        "llm_model_name": "flotorch/evaluation-testing-chat-model",
+        "embedding_model_name": "flotorch/evaluation-testing-embedding-model"
+    },
+    "evaluation_config": {
+        "metrics": [
+            "deepeval:answer_relevancy",
+            "ragas:faithfulness",
+            "faithfulness"
+        ],
+        "metric_params": {
+            "answer_relevancy": {
+                "threshold": 0.8
+            }
+        }
+    }
+}
