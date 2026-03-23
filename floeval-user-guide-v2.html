@@ -1742,7 +1742,7 @@ dataset = DatasetLoader.from_samples([
 ])
 
 llm_config = OpenAIProviderConfig(
-    base_url=os.getenv("FLOEVAL_GATEWAY_BASE_URL", "https://api.openai.com/v1"),
+    base_url=os.getenv("FLOEVAL_BASE_URL", "https://api.openai.com/v1"),
     api_key=os.getenv("OPENAI_API_KEY"),
     chat_model=os.getenv("FLOEVAL_LLM_MODEL", "gpt-4o-mini"),
     embedding_model=os.getenv("FLOEVAL_EMBEDDING_MODEL", "text-embedding-3-small"),

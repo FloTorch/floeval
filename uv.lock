@@ -665,7 +665,7 @@ wheels = [
 
 [[package]]
 name = "floeval"
-version = "0.1.0b1"
+version = "0.2.0b1"
 source = { editable = "." }
 dependencies = [
     { name = "deepeval" },
@@ -685,10 +685,14 @@ dev = [
     { name = "build" },
     { name = "mkdocs" },
     { name = "mypy" },
+    { name = "pylance" },
     { name = "pylint" },
     { name = "pymdown-extensions" },
+    { name = "pytest" },
+    { name = "pytest-mock" },
     { name = "ruff" },
     { name = "twine" },
+    { name = "types-pyyaml" },
 ]
 
 [package.metadata]
@@ -707,10 +711,14 @@ dev = [
     { name = "build", specifier = ">=1.4.0" },
     { name = "mkdocs", specifier = ">=1.6.1" },
     { name = "mypy", specifier = ">=1.19.1" },
+    { name = "pylance", specifier = ">=3.0.1" },
     { name = "pylint", specifier = ">=4.0.4" },
     { name = "pymdown-extensions", specifier = ">=10.21" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
     { name = "ruff", specifier = ">=0.14.14" },
     { name = "twine", specifier = ">=6.2.0" },
+    { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },
 ]
 
 [[package]]
@@ -1920,6 +1928,33 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/43/4b/674af6ef2f97d56f0ab5153bf0bfa28ccb6c3ed4d1babf4305449668807b/keyring-25.7.0.tar.gz", hash = "sha256:fe01bd85eb3f8fb3dd0405defdeac9a5b4f6f0439edbb3149577f244a2e8245b", size = 63516, upload-time = "2025-11-16T16:26:09.482Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/81/db/e655086b7f3a705df045bf0933bdd9c2f79bb3c97bfef1384598bb79a217/keyring-25.7.0-py3-none-any.whl", hash = "sha256:be4a0b195f149690c166e850609a477c532ddbfbaed96a404d4e43f8d5e2689f", size = 39160, upload-time = "2025-11-16T16:26:08.402Z" },
+]
+
+[[package]]
+name = "lance-namespace"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lance-namespace-urllib3-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/28/9f/7906ba4117df8d965510285eaf07264a77de2fd283b9d44ec7fc63a4a57a/lance_namespace-0.6.1.tar.gz", hash = "sha256:f0deea442bd3f1056a8e2fed056ae2778e3356517ec2e680db049058b824d131", size = 10666, upload-time = "2026-03-17T17:55:44.977Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d1/91/aee1c0a04d17f2810173bd304bd444eb78332045df1b0c1b07cebd01f530/lance_namespace-0.6.1-py3-none-any.whl", hash = "sha256:9699c9e3f12236e5e08ea979cc4e036a8e3c67ed2f37ae6f25c5353ab908e1be", size = 12498, upload-time = "2026-03-17T17:55:44.062Z" },
+]
+
+[[package]]
+name = "lance-namespace-urllib3-client"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "python-dateutil" },
+    { name = "typing-extensions" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/63/a1/8706a2be25bd184acccc411e48f1a42a4cbf3b6556cba15b9fcf4c15cfcc/lance_namespace_urllib3_client-0.6.1.tar.gz", hash = "sha256:31fbd058ce1ea0bf49045cdeaa756360ece0bc61e9e10276f41af6d217debe87", size = 182567, upload-time = "2026-03-17T17:55:46.87Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/c7/cb9580602dec25f0fdd6005c1c9ba1d4c8c0c3dc8d543107e5a9f248bba8/lance_namespace_urllib3_client-0.6.1-py3-none-any.whl", hash = "sha256:b9c103e1377ad46d2bd70eec894bfec0b1e2133dae0964d7e4de543c6e16293b", size = 317111, upload-time = "2026-03-17T17:55:45.546Z" },
 ]
 
 [[package]]
@@ -3671,6 +3706,24 @@ crypto = [
 ]
 
 [[package]]
+name = "pylance"
+version = "3.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lance-namespace" },
+    { name = "numpy" },
+    { name = "pyarrow" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9a/a7/52e8a4da6c0fa7dd6288737c306c541646a3552169f008364d25c9c6ea92/pylance-3.0.1-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:79440b9ceb0529b0d904e23312ebd338dc50ad413b419ccaffeb8459628b5ebc", size = 54665519, upload-time = "2026-03-19T21:20:50.402Z" },
+    { url = "https://files.pythonhosted.org/packages/1f/45/aa925abcdec0159cdc178e9b6d4e2bcf565dcef6f2b9b123333c17b5695b/pylance-3.0.1-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c181d65f40e2fc61fb72edc14f548e5659742692b96c75f95172ddbc448dbf77", size = 56999643, upload-time = "2026-03-19T21:24:07.969Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/73/35264a42d2ffa298399f9ba31b908b2577a80ada6f15f61536ac923f884b/pylance-3.0.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a913a70505d55899117e74151f808bea2923cd8cf0937f77aad71988c88f1959", size = 60643476, upload-time = "2026-03-19T21:32:24.321Z" },
+    { url = "https://files.pythonhosted.org/packages/4e/c4/1e57d674cd1fc5ea01f5431c5b54bd64fb54a8fc93ef9612b0b632b008b4/pylance-3.0.1-cp39-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:c81305290ea304147a8f25c9b52088658c091e0217abc86e695ce1f28d2fbcdc", size = 57014265, upload-time = "2026-03-19T21:25:13.115Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/33/1d6436d3335e066d3929bbf6ab0bec4d606779bc88010a34ee43054b3c94/pylance-3.0.1-cp39-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:cbff7ab25771ae1ab38e83baf43d0cc39976e0d621a0adc9d2019f5d28892167", size = 60597610, upload-time = "2026-03-19T21:32:47.329Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/a7/3c88dcf42359cb093fd2e5546e1bc8b85f3c5e82fbe2ddad79f9be437874/pylance-3.0.1-cp39-abi3-win_amd64.whl", hash = "sha256:af70a844e5dca4bf7b4c29f5c20ea7c25fab105434a5625ca12d6e1fa0d2abd9", size = 65340274, upload-time = "2026-03-19T21:55:38.315Z" },
+]
+
+[[package]]
 name = "pylint"
 version = "4.0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -3759,6 +3812,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/90/2c/8af215c0f776415f3590cac4f9086ccefd6fd463befeae41cd4d3f193e5a/pytest_asyncio-1.3.0.tar.gz", hash = "sha256:d7f52f36d231b80ee124cd216ffb19369aa168fc10095013c6b014a34d3ee9e5", size = 50087, upload-time = "2025-11-10T16:07:47.256Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/35/f8b19922b6a25bc0880171a2f1a003eaeb93657475193ab516fd87cac9da/pytest_asyncio-1.3.0-py3-none-any.whl", hash = "sha256:611e26147c7f77640e6d0a92a38ed17c3e9848063698d5c93d5aa7aa11cebff5", size = 15075, upload-time = "2025-11-10T16:07:45.537Z" },
+]
+
+[[package]]
+name = "pytest-mock"
+version = "3.15.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/68/14/eb014d26be205d38ad5ad20d9a80f7d201472e08167f0bb4361e251084a9/pytest_mock-3.15.1.tar.gz", hash = "sha256:1849a238f6f396da19762269de72cb1814ab44416fa73a8686deac10b0d87a0f", size = 34036, upload-time = "2025-09-16T16:37:27.081Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5a/cc/06253936f4a7fa2e0f48dfe6d851d9c56df896a9ab09ac019d70b760619c/pytest_mock-3.15.1-py3-none-any.whl", hash = "sha256:0a25e2eb88fe5168d535041d09a4529a188176ae608a6d249ee65abc0949630d", size = 10095, upload-time = "2025-09-16T16:37:25.734Z" },
 ]
 
 [[package]]
@@ -4677,6 +4742,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/17/d4/064570dec6358aa9049d4708e4a10407d74c99258f8b2136bb8702303f1a/typer_slim-0.21.1.tar.gz", hash = "sha256:73495dd08c2d0940d611c5a8c04e91c2a0a98600cbd4ee19192255a233b6dbfd", size = 110478, upload-time = "2026-01-06T11:21:11.176Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/0a/4aca634faf693e33004796b6cee0ae2e1dba375a800c16ab8d3eff4bb800/typer_slim-0.21.1-py3-none-any.whl", hash = "sha256:6e6c31047f171ac93cc5a973c9e617dbc5ab2bddc4d0a3135dc161b4e2020e0d", size = 47444, upload-time = "2026-01-06T11:21:12.441Z" },
+]
+
+[[package]]
+name = "types-pyyaml"
+version = "6.0.12.20250915"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/69/3c51b36d04da19b92f9e815be12753125bd8bc247ba0470a982e6979e71c/types_pyyaml-6.0.12.20250915.tar.gz", hash = "sha256:0f8b54a528c303f0e6f7165687dd33fafa81c807fcac23f632b63aa624ced1d3", size = 17522, upload-time = "2025-09-15T03:01:00.728Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/e0/1eed384f02555dde685fff1a1ac805c1c7dcb6dd019c916fe659b1c1f9ec/types_pyyaml-6.0.12.20250915-py3-none-any.whl", hash = "sha256:e7d4d9e064e89a3b3cae120b4990cd370874d2bf12fa5f46c97018dd5d3c9ab6", size = 20338, upload-time = "2025-09-15T03:00:59.218Z" },
 ]
 
 [[package]]

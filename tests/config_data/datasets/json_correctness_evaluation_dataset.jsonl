@@ -1,0 +1,5 @@
+{"user_input": "What is the capital of France?", "llm_response": "{\"answer\": \"Paris\"}", "ground_truth": "Paris"}
+{"user_input": "What is 2 + 2?", "llm_response": "{\"answer\": \"4\"}", "ground_truth": "4"}
+{"user_input": "Who wrote Hamlet?", "llm_response": "{\"wrong_key\": \"Shakespeare\"}", "ground_truth": "William Shakespeare"}
+{"user_input": "What color is the sky?", "llm_response": "The sky is blue", "ground_truth": "Blue"}
+{"user_input": "Name a prime number", "llm_response": "{\"answer\": \"7\"}", "ground_truth": "7"}

@@ -1,0 +1,9 @@
+{
+  "samples": [
+    {
+      "user_input": "What is 2+2?",
+      "llm_response": "4",
+      "ground_truth": "4"
+    }
+  ]
+}

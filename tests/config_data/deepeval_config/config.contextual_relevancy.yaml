@@ -1,0 +1,13 @@
+llm_config:
+  api_key: ${FLOEVAL_API_KEY}
+  base_url: ${FLOEVAL_BASE_URL}
+  chat_model: flotorch/evaluation-testing-chat-model
+  embedding_model: flotorch/evaluation-testing-embedding-model
+
+evaluation_config:
+  metrics:
+    - provider: "deepeval"
+      id: "contextual_relevancy"
+      params:
+        threshold: 0.7
+        include_reason: true

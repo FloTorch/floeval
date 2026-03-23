@@ -1,0 +1,6 @@
+evaluation_config:
+  metrics:
+    - provider: "deepeval"
+      id: "exact_match"
+      params:
+        threshold: 1.0
