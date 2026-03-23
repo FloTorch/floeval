@@ -3,11 +3,10 @@
 Follows the same pattern as RAGASAnswerRelevancy/RAGASFaithfulness:
 - Use RAGASAdapter for LLM (adapter.agent_llm for agent metrics)
 - Transform sample to RAGAS format
-- Sync evaluate() uses asyncio.run(); async aevaluate() awaits natively
+- Sync evaluate() uses notebook-safe coroutine runner; async aevaluate() awaits natively
 - Return MetricResult
 """
 
-import asyncio
 import logging
 from typing import Any
 
@@ -20,6 +19,7 @@ from floeval.metric_providers.ragas.adapter import (
     RAGASAdapter,
     transform_agent_sample_to_ragas_messages,
 )
+from floeval.utils.asyncio_compat import run_coroutine_sync
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,12 @@ class RAGASAgentGoalAccuracy(BaseMetric):
                     )
                 ]
             reference = _to_display_str(sample.reference_outcome)
-            result = asyncio.run(self._metric.ascore(user_input=messages, reference=reference))
+            result = run_coroutine_sync(
+                lambda: self._metric.ascore(
+                    user_input=messages,
+                    reference=reference,
+                )
+            )
             return MetricResult(
                 score=float(result.value),
                 metadata={"provider": "ragas", "metric_name": "agent_goal_accuracy"},
@@ -135,8 +140,11 @@ class RAGASToolCallAccuracy(BaseMetric):
             ref_calls = [
                 RAGASToolCall(name=tc.name, args=tc.args) for tc in sample.reference_tool_calls
             ]
-            result = asyncio.run(
-                self._metric.ascore(user_input=messages, reference_tool_calls=ref_calls)
+            result = run_coroutine_sync(
+                lambda: self._metric.ascore(
+                    user_input=messages,
+                    reference_tool_calls=ref_calls,
+                )
             )
             return MetricResult(
                 score=float(result.value),

@@ -28,6 +28,7 @@ from floeval.config.schemas.io.agent_dataset import (
 )
 from floeval.config.schemas.io.dataset import Sample
 from floeval.config.schemas.io.llm import LLMProviderConfig, _normalize_openai_base_url
+from floeval.utils.asyncio_compat import run_coroutine_sync
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -54,9 +55,7 @@ class LangChainStructuredLLM(InstructorBaseRagasLLM):
 
     def generate(self, prompt: str, response_model: Type[T]) -> T:
         """Sync generate - runs async in loop."""
-        import asyncio
-
-        return asyncio.run(self.agenerate(prompt, response_model))
+        return run_coroutine_sync(lambda: self.agenerate(prompt, response_model))
 
     async def agenerate(self, prompt: str, response_model: Type[T]) -> T:
         """Generate structured output via ChatOpenAI + JSON parse."""
