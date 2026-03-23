@@ -17,7 +17,10 @@ from floeval.config.schemas.io.llm import (
     _normalize_openai_base_url,
 )
 from floeval.core.execution.llm_executor import OpenAIProvider
-from floeval.core.execution.response_synthesizer import populate_llm_responses
+from floeval.core.execution.response_synthesizer import (
+    apopulate_llm_responses,
+    populate_llm_responses,
+)
 from floeval.metric_providers.deepeval.custom_adapter import (
     DeepEvalCustomMetricAdapter,
 )
@@ -62,7 +65,7 @@ class Evaluation:
         self.default_provider = default_provider
         self.llm_config: OpenAIProviderConfig | LLMProviderConfig | None = llm_config
         self.prompts_file = prompts_file
-        self.dataset = self._prepare_dataset(dataset)
+        self.dataset: Dataset | PartialDataset = dataset
         self.metric_params = dict(metric_params or {})
         self._registry = MetricRegistry()
 
@@ -73,18 +76,14 @@ class Evaluation:
 
         self.metrics = self._resolve_metrics(metrics)
 
-    def _prepare_dataset(self, dataset: Dataset | PartialDataset) -> Dataset:
-        """Prepare dataset for evaluation (e.g., populate LLM responses if needed)."""
-        if isinstance(dataset, Dataset):
-            return dataset
-
+    def _build_dataset_generation_context(self) -> tuple[OpenAIProvider, Any]:
+        """Build provider and prompt context for PartialDataset generation."""
         if self.llm_config is None or not self.dataset_generator_model:
             raise ValueError(
                 "llm_config must be provided to Evaluation() when using a "
                 "PartialDataset. dataset_generator_model is also required."
             )
 
-        _partial_dataset = dataset
         config_dict = (
             self.llm_config.model_dump()
             if hasattr(self.llm_config, "model_dump")
@@ -97,9 +96,7 @@ class Evaluation:
 
         llm_provider = OpenAIProvider(
             config_name=f"{self.dataset_generator_model}_generation",
-            **(self.llm_config.model_dump() 
-            | {"chat_model": self.dataset_generator_model}
-            ),
+            **(config_dict | {"chat_model": self.dataset_generator_model}),
         )
 
         # Load prompts file if specified
@@ -107,18 +104,45 @@ class Evaluation:
         if self.prompts_file:
             prompts = load_prompts_file(self.prompts_file)
 
-        dataset = populate_llm_responses(
-            partial_dataset=_partial_dataset,
+        return llm_provider, prompts
+
+    def _ensure_dataset_sync(self) -> None:
+        """Ensure partial dataset is expanded in synchronous flows."""
+        if isinstance(self.dataset, Dataset):
+            return
+
+        llm_provider, prompts = self._build_dataset_generation_context()
+        self.dataset = populate_llm_responses(
+            partial_dataset=self.dataset,
             llm_provider=llm_provider,
             prompts=prompts,
         )
-        return dataset
+
+    async def _ensure_dataset_async(self) -> None:
+        """Ensure partial dataset is expanded in asynchronous flows."""
+        if isinstance(self.dataset, Dataset):
+            return
+
+        llm_provider, prompts = self._build_dataset_generation_context()
+        self.dataset = await apopulate_llm_responses(
+            partial_dataset=self.dataset,
+            llm_provider=llm_provider,
+            prompts=prompts,
+        )
 
     def _get_ragas_adapter(self, llm_config: Any | None) -> RAGASAdapter:
         """Return cached RAGAS adapter, creating it if needed."""
         if self._provider_adapters["ragas"]["adapter"] is None:
             self._provider_adapters["ragas"]["adapter"] = RAGASAdapter(config=llm_config)
-        return self._provider_adapters["ragas"]["adapter"]
+        return cast(RAGASAdapter, self._provider_adapters["ragas"]["adapter"])
+
+    def _require_dataset(self) -> Dataset:
+        """Return prepared Dataset, or raise if preparation has not run yet."""
+        if not isinstance(self.dataset, Dataset):
+            raise RuntimeError(
+                "Dataset was not prepared. Call run() or arun() before metric execution."
+            )
+        return self.dataset
 
     def _merge_params(
         self, provider: str, metric_id: str, params: dict[str, Any]
@@ -175,7 +199,7 @@ class Evaluation:
         except (TypeError, ValueError, AttributeError):
             pass
 
-        return self._registry.create(provider, metric_id, **merged)
+        return cast(BaseMetric, self._registry.create(provider, metric_id, **merged))
 
     def _resolve_metrics(self, specs: list[MetricSpec]) -> list[BaseMetric]:
         """Resolve metric specs to instances."""
@@ -251,9 +275,10 @@ class Evaluation:
 
     def _run_standalone(self, metrics: list[BaseMetric]) -> list[dict[str, Any]]:
         """Execute standalone metrics."""
+        dataset = self._require_dataset()
         sample_results: list[dict[str, Any]] = []
 
-        for sample in self.dataset.samples:
+        for sample in dataset.samples:
             metric_results: dict[str, Any] = {}
 
             for metric in metrics:
@@ -302,6 +327,7 @@ class Evaluation:
 
         ragas_adapter = self._get_ragas_adapter(self.llm_config)
         adapter = RAGASCustomMetricAdapter(self.llm_config, ragas_adapter=ragas_adapter)
+        dataset = self._require_dataset()
 
         ragas_metrics = []
         metric_mapping = []
@@ -318,7 +344,7 @@ class Evaluation:
         if not ragas_metrics:
             return []
 
-        ragas_dataset = adapter.transform_dataset(self.dataset)
+        ragas_dataset = adapter.transform_dataset(dataset)
 
         try:
             ragas_eval_result = ragas_evaluate(
@@ -348,7 +374,7 @@ class Evaluation:
 
         sample_results: list[dict[str, Any]] = []
 
-        for i, sample in enumerate(self.dataset.samples):
+        for i, sample in enumerate(dataset.samples):
             metric_results: dict[str, Any] = {}
 
             for idx, (ragas_metric_instance, floeval_metric) in enumerate(metric_mapping):
@@ -413,6 +439,7 @@ class Evaluation:
 
     def run(self) -> EvaluationResult:
         """Run evaluation with provider routing (pure sync)."""
+        self._ensure_dataset_sync()
         grouped = self._group_metrics_by_strategy()
         results = self._collect_results_sync(grouped)
         aggregate_scores = self._aggregate(results)
@@ -467,8 +494,9 @@ class Evaluation:
         if not deepeval_metric_classes:
             return []
 
+        dataset = self._require_dataset()
         sample_results: list[dict[str, Any]] = []
-        for sample in self.dataset.samples:
+        for sample in dataset.samples:
             metric_results: dict[str, Any] = {}
             test_case = adapter.transform_sample(sample)
             for deepeval_class, floeval_metric in deepeval_metric_classes:
@@ -563,6 +591,7 @@ class Evaluation:
 
         Uses the same _group_metrics_by_strategy() as run() for consistency.
         """
+        await self._ensure_dataset_async()
         grouped = self._group_metrics_by_strategy()
         results = await self._collect_results_async(grouped)
         aggregate_scores = self._aggregate(results)
@@ -577,6 +606,7 @@ class Evaluation:
         """Run standalone metrics asynchronously with concurrent execution per sample."""
         import asyncio
 
+        dataset = self._require_dataset()
         sem = asyncio.Semaphore(8)  # Limit concurrent samples to prevent overwhelming API
 
         async def evaluate_sample(sample):
@@ -614,8 +644,8 @@ class Evaluation:
                         }
                 return sample.model_dump() | {"metrics": metric_results}
 
-        sample_tasks = [evaluate_sample(s) for s in self.dataset.samples]
-        return await asyncio.gather(*sample_tasks)
+        sample_tasks = [evaluate_sample(s) for s in dataset.samples]
+        return cast(list[dict[str, Any]], await asyncio.gather(*sample_tasks))
 
     def _aggregate(self, results: list[dict[str, Any]]) -> dict[str, float]:
         """Aggregate scores across samples. Skips None scores (failed evaluations)."""
