@@ -18,7 +18,7 @@ pytestmark = pytest.mark.integration
 
 
 def test_generate_dataset_from_partial(tmp_path: Path, config_data_dir: Path, requires_llm_credentials) -> None:
-    cfg_path = config_data_dir / "common_config" / "generate_dataset.yaml"
+    cfg_path = config_data_dir / "common_config" / "config_generate_dataset.yaml"
     with open(cfg_path, encoding="utf-8") as f:
         config_data: dict[str, Any] = resolve_env_placeholders(yaml.safe_load(f))
 

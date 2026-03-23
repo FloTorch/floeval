@@ -59,7 +59,7 @@ def _registered_custom_metrics():
 
 
 def _llm_config(config_data_dir: Path) -> OpenAIProviderConfig:
-    path = config_data_dir / "common_config" / "config.new.part-dataset.yaml"
+    path = config_data_dir / "common_config" / "config_partial_dataset.yaml"
     with open(path, encoding="utf-8") as f:
         data = resolve_env_placeholders(yaml.safe_load(f))
     return OpenAIProviderConfig(**data["llm_config"])

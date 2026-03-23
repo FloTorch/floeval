@@ -1,0 +1,9 @@
+partial_data:
+  samples:
+    - user_input: "What is the capital of France?"
+    - user_input: "What is the largest mammal?"
+
+provider_config:
+  base_url: "${FLOEVAL_BASE_URL}"
+  api_key: "${FLOEVAL_API_KEY}"
+  chat_model: "flotorch/evaluation-testing-chat-model"

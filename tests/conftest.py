@@ -11,6 +11,11 @@ import yaml
 
 def pytest_configure(config: pytest.Config) -> None:
     os.environ.setdefault("RAGAS_DO_NOT_TRACK", "true")
+    # Defaults match production FloTorch gateway; override for dev/staging (e.g. dev-gateway).
+    os.environ.setdefault(
+        "FLOEVAL_BASE_URL",
+        "https://gateway.flotorch.cloud/openai/v1/",
+    )
 
 
 @pytest.fixture(scope="session")
@@ -35,7 +40,11 @@ def load_yaml():
 
 
 def resolve_env_placeholders(obj: Any) -> Any:
-    """Replace strings like ${VAR} with os.environ.get(VAR, '')."""
+    """Replace strings like ${VAR} with os.environ.get(VAR, '').
+
+    Common test vars: FLOEVAL_API_KEY, FLOEVAL_BASE_URL
+    (see pytest_configure defaults).
+    """
     if isinstance(obj, dict):
         return {k: resolve_env_placeholders(v) for k, v in obj.items()}
     if isinstance(obj, list):

@@ -27,7 +27,7 @@ def test_ragas_answer_relevancy_from_gateway_config(
     provider_samples_dataset,
 ) -> None:
     config_data: dict[str, Any] = resolve_env(
-        load_yaml(config_data_dir / "common_config" / "config.new.yaml")
+        load_yaml(config_data_dir / "common_config" / "config_gateway_ragas.yaml")
     )
     llm_config = OpenAIProviderConfig(**config_data["llm_config"])
     evaluation = Evaluation(
@@ -49,7 +49,7 @@ def test_deepeval_answer_relevancy_from_gateway_config(
     provider_samples_dataset,
 ) -> None:
     config_data: dict[str, Any] = resolve_env(
-        load_yaml(config_data_dir / "common_config" / "config.provider_deepeval.yaml")
+        load_yaml(config_data_dir / "common_config" / "config_gateway_deepeval.yaml")
     )
     llm_config = OpenAIProviderConfig(**config_data["llm_config"])
     evaluation = Evaluation(
