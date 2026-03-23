@@ -1,0 +1,11 @@
+criteria:
+  name: "response_clarity"
+  description: >-
+    Evaluate how clear and understandable the response is.
+    A clear response should be well-structured, use simple language,
+    and directly address the question without unnecessary complexity.
+  threshold: 0.6
+  evaluation_steps:
+    - "Check if the response directly answers the question"
+    - "Assess whether the language is accessible and jargon-free"
+    - "Evaluate the logical flow and structure of the response"

@@ -34,10 +34,14 @@ dev = [
     "build>=1.4.0",
     "mkdocs>=1.6.1",
     "mypy>=1.19.1",
+    "pylance>=3.0.1",
     "pylint>=4.0.4",
     "pymdown-extensions>=10.21",
+    "pytest>=8.0.0",
+    "pytest-mock>=3.14.0",
     "ruff>=0.14.14",
     "twine>=6.2.0",
+    "types-pyyaml>=6.0.12.20250915",
 ]
 
 [project.optional-dependencies]
@@ -92,4 +96,16 @@ disable = [
 [tool.pylint.format]
 max-line-length = 100
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+python_files = ["test_*.py"]
+markers = [
+    "unit: fast tests; no third-party metric execution or network",
+    "integration: real APIs, LLM, or full Evaluation.run against a backend",
+    "deepeval: integration test uses only DeepEval metrics",
+    "ragas: integration test uses only RAGAS metrics",
+    "builtin: integration test uses only builtin metrics",
+    "slow: timing or long-running checks",
+]
 

@@ -13,7 +13,7 @@ class BaseLLMProvider(ABC):
 
     Providers implement separate sync and async methods using
     separate client instances (e.g., openai.OpenAI vs openai.AsyncOpenAI).
-    No ThreadPoolExecutor or asyncio.run() bridging needed.
+    No ThreadPoolExecutor or event-loop bridging needed.
     """
 
     @abstractmethod

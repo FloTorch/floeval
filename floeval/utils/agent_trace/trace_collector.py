@@ -15,6 +15,7 @@ from floeval.utils.agent_trace.patchers.langchain_callback import (
     get_langchain_callback,
     is_langchain_available,
 )
+from floeval.utils.asyncio_compat import run_coroutine_sync
 from floeval.utils.agent_trace.patchers.openai_patcher import patch_openai, unpatch_openai
 from floeval.utils.agent_trace.trace_context import (
     TraceContext,
@@ -51,7 +52,7 @@ class TraceCollector:
     def collect(self, partial_samples: list[PartialAgentSample]) -> list[AgentSample]:
         """Sync interface."""
         if self._is_async:
-            return asyncio.run(self.acollect(partial_samples))
+            return run_coroutine_sync(lambda: self.acollect(partial_samples))
         return self._collect_sync(partial_samples)
 
     async def acollect(

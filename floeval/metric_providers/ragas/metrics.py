@@ -4,7 +4,6 @@ This module provides RAGAS metrics (answer_relevancy, faithfulness)
 that can be configured with custom LLM providers.
 """
 
-import asyncio
 import copy
 import logging
 from typing import Any, Dict, Optional
@@ -21,6 +20,7 @@ from ragas.metrics import (
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.config.schemas.io.llm import LLMProviderConfig
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
+from floeval.utils.asyncio_compat import run_coroutine_sync
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +132,8 @@ class RAGASAnswerRelevancy(RAGASMetric):
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
         """Compute answer relevancy score for a sample (sync).
 
-        Safe to call from sync context only. Use aevaluate() inside async code.
+        Notebook-compatible sync path via coroutine runner fallback.
+        Use aevaluate() inside async code for best performance.
 
         Args:
             sample: Floeval Sample object with inputs and ground_truth
@@ -143,7 +144,9 @@ class RAGASAnswerRelevancy(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = asyncio.run(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score = run_coroutine_sync(
+                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
+            )
             score_float = float(score)
             return MetricResult(
                 score=score_float,
@@ -211,7 +214,8 @@ class RAGASFaithfulness(RAGASMetric):
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
         """Compute faithfulness score for a sample (sync).
 
-        Safe to call from sync context only. Use aevaluate() inside async code.
+        Notebook-compatible sync path via coroutine runner fallback.
+        Use aevaluate() inside async code for best performance.
 
         Args:
             sample: Floeval Sample object with inputs and ground_truth
@@ -222,7 +226,9 @@ class RAGASFaithfulness(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = asyncio.run(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score = run_coroutine_sync(
+                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
+            )
             score_float = float(score)
 
             return MetricResult(
@@ -288,6 +294,8 @@ class RAGASContextPrecision(RAGASMetric):
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
         """Compute context precision score for a sample.
 
+        Notebook-compatible sync path via coroutine runner fallback.
+
         Args:
             sample: Floeval Sample object with inputs and ground_truth
             **kwargs: Additional arguments (unused)
@@ -297,7 +305,9 @@ class RAGASContextPrecision(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = asyncio.run(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score = run_coroutine_sync(
+                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
+            )
             score_float = float(score)
 
             return MetricResult(
@@ -363,6 +373,8 @@ class RAGASContextRecall(RAGASMetric):
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
         """Compute context recall score for a sample.
 
+        Notebook-compatible sync path via coroutine runner fallback.
+
         Args:
             sample: Floeval Sample object with inputs and ground_truth
             **kwargs: Additional arguments (unused)
@@ -372,7 +384,9 @@ class RAGASContextRecall(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = asyncio.run(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score = run_coroutine_sync(
+                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
+            )
             score_float = float(score)
 
             return MetricResult(
@@ -438,6 +452,8 @@ class RAGASContextEntityRecall(RAGASMetric):
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
         """Compute context entity recall score for a sample.
 
+        Notebook-compatible sync path via coroutine runner fallback.
+
         Args:
             sample: Floeval Sample object with inputs and ground_truth
             **kwargs: Additional arguments (unused)
@@ -447,7 +463,9 @@ class RAGASContextEntityRecall(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = asyncio.run(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score = run_coroutine_sync(
+                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
+            )
             score_float = float(score)
 
             return MetricResult(
@@ -513,6 +531,8 @@ class RAGASNoiseSensitivity(RAGASMetric):
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
         """Compute noise sensitivity score for a sample.
 
+        Notebook-compatible sync path via coroutine runner fallback.
+
         Args:
             sample: Floeval Sample object with inputs and ground_truth
             **kwargs: Additional arguments (unused)
@@ -522,7 +542,9 @@ class RAGASNoiseSensitivity(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = asyncio.run(self.ragas_metric.single_turn_ascore(ragas_sample))
+            score = run_coroutine_sync(
+                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
+            )
             score_float = float(score)
 
             return MetricResult(

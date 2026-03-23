@@ -20,6 +20,7 @@ from floeval.config.schemas.io.agent_dataset import (
 )
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
 from floeval.core.execution.llm_executor import OpenAIProvider
+from floeval.utils.asyncio_compat import run_coroutine_sync
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +205,7 @@ class AgentEvaluation:
         )
 
     async def _ensure_full_samples_async(self) -> list[AgentSample]:
-        """Async variant: run agent/runner without nesting asyncio.run()."""
+        """Async variant: run agent/runner without nested sync wrappers."""
         if not self.dataset.is_partial:
             return self.dataset.all_full
 
@@ -217,8 +218,7 @@ class AgentEvaluation:
             if hasattr(runner, "run_on_dataset_async"):
                 return await runner.run_on_dataset_async(partial)
             if hasattr(runner, "run_on_dataset"):
-                # Sync run_on_dataset uses asyncio.run() internally; we're already in a loop.
-                # Run it in a thread so asyncio.run() gets a fresh loop in that thread.
+                # run_on_dataset is sync; run in executor to avoid blocking async loop.
                 loop = asyncio.get_running_loop()
                 return await loop.run_in_executor(
                     None, lambda: runner.run_on_dataset(partial)
@@ -248,7 +248,7 @@ class AgentEvaluation:
 
     def run(self) -> AgentEvaluationResult:
         """Run evaluation synchronously."""
-        return asyncio.run(self.arun())
+        return run_coroutine_sync(lambda: self.arun())
 
     async def arun(self) -> AgentEvaluationResult:
         """Run evaluation asynchronously."""

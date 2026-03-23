@@ -1,0 +1,8 @@
+{
+  "samples": [
+    {
+      "user_input": "What is the speed of light in vacuum?",
+      "ground_truth": "299792458 m/s"
+    }
+  ]
+}
