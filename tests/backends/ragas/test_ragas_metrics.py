@@ -17,25 +17,25 @@ pytestmark = [pytest.mark.ragas, pytest.mark.integration]
     [
         pytest.param(
             "ragas_config/config.ragas_context_recall.yaml",
-            "datasets/complete-dataset-from-part-dataset5.jsonl",
+            "datasets/general_qa_full_dataset.jsonl",
             "ragas:context_recall",
             id="context_recall",
         ),
         pytest.param(
             "ragas_config/config.ragas_context_precision.yaml",
-            "datasets/complete-dataset-from-part-dataset5.jsonl",
+            "datasets/general_qa_full_dataset.jsonl",
             "ragas:context_precision",
             id="context_precision",
         ),
         pytest.param(
             "ragas_config/config.ragas_context_entity_recall.yaml",
-            "datasets/complete-dataset-from-part-dataset5.jsonl",
+            "datasets/general_qa_full_dataset.jsonl",
             "ragas:context_entity_recall",
             id="context_entity_recall",
         ),
         pytest.param(
             "ragas_config/config.ragas_noise_sensitivity.yaml",
-            "datasets/complete-dataset-from-part-dataset5.jsonl",
+            "datasets/general_qa_full_dataset.jsonl",
             "ragas:noise_sensitivity",
             id="noise_sensitivity",
         ),

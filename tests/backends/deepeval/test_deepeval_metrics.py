@@ -22,7 +22,7 @@ class JsonCorrectnessSchema(BaseModel):
     [
         pytest.param(
             "deepeval_config/config.exact_match.yaml",
-            "datasets/complete-dataset-from-part-dataset5.jsonl",
+            "datasets/general_qa_full_dataset.jsonl",
             "deepeval:exact_match",
             False,
             False,
@@ -30,7 +30,7 @@ class JsonCorrectnessSchema(BaseModel):
         ),
         pytest.param(
             "deepeval_config/config.pattern_match.yaml",
-            "datasets/pattern-match-dataset.jsonl",
+            "datasets/pattern_match_evaluation_dataset.jsonl",
             "deepeval:pattern_match",
             False,
             False,
@@ -38,7 +38,7 @@ class JsonCorrectnessSchema(BaseModel):
         ),
         pytest.param(
             "deepeval_config/config.json_correctness.yaml",
-            "datasets/json-correctness-dataset.jsonl",
+            "datasets/json_correctness_evaluation_dataset.jsonl",
             "deepeval:json_correctness",
             True,
             True,
@@ -47,7 +47,7 @@ class JsonCorrectnessSchema(BaseModel):
         ),
         pytest.param(
             "deepeval_config/config.toxicity.yaml",
-            "datasets/toxicity-dataset.jsonl",
+            "datasets/toxicity_evaluation_dataset.jsonl",
             "deepeval:toxicity",
             True,
             False,
@@ -56,7 +56,7 @@ class JsonCorrectnessSchema(BaseModel):
         ),
         pytest.param(
             "deepeval_config/config.hallucination.yaml",
-            "datasets/complete-dataset-from-part-dataset5.jsonl",
+            "datasets/general_qa_full_dataset.jsonl",
             "deepeval:hallucination",
             True,
             False,
@@ -65,7 +65,7 @@ class JsonCorrectnessSchema(BaseModel):
         ),
         pytest.param(
             "deepeval_config/config.contextual_precision.yaml",
-            "datasets/complete-dataset-from-part-dataset5.jsonl",
+            "datasets/general_qa_full_dataset.jsonl",
             "deepeval:contextual_precision",
             True,
             False,
@@ -74,7 +74,7 @@ class JsonCorrectnessSchema(BaseModel):
         ),
         pytest.param(
             "deepeval_config/config.contextual_recall.yaml",
-            "datasets/complete-dataset-from-part-dataset5.jsonl",
+            "datasets/general_qa_full_dataset.jsonl",
             "deepeval:contextual_recall",
             True,
             False,
@@ -83,7 +83,7 @@ class JsonCorrectnessSchema(BaseModel):
         ),
         pytest.param(
             "deepeval_config/config.contextual_relevancy.yaml",
-            "datasets/complete-dataset-from-part-dataset5.jsonl",
+            "datasets/general_qa_full_dataset.jsonl",
             "deepeval:contextual_relevancy",
             True,
             False,

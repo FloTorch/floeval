@@ -19,7 +19,7 @@ pytestmark = pytest.mark.integration
 def test_prompt_evaluation_with_criteria(tmp_path: Path, config_data_dir: Path, requires_llm_credentials) -> None:
     config_path = config_data_dir / "common_config" / "config.new.yaml"
     criteria_path = config_data_dir / "common_config" / "prompt_eval_criteria.yaml"
-    dataset_path = config_data_dir / "datasets" / "part-dataset-prompt-eval-01.jsonl"
+    dataset_path = config_data_dir / "datasets" / "prompt_evaluation_multi_prompt_dataset.jsonl"
 
     with open(config_path, encoding="utf-8") as f:
         config = resolve_env_placeholders(yaml.safe_load(f))

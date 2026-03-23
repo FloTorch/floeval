@@ -73,7 +73,7 @@ def test_custom_full_dataset_response_length_and_clarity(
 ) -> None:
     llm_config = _llm_config(config_data_dir)
     full_ds = DatasetLoader.from_file(
-        config_data_dir / "datasets" / "complete-dataset-from-part-dataset5.jsonl",
+        config_data_dir / "datasets" / "general_qa_full_dataset.jsonl",
         partial_dataset=False,
     )
     assert isinstance(full_ds, Dataset)
@@ -93,7 +93,7 @@ def test_custom_full_dataset_ragas_answer_relevancy_with_custom_length(
 ) -> None:
     llm_config = _llm_config(config_data_dir)
     full_ds = DatasetLoader.from_file(
-        config_data_dir / "datasets" / "complete-dataset-from-part-dataset5.jsonl",
+        config_data_dir / "datasets" / "general_qa_full_dataset.jsonl",
         partial_dataset=False,
     )
     result = Evaluation(
@@ -112,7 +112,7 @@ def test_custom_partial_dataset_empathy_via_ragas(
 ) -> None:
     llm_config = _llm_config(config_data_dir)
     partial_ds = DatasetLoader.from_file(
-        config_data_dir / "datasets" / "part_dataset20.jsonl",
+        config_data_dir / "datasets" / "general_qa_partial_dataset_20_samples.jsonl",
         partial_dataset=True,
     )
     assert isinstance(partial_ds, PartialDataset)
