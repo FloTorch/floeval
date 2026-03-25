@@ -107,6 +107,20 @@ class DeepEvalAdapter:
         # TODO: Should we validate self._inp_config against a schema?
         self.config = self._inp_config
 
+    @staticmethod
+    def _with_safe_contexts(
+        test_case_dict: Mapping[str, str | list[str] | None],
+    ) -> dict[str, str | list[str] | None]:
+        """Return a shallow copy with context fields normalized for DeepEval schemas.
+
+        Some datasets provide `contexts=None`. Context-dependent DeepEval test-case
+        schemas require a list, so normalize None -> [] before pydantic validation.
+        """
+        normalized = dict(test_case_dict)
+        if normalized.get("contexts") is None:
+            normalized["contexts"] = []
+        return normalized
+
     def transform_test_case(
         self, metric_name: str, test_case_dict: Mapping[str, str | list[str] | None]
     ) -> LLMTestCase:
@@ -125,7 +139,9 @@ class DeepEvalAdapter:
         metric_test_case_schema = __VALID_TEST_CASE_SCHEMAS__[metric_name]
 
         if metric_name == "faithfulness":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            test_case = metric_test_case_schema.model_validate(
+                self._with_safe_contexts(test_case_dict)
+            )
             if not isinstance(test_case, FaithfulnessTestCase):
                 raise TypeError(
                     f"Expected FaithfulnessTestCase after validation, got {type(test_case)}"
@@ -148,7 +164,9 @@ class DeepEvalAdapter:
                 actual_output=test_case.llm_response,
             )
         elif metric_name == "contextual_precision":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            test_case = metric_test_case_schema.model_validate(
+                self._with_safe_contexts(test_case_dict)
+            )
             if not isinstance(test_case, ContextualPrecisionTestCase):
                 raise TypeError(
                     f"Expected ContextualPrecisionTestCase after validation, got {type(test_case)}"
@@ -161,7 +179,9 @@ class DeepEvalAdapter:
                 retrieval_context=test_case.contexts,
             )
         elif metric_name == "contextual_recall":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            test_case = metric_test_case_schema.model_validate(
+                self._with_safe_contexts(test_case_dict)
+            )
             if not isinstance(test_case, ContextualRecallTestCase):
                 raise TypeError(
                     f"Expected ContextualRecallTestCase after validation, got {type(test_case)}"
@@ -174,7 +194,9 @@ class DeepEvalAdapter:
                 retrieval_context=test_case.contexts,
             )
         elif metric_name == "contextual_relevancy":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            test_case = metric_test_case_schema.model_validate(
+                self._with_safe_contexts(test_case_dict)
+            )
             if not isinstance(test_case, ContextualRelevancyTestCase):
                 raise TypeError(
                     f"Expected ContextualRelevancyTestCase after validation, got {type(test_case)}"
@@ -186,7 +208,9 @@ class DeepEvalAdapter:
                 retrieval_context=test_case.contexts,
             )
         elif metric_name == "hallucination":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
+            test_case = metric_test_case_schema.model_validate(
+                self._with_safe_contexts(test_case_dict)
+            )
             if not isinstance(test_case, HallucinationTestCase):
                 raise TypeError(
                     f"Expected HallucinationTestCase after validation, got {type(test_case)}"

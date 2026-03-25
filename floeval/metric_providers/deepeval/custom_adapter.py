@@ -302,7 +302,7 @@ class DeepEvalCustomMetricAdapter:
             input=sample_dict.get("user_input", ""),
             actual_output=sample_dict.get("llm_response", ""),
             expected_output=sample_dict.get("ground_truth"),
-            retrieval_context=sample_dict.get("contexts", []),
+            retrieval_context=sample_dict.get("contexts") or [],
         )
 
     def transform_dataset(self, dataset: Dataset) -> list[LLMTestCase]:
