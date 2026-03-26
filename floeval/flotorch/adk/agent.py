@@ -77,11 +77,13 @@ class FlotorchADKAgent:
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         custom_tools: Optional[List[Any]] = None,
+        enable_memory: bool = False,
     ):
         self.agent_name = agent_name
         self.base_url = base_url or os.environ.get("FLOTORCH_BASE_URL")
         self.api_key = api_key or os.environ.get("FLOTORCH_API_KEY")
         self.custom_tools = custom_tools or []
+        self.enable_memory = enable_memory
         self.config = self._fetch_agent_config(agent_name)
         self._agent = self._build_agent_from_config(self.config)
 
@@ -104,8 +106,11 @@ class FlotorchADKAgent:
             raise
 
     def _build_tools(self, config: Dict[str, Any]) -> List[Any]:
-        """Build tools list from config (MCP + custom). Memory excluded per plan."""
+        """Build tools list from config (MCP + custom + memory preloader)."""
         tools: List[Any] = []
+        if self.enable_memory:
+            from google.adk.tools import preload_memory
+            tools.append(preload_memory)
         try:
             for tool_cfg in config.get("tools", []):
                 if tool_cfg.get("type") == "MCP":
