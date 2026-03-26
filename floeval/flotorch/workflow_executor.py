@@ -150,6 +150,7 @@ class WorkflowExecutor:
                 agent_name=node.callable_name or nid,
                 base_url=self.base_url,
                 api_key=self.api_key,
+                enable_memory=True if memory_service else False,
             )
             agent = flt_agent.get_agent()
 

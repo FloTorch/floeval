@@ -14,8 +14,6 @@ MemoryMessage = Dict[str, str]
 MemoryMetadata = Dict[str, Any]
 JSONType = Union[Dict[str, Any], List[Any]]
 
-VECTORSTORE_ENDPOINT = "/openai/v1/vector_stores/"
-
 
 def _build_headers(api_key: str) -> Dict[str, str]:
     return {
@@ -35,6 +33,22 @@ def _build_gateway_memory_url(base_url: str, provider_name: str) -> str:
     if base.endswith("/v1"):
         return f"{base}/memory/{provider_name}"
     return f"{base}/v1/memory/{provider_name}"
+
+
+def _gateway_root_from_llm_base_url(base_url: str) -> str:
+    """Strip /openai/v1 (or /openai) from LLM base so paths are not doubled."""
+    base = base_url.rstrip("/")
+    if "/openai/v1" in base:
+        base = base.replace("/openai/v1", "")
+    elif "/openai" in base:
+        base = base.replace("/openai", "")
+    return base.rstrip("/")
+
+
+def _build_vectorstore_search_url(base_url: str, vectorstore_id: str) -> str:
+    """Vector store lives under /openai/v1/vector_stores/ on the gateway root."""
+    root = _gateway_root_from_llm_base_url(base_url)
+    return f"{root}/openai/v1/vector_stores/{vectorstore_id}/search"
 
 
 def add_memory(
@@ -166,7 +180,7 @@ def search_vectorstore(
         "ranking_options": {"ranker": ranker, "score_threshold": score_threshold},
         "rewrite_query": rewrite_query,
     }
-    url = f"{base_url.rstrip('/')}{VECTORSTORE_ENDPOINT}{vectorstore_id}/search"
+    url = _build_vectorstore_search_url(base_url, vectorstore_id)
     return http_post(url, headers=headers, json=payload)
 
 
@@ -259,5 +273,5 @@ async def async_search_vectorstore(
         "ranking_options": {"ranker": ranker, "score_threshold": score_threshold},
         "rewrite_query": rewrite_query,
     }
-    url = f"{base_url.rstrip('/')}{VECTORSTORE_ENDPOINT}{vectorstore_id}/search"
+    url = _build_vectorstore_search_url(base_url, vectorstore_id)
     return await async_http_post(url, headers=headers, json=payload)
