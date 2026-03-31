@@ -5,6 +5,7 @@ from __future__ import annotations
 import inspect
 import logging
 import os
+import time
 from typing import Any, Mapping, cast
 
 from pydantic import BaseModel, Field
@@ -26,10 +27,18 @@ from floeval.metric_providers.deepeval.custom_adapter import (
     DeepEvalCustomMetricAdapter,
 )
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
+from floeval.utils.job_status import log_job_status
 from floeval.utils.loaders import load_prompts_file
 from floeval.utils.ragas_results import extract_ragas_score
 
 logger = logging.getLogger(__name__)
+
+
+def _emit_progress(msg: str, *args: Any, extra: dict[str, Any]) -> None:
+    # Worker may attach a file handler to floeval.job_status; otherwise log_job_status is a no-op.
+    logger.info(msg, *args, extra=extra)
+    log_job_status(msg, *args, extra=extra)
+
 
 MetricSpec = BaseMetric | str | dict[str, Any]
 
@@ -520,20 +529,22 @@ class Evaluation:
         # max_concurrent bounded by sample count to avoid unnecessary goroutine pressure.
         max_concurrent = min(len(all_test_cases), 10)
 
-        logger.info(
-            "DeepEval batched evaluate() AsyncConfig(run_async=True): metrics=%d samples=%d max_concurrent=%d",
+        _deepeval_start_extra = {
+            "phase": "floeval_deepeval_batched",
+            "eval_phase": "deepeval_async_config",
+            "metric_count": len(deepeval_metric_instances),
+            "sample_count": len(all_test_cases),
+            "deepeval_max_concurrent": max_concurrent,
+        }
+        _emit_progress(
+            "DeepEval batched evaluate() starting: metrics=%d samples=%d max_concurrent=%d",
             len(deepeval_metric_instances),
             len(all_test_cases),
             max_concurrent,
-            extra={
-                "phase": "floeval_deepeval_batched",
-                "eval_phase": "deepeval_async_config",
-                "metric_count": len(deepeval_metric_instances),
-                "sample_count": len(all_test_cases),
-                "deepeval_max_concurrent": max_concurrent,
-            },
+            extra=_deepeval_start_extra,
         )
 
+        t_deepeval = time.monotonic()
         try:
             result = deepeval_evaluate(
                 test_cases=all_test_cases,
@@ -543,8 +554,24 @@ class Evaluation:
                 error_config=ErrorConfig(ignore_errors=True),
             )
         except Exception as e:
-            logger.error("DeepEval batched evaluation failed: %s", e, exc_info=True)
+            logger.error(
+                "DeepEval batched evaluation failed after %.1fs: %s",
+                time.monotonic() - t_deepeval, e, exc_info=True,
+            )
             return []
+
+        deepeval_elapsed = time.monotonic() - t_deepeval
+        _deepeval_done_extra = {
+            "phase": "floeval_deepeval_batched_done",
+            "elapsed_s": round(deepeval_elapsed, 1),
+            "metric_count": len(deepeval_metric_instances),
+            "sample_count": len(all_test_cases),
+        }
+        _emit_progress(
+            "DeepEval batched evaluate() done in %.1fs metrics=%d samples=%d",
+            deepeval_elapsed, len(deepeval_metric_instances), len(all_test_cases),
+            extra=_deepeval_done_extra,
+        )
 
         sample_results: list[dict[str, Any]] = []
         for i, sample in enumerate(dataset.samples):
@@ -652,20 +679,22 @@ class Evaluation:
                 rw = 32
         run_config = RunConfig(max_workers=rw, timeout=180, max_wait=60)
 
-        logger.info(
-            "RAGAS async aevaluate() path (arun): metrics=%d samples=%d ragas_max_workers=%d",
+        _ragas_start_extra = {
+            "phase": "floeval_ragas_async",
+            "eval_phase": "ragas_aevaluate",
+            "metric_count": len(ragas_metrics),
+            "sample_count": len(dataset.samples),
+            "ragas_max_workers": rw,
+        }
+        _emit_progress(
+            "RAGAS async aevaluate() starting: metrics=%d samples=%d ragas_max_workers=%d",
             len(ragas_metrics),
             len(dataset.samples),
             rw,
-            extra={
-                "phase": "floeval_ragas_async",
-                "eval_phase": "ragas_aevaluate",
-                "metric_count": len(ragas_metrics),
-                "sample_count": len(dataset.samples),
-                "ragas_max_workers": rw,
-            },
+            extra=_ragas_start_extra,
         )
 
+        t_ragas = time.monotonic()
         try:
             ragas_eval_result = await ragas_aevaluate(
                 dataset=ragas_dataset,
@@ -675,8 +704,24 @@ class Evaluation:
                 run_config=run_config,
             )
         except Exception as e:
-            logger.error("RAGAS async evaluation failed: %s", e, exc_info=True)
+            logger.error(
+                "RAGAS async evaluation failed after %.1fs: %s",
+                time.monotonic() - t_ragas, e, exc_info=True,
+            )
             return []
+
+        ragas_elapsed = time.monotonic() - t_ragas
+        _ragas_done_extra = {
+            "phase": "floeval_ragas_async_done",
+            "elapsed_s": round(ragas_elapsed, 1),
+            "metric_count": len(ragas_metrics),
+            "sample_count": len(dataset.samples),
+        }
+        _emit_progress(
+            "RAGAS async aevaluate() done in %.1fs metrics=%d samples=%d",
+            ragas_elapsed, len(ragas_metrics), len(dataset.samples),
+            extra=_ragas_done_extra,
+        )
 
         if hasattr(ragas_eval_result, "to_pandas"):
             ragas_results = ragas_eval_result.to_pandas()
@@ -735,19 +780,20 @@ class Evaluation:
 
         ds = self._require_dataset()
         n = len(ds.samples)
-        logger.info(
+        _routing_extra = {
+            "phase": "floeval_arun_routing",
+            "standalone_count": len(grouped["standalone"]),
+            "ragas_count": len(grouped["ragas"]),
+            "deepeval_count": len(grouped["deepeval"]),
+            "sample_count": n,
+        }
+        _emit_progress(
             "floeval arun routing: standalone=%d ragas=%d deepeval=%d samples=%d",
             len(grouped["standalone"]),
             len(grouped["ragas"]),
             len(grouped["deepeval"]),
             n,
-            extra={
-                "phase": "floeval_arun_routing",
-                "standalone_count": len(grouped["standalone"]),
-                "ragas_count": len(grouped["ragas"]),
-                "deepeval_count": len(grouped["deepeval"]),
-                "sample_count": n,
-            },
+            extra=_routing_extra,
         )
 
         results: list[dict[str, Any]] = []
