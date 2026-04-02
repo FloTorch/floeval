@@ -49,6 +49,7 @@ def build_simple_agent(
     instruction: str = "You are a helpful assistant.",
     tools: Optional[List[Any]] = None,
     chat_endpoint: str = "chat/completions",
+    default_headers: Optional[Dict[str, str]] = None,
 ) -> LlmAgent:
     """Build a minimal LlmAgent from config (no gateway fetch).
 
@@ -59,6 +60,7 @@ def build_simple_agent(
         api_key=api_key,
         base_url=base_url,
         chat_endpoint=chat_endpoint,
+        default_headers=default_headers,
     )
     return LlmAgent(
         name="eval_agent",
@@ -78,12 +80,14 @@ class FlotorchADKAgent:
         api_key: Optional[str] = None,
         custom_tools: Optional[List[Any]] = None,
         enable_memory: bool = False,
+        default_headers: Optional[Dict[str, str]] = None,
     ):
         self.agent_name = agent_name
         self.base_url = base_url or os.environ.get("FLOTORCH_BASE_URL")
         self.api_key = api_key or os.environ.get("FLOTORCH_API_KEY")
         self.custom_tools = custom_tools or []
         self.enable_memory = enable_memory
+        self.default_headers = dict(default_headers or {})
         self.config = self._fetch_agent_config(agent_name)
         self._agent = self._build_agent_from_config(self.config)
 
@@ -99,6 +103,7 @@ class FlotorchADKAgent:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+        headers.update(self.default_headers)
         try:
             return http_get(url, headers=headers)
         except Exception as e:
@@ -127,6 +132,7 @@ class FlotorchADKAgent:
                         headers = dict(mcp_conf.get("headers", {}))
                         if self.api_key:
                             headers["Authorization"] = f"Bearer {self.api_key}"
+                        headers.update(self.default_headers)
 
                         if mcp_conf.get("transport") == "HTTP_STREAMABLE":
                             conn_params = StreamableHTTPConnectionParams(
@@ -164,6 +170,7 @@ class FlotorchADKAgent:
             api_key=self.api_key,
             base_url=self.base_url,
             chat_endpoint=chat_endpoint,
+            default_headers=self.default_headers,
         )
         tools = self._build_tools(config)
         return LlmAgent(
