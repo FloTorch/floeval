@@ -9,6 +9,8 @@ import time
 from typing import Any, Mapping, cast
 
 from pydantic import BaseModel, Field
+from ragas import aevaluate as ragas_aevaluate, evaluate as ragas_evaluate
+from ragas.run_config import RunConfig
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.registry import MetricRegistry
@@ -27,6 +29,7 @@ from floeval.metric_providers.deepeval.custom_adapter import (
     DeepEvalCustomMetricAdapter,
 )
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
+from floeval.metric_providers.ragas.custom_adapter import RAGASCustomMetricAdapter
 from floeval.utils.job_status import log_job_status, log_job_status_error
 from floeval.utils.loaders import load_prompts_file
 from floeval.utils.ragas_results import extract_ragas_score
@@ -331,12 +334,6 @@ class Evaluation:
 
     def _run_via_ragas_sync(self, metrics: list[BaseMetric]) -> list[dict[str, Any]]:
         """Run metrics via RAGAS evaluate(); map results back to sample dicts."""
-        from ragas import evaluate as ragas_evaluate
-
-        from floeval.metric_providers.ragas.custom_adapter import (
-            RAGASCustomMetricAdapter,
-        )
-
         ragas_adapter = self._get_ragas_adapter(self.llm_config)
         adapter = RAGASCustomMetricAdapter(self.llm_config, ragas_adapter=ragas_adapter)
         dataset = self._require_dataset()
@@ -652,11 +649,6 @@ class Evaluation:
 
     async def _run_via_ragas_async(self, metrics: list[BaseMetric]) -> list[dict[str, Any]]:
         """Run RAGAS metrics via aevaluate() in the current event loop."""
-        from ragas import aevaluate as ragas_aevaluate
-        from ragas.run_config import RunConfig
-
-        from floeval.metric_providers.ragas.custom_adapter import RAGASCustomMetricAdapter
-
         ragas_adapter = self._get_ragas_adapter(self.llm_config)
         adapter = RAGASCustomMetricAdapter(self.llm_config, ragas_adapter=ragas_adapter)
         dataset = self._require_dataset()
