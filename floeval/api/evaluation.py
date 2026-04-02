@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import inspect
 import logging
+import os
+import time
 from typing import Any, Mapping, cast
 
 from pydantic import BaseModel, Field
+from ragas import aevaluate as ragas_aevaluate, evaluate as ragas_evaluate
+from ragas.run_config import RunConfig
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.registry import MetricRegistry
@@ -25,10 +29,19 @@ from floeval.metric_providers.deepeval.custom_adapter import (
     DeepEvalCustomMetricAdapter,
 )
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
+from floeval.metric_providers.ragas.custom_adapter import RAGASCustomMetricAdapter
+from floeval.utils.job_status import log_job_status, log_job_status_error
 from floeval.utils.loaders import load_prompts_file
 from floeval.utils.ragas_results import extract_ragas_score
 
 logger = logging.getLogger(__name__)
+
+
+def _emit_progress(msg: str, *args: Any, extra: dict[str, Any]) -> None:
+    # Worker may attach a file handler to floeval.job_status; otherwise log_job_status is a no-op.
+    logger.info(msg, *args, extra=extra)
+    log_job_status(msg, *args, extra=extra)
+
 
 MetricSpec = BaseMetric | str | dict[str, Any]
 
@@ -60,6 +73,7 @@ class Evaluation:
         metric_params: Mapping[str, dict[str, Any]] | None = None,
         dataset_generator_model: str | None = None,
         prompts_file: str | None = None,
+        ragas_max_workers: int | None = None,
     ):
         self.dataset_generator_model = dataset_generator_model
         self.default_provider = default_provider
@@ -67,6 +81,7 @@ class Evaluation:
         self.prompts_file = prompts_file
         self.dataset: Dataset | PartialDataset = dataset
         self.metric_params = dict(metric_params or {})
+        self._ragas_max_workers = ragas_max_workers
         self._registry = MetricRegistry()
 
         # Cache adapters per provider
@@ -319,12 +334,6 @@ class Evaluation:
 
     def _run_via_ragas_sync(self, metrics: list[BaseMetric]) -> list[dict[str, Any]]:
         """Run metrics via RAGAS evaluate(); map results back to sample dicts."""
-        from ragas import evaluate as ragas_evaluate
-
-        from floeval.metric_providers.ragas.custom_adapter import (
-            RAGASCustomMetricAdapter,
-        )
-
         ragas_adapter = self._get_ragas_adapter(self.llm_config)
         adapter = RAGASCustomMetricAdapter(self.llm_config, ragas_adapter=ragas_adapter)
         dataset = self._require_dataset()
@@ -345,6 +354,17 @@ class Evaluation:
             return []
 
         ragas_dataset = adapter.transform_dataset(dataset)
+        logger.info(
+            "RAGAS sync evaluate() path (run/executor): metrics=%d samples=%d",
+            len(ragas_metrics),
+            len(dataset.samples),
+            extra={
+                "phase": "floeval_ragas_sync",
+                "eval_phase": "ragas_sync_evaluate",
+                "metric_count": len(ragas_metrics),
+                "sample_count": len(dataset.samples),
+            },
+        )
 
         try:
             ragas_eval_result = ragas_evaluate(
@@ -474,78 +494,147 @@ class Evaluation:
                 existing_results.append(new_result)
 
     def _run_via_deepeval_sync(self, metrics: list[BaseMetric]) -> list[dict[str, Any]]:
-        """Run metrics via deepeval.evaluate() per sample; map results to sample dicts."""
+        """Run all DeepEval metrics on all samples in one batched evaluate() call.
+
+        Uses AsyncConfig(run_async=True) so DeepEval processes test cases and metrics
+        concurrently, instead of the previous per-sample×per-metric nested loop.
+        """
+        from deepeval.evaluate import AsyncConfig, DisplayConfig, ErrorConfig
         from deepeval.evaluate import evaluate as deepeval_evaluate
 
         adapter = DeepEvalCustomMetricAdapter(self.llm_config)
+        dataset = self._require_dataset()
 
-        # Transform metrics to DeepEval classes
-        deepeval_metric_classes = []
-        for metric in metrics:
+        # Build metric instances and remember their floeval metadata for result mapping.
+        deepeval_metric_instances = []
+        floeval_metrics_ordered = []
+        for floeval_metric in metrics:
             try:
-                deepeval_class = adapter.transform_metric(metric)
-                deepeval_metric_classes.append((deepeval_class, metric))
+                deepeval_class = adapter.transform_metric(floeval_metric)
+                deepeval_metric_instances.append(deepeval_class())
+                floeval_metrics_ordered.append(floeval_metric)
             except Exception as e:
                 logger.error(
-                    f"Failed to transform metric {metric.name} to DeepEval: {e}", 
-                    exc_info=True
+                    "Failed to transform metric %s to DeepEval: %s",
+                    floeval_metric.name, e, exc_info=True,
                 )
 
-        if not deepeval_metric_classes:
+        if not deepeval_metric_instances:
             return []
 
-        dataset = self._require_dataset()
+        all_test_cases = [adapter.transform_sample(s) for s in dataset.samples]
+        # max_concurrent bounded by sample count to avoid unnecessary goroutine pressure.
+        max_concurrent = min(len(all_test_cases), 10)
+
+        _deepeval_start_extra = {
+            "phase": "floeval_deepeval_batched",
+            "eval_phase": "deepeval_async_config",
+            "metric_count": len(deepeval_metric_instances),
+            "sample_count": len(all_test_cases),
+            "deepeval_max_concurrent": max_concurrent,
+        }
+        _emit_progress(
+            "DeepEval batched evaluate() starting: metrics=%d samples=%d max_concurrent=%d",
+            len(deepeval_metric_instances),
+            len(all_test_cases),
+            max_concurrent,
+            extra=_deepeval_start_extra,
+        )
+
+        t_deepeval = time.monotonic()
+        try:
+            result = deepeval_evaluate(
+                test_cases=all_test_cases,
+                metrics=deepeval_metric_instances,
+                async_config=AsyncConfig(run_async=True, max_concurrent=max_concurrent),
+                display_config=DisplayConfig(print_results=False, show_indicator=False),
+                error_config=ErrorConfig(ignore_errors=True),
+            )
+        except Exception as e:
+            elapsed = time.monotonic() - t_deepeval
+            logger.error(
+                "DeepEval batched evaluation failed after %.1fs: %s",
+                elapsed, e, exc_info=True,
+            )
+            log_job_status_error(
+                "DeepEval evaluation FAILED after %.1fs: [%s] %s",
+                elapsed, type(e).__name__, str(e)[:600],
+                extra={
+                    "phase": "deepeval_eval_failed",
+                    "elapsed_s": round(elapsed, 1),
+                    "error_type": type(e).__name__,
+                    "error": str(e)[:600],
+                },
+            )
+            return []
+
+        deepeval_elapsed = time.monotonic() - t_deepeval
+        _deepeval_done_extra = {
+            "phase": "floeval_deepeval_batched_done",
+            "elapsed_s": round(deepeval_elapsed, 1),
+            "metric_count": len(deepeval_metric_instances),
+            "sample_count": len(all_test_cases),
+        }
+        _emit_progress(
+            "DeepEval batched evaluate() done in %.1fs metrics=%d samples=%d",
+            deepeval_elapsed, len(deepeval_metric_instances), len(all_test_cases),
+            extra=_deepeval_done_extra,
+        )
+
         sample_results: list[dict[str, Any]] = []
-        for sample in dataset.samples:
+        for i, sample in enumerate(dataset.samples):
             metric_results: dict[str, Any] = {}
-            test_case = adapter.transform_sample(sample)
-            for deepeval_class, floeval_metric in deepeval_metric_classes:
+
+            test_result = (
+                result.test_results[i]
+                if result.test_results and i < len(result.test_results)
+                else None
+            )
+
+            for j, (metric_instance, floeval_metric) in enumerate(
+                zip(deepeval_metric_instances, floeval_metrics_ordered)
+            ):
                 provider = "deepeval"
                 metric_name = floeval_metric.name
                 key = f"{provider}:{metric_name}"
+                threshold = getattr(floeval_metric, "threshold", 0.5)
 
                 try:
-                    deepeval_metric_instance = deepeval_class()
-                    result = deepeval_evaluate(
-                        metrics=[deepeval_metric_instance], test_cases=[test_case]
+                    metric_data = (
+                        test_result.metrics_data[j]
+                        if test_result and test_result.metrics_data and j < len(test_result.metrics_data)
+                        else None
                     )
-                    if result.test_results and len(result.test_results) > 0:
-                        test_result = result.test_results[0]
-                        if test_result.metrics_data and len(test_result.metrics_data) > 0:
-                            metric_data = test_result.metrics_data[0]
-                            score = metric_data.score
-                            success = (
-                                metric_data.success if hasattr(metric_data, "success") else None
-                            )
-                            threshold = getattr(floeval_metric, "threshold", 0.5)
-                            if deepeval_metric_instance.score is not None:
-                                score = deepeval_metric_instance.score
-                            if deepeval_metric_instance.success is not None:
-                                success = deepeval_metric_instance.success
+                    if metric_data is None:
+                        raise ValueError(f"No metric data at index {j} for sample {i}")
 
-                            if score is None:
-                                score = 0.0
+                    score = metric_data.score
+                    # Prefer score from the instance itself when available.
+                    if getattr(metric_instance, "score", None) is not None:
+                        score = metric_instance.score
+                    if score is None:
+                        score = 0.0
 
-                            if success is None:
-                                success = score >= threshold
+                    success = getattr(metric_data, "success", None)
+                    if getattr(metric_instance, "success", None) is not None:
+                        success = metric_instance.success
+                    if success is None:
+                        success = score >= threshold
 
-                            metric_results[key] = {
-                                "score": score,
-                                "passed": success,
-                                "reason": getattr(deepeval_metric_instance, "reason", None),
-                                "provider": provider,
-                                "metadata": {
-                                    "threshold": threshold,
-                                    "execution_provider": "deepeval",
-                                },
-                            }
-                        else:
-                            raise ValueError("No metric data in DeepEval result")
-                    else:
-                        raise ValueError("No test results from DeepEval evaluation")
-
+                    metric_results[key] = {
+                        "score": score,
+                        "passed": success,
+                        "reason": getattr(metric_instance, "reason", None),
+                        "provider": provider,
+                        "metadata": {
+                            "threshold": threshold,
+                            "execution_provider": "deepeval",
+                        },
+                    }
                 except Exception as e:
-                    logger.error(f"DeepEval metric {key} failed for sample: {e}", exc_info=True)
+                    logger.error(
+                        "DeepEval metric %s failed for sample %d: %s", key, i, e, exc_info=True
+                    )
                     metric_results[key] = {
                         "score": None,
                         "passed": False,
@@ -558,25 +647,182 @@ class Evaluation:
 
         return sample_results
 
+    async def _run_via_ragas_async(self, metrics: list[BaseMetric]) -> list[dict[str, Any]]:
+        """Run RAGAS metrics via aevaluate() in the current event loop."""
+        ragas_adapter = self._get_ragas_adapter(self.llm_config)
+        adapter = RAGASCustomMetricAdapter(self.llm_config, ragas_adapter=ragas_adapter)
+        dataset = self._require_dataset()
+
+        ragas_metrics = []
+        metric_mapping = []
+        for metric in metrics:
+            try:
+                ragas_class = adapter.transform_metric(metric)
+                ragas_metric_instance = ragas_class(llm=adapter.llm, name=metric.name)
+                ragas_metrics.append(ragas_metric_instance)
+                metric_mapping.append((ragas_metric_instance, metric))
+            except Exception as e:
+                logger.error(
+                    "Failed to transform metric %s to RAGAS: %s", metric.name, e, exc_info=True
+                )
+
+        if not ragas_metrics:
+            return []
+
+        ragas_dataset = adapter.transform_dataset(dataset)
+        if self._ragas_max_workers is not None:
+            rw = max(1, int(self._ragas_max_workers))
+        else:
+            s = os.environ.get("FLOEVAL_RAGAS_MAX_WORKERS") or os.environ.get(
+                "WORKER_RAGAS_MAX_WORKERS", "32"
+            )
+            try:
+                rw = max(1, int(s))
+            except ValueError:
+                rw = 32
+        run_config = RunConfig(max_workers=rw, timeout=180, max_wait=60)
+
+        _ragas_start_extra = {
+            "phase": "floeval_ragas_async",
+            "eval_phase": "ragas_aevaluate",
+            "metric_count": len(ragas_metrics),
+            "sample_count": len(dataset.samples),
+            "ragas_max_workers": rw,
+        }
+        _emit_progress(
+            "RAGAS async aevaluate() starting: metrics=%d samples=%d ragas_max_workers=%d",
+            len(ragas_metrics),
+            len(dataset.samples),
+            rw,
+            extra=_ragas_start_extra,
+        )
+
+        t_ragas = time.monotonic()
+        try:
+            ragas_eval_result = await ragas_aevaluate(
+                dataset=ragas_dataset,
+                metrics=ragas_metrics,
+                llm=adapter.llm,
+                embeddings=adapter.embeddings,
+                run_config=run_config,
+            )
+        except Exception as e:
+            elapsed = time.monotonic() - t_ragas
+            logger.error(
+                "RAGAS async evaluation failed after %.1fs: %s",
+                elapsed, e, exc_info=True,
+            )
+            log_job_status_error(
+                "RAGAS aevaluate() FAILED after %.1fs: [%s] %s",
+                elapsed, type(e).__name__, str(e)[:600],
+                extra={
+                    "phase": "ragas_eval_failed",
+                    "elapsed_s": round(elapsed, 1),
+                    "error_type": type(e).__name__,
+                    "error": str(e)[:600],
+                },
+            )
+            return []
+
+        ragas_elapsed = time.monotonic() - t_ragas
+        _ragas_done_extra = {
+            "phase": "floeval_ragas_async_done",
+            "elapsed_s": round(ragas_elapsed, 1),
+            "metric_count": len(ragas_metrics),
+            "sample_count": len(dataset.samples),
+        }
+        _emit_progress(
+            "RAGAS async aevaluate() done in %.1fs metrics=%d samples=%d",
+            ragas_elapsed, len(ragas_metrics), len(dataset.samples),
+            extra=_ragas_done_extra,
+        )
+
+        if hasattr(ragas_eval_result, "to_pandas"):
+            ragas_results = ragas_eval_result.to_pandas()
+        elif hasattr(ragas_eval_result, "columns"):
+            ragas_results = ragas_eval_result
+        else:
+            logger.error(
+                "RAGAS results cannot be converted to DataFrame. Type: %s",
+                type(ragas_eval_result),
+            )
+            return []
+
+        available_columns = list(ragas_results.columns)
+        sample_results: list[dict[str, Any]] = []
+
+        for i, sample in enumerate(dataset.samples):
+            metric_results: dict[str, Any] = {}
+            for idx, (ragas_metric_instance, floeval_metric) in enumerate(metric_mapping):
+                provider = "ragas"
+                metric_name = floeval_metric.name
+                key = f"{provider}:{metric_name}"
+                try:
+                    score = extract_ragas_score(
+                        ragas_results, i, available_columns,
+                        ragas_metric_instance, metric_name,
+                        len(ragas_metrics), idx,
+                    )
+                    threshold = getattr(floeval_metric, "threshold", 0.5)
+                    metric_results[key] = {
+                        "score": score,
+                        "passed": score >= threshold if score is not None else False,
+                        "reason": None,
+                        "provider": provider,
+                        "metadata": {"threshold": threshold, "execution_provider": "ragas"},
+                    }
+                except Exception as e:
+                    logger.error(
+                        "Failed to extract RAGAS result for %s: %s", key, e, exc_info=True
+                    )
+                    metric_results[key] = {
+                        "score": None,
+                        "passed": False,
+                        "reason": str(e),
+                        "provider": provider,
+                        "metadata": {"error": str(e), "metric_name": metric_name},
+                    }
+            sample_results.append(sample.model_dump() | {"metrics": metric_results})
+
+        return sample_results
+
     async def _collect_results_async(
         self, grouped: dict[str, list[BaseMetric]]
     ) -> list[dict[str, Any]]:
         """Collect results asynchronously. Shared routing for arun()."""
         import asyncio
 
+        ds = self._require_dataset()
+        n = len(ds.samples)
+        _routing_extra = {
+            "phase": "floeval_arun_routing",
+            "standalone_count": len(grouped["standalone"]),
+            "ragas_count": len(grouped["ragas"]),
+            "deepeval_count": len(grouped["deepeval"]),
+            "sample_count": n,
+        }
+        _emit_progress(
+            "floeval arun routing: standalone=%d ragas=%d deepeval=%d samples=%d",
+            len(grouped["standalone"]),
+            len(grouped["ragas"]),
+            len(grouped["deepeval"]),
+            n,
+            extra=_routing_extra,
+        )
+
         results: list[dict[str, Any]] = []
         if grouped["standalone"]:
             results = await self._arun_standalone(grouped["standalone"])
-        loop = asyncio.get_running_loop()
+        # RAGAS: use aevaluate() directly — no thread/executor overhead.
         if grouped["ragas"]:
-            ragas_results = await loop.run_in_executor(
-                None, lambda: self._run_via_ragas_sync(grouped["ragas"])
-            )
+            ragas_results = await self._run_via_ragas_async(grouped["ragas"])
             if not results:
                 results.extend(ragas_results)
             else:
                 self._merge_provider_results(results, ragas_results)
+        # DeepEval: still sync internally (manages its own event loop via AsyncConfig).
         if grouped["deepeval"]:
+            loop = asyncio.get_running_loop()
             deepeval_results = await loop.run_in_executor(
                 None, lambda: self._run_via_deepeval_sync(grouped["deepeval"])
             )
@@ -596,6 +842,44 @@ class Evaluation:
         results = await self._collect_results_async(grouped)
         aggregate_scores = self._aggregate(results)
         summary = self._summarize(results, aggregate_scores)
+
+        # Log per-metric summary to experiment JSONL for quick post-eval debugging.
+        if results:
+            scores_by_metric: dict[str, list[float]] = {}
+            for r in results:
+                for key, m in (r.get("metrics") or {}).items():
+                    if m.get("score") is not None:
+                        scores_by_metric.setdefault(key, []).append(float(m["score"]))
+            metric_summary = {
+                k: {
+                    "avg": round(sum(v) / len(v), 4),
+                    "pass_rate": round(sum(1 for r in results if (r.get("metrics") or {}).get(k, {}).get("passed")) / len(results), 4),
+                    "n": len(v),
+                }
+                for k, v in scores_by_metric.items()
+            }
+            if metric_summary:
+                log_job_status(
+                    "Evaluation metrics summary: %s",
+                    metric_summary,
+                    extra={
+                        "phase": "eval_metrics_summary",
+                        "sample_count": len(results),
+                        "metrics": metric_summary,
+                    },
+                )
+            else:
+                log_job_status_error(
+                    "Evaluation produced %d results but no metric scores were collected "
+                    "(all providers may have failed or returned no scores)",
+                    len(results),
+                    extra={
+                        "phase": "eval_metrics_summary",
+                        "sample_count": len(results),
+                        "metrics": {},
+                    },
+                )
+
         return EvaluationResult(
             sample_results=results,
             aggregate_scores=aggregate_scores,
