@@ -27,7 +27,7 @@ from floeval.metric_providers.deepeval.custom_adapter import (
     DeepEvalCustomMetricAdapter,
 )
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
-from floeval.utils.job_status import log_job_status
+from floeval.utils.job_status import log_job_status, log_job_status_error
 from floeval.utils.loaders import load_prompts_file
 from floeval.utils.ragas_results import extract_ragas_score
 
@@ -554,9 +554,20 @@ class Evaluation:
                 error_config=ErrorConfig(ignore_errors=True),
             )
         except Exception as e:
+            elapsed = time.monotonic() - t_deepeval
             logger.error(
                 "DeepEval batched evaluation failed after %.1fs: %s",
-                time.monotonic() - t_deepeval, e, exc_info=True,
+                elapsed, e, exc_info=True,
+            )
+            log_job_status_error(
+                "DeepEval evaluation FAILED after %.1fs: [%s] %s",
+                elapsed, type(e).__name__, str(e)[:600],
+                extra={
+                    "phase": "deepeval_eval_failed",
+                    "elapsed_s": round(elapsed, 1),
+                    "error_type": type(e).__name__,
+                    "error": str(e)[:600],
+                },
             )
             return []
 
@@ -704,9 +715,20 @@ class Evaluation:
                 run_config=run_config,
             )
         except Exception as e:
+            elapsed = time.monotonic() - t_ragas
             logger.error(
                 "RAGAS async evaluation failed after %.1fs: %s",
-                time.monotonic() - t_ragas, e, exc_info=True,
+                elapsed, e, exc_info=True,
+            )
+            log_job_status_error(
+                "RAGAS aevaluate() FAILED after %.1fs: [%s] %s",
+                elapsed, type(e).__name__, str(e)[:600],
+                extra={
+                    "phase": "ragas_eval_failed",
+                    "elapsed_s": round(elapsed, 1),
+                    "error_type": type(e).__name__,
+                    "error": str(e)[:600],
+                },
             )
             return []
 
@@ -828,6 +850,44 @@ class Evaluation:
         results = await self._collect_results_async(grouped)
         aggregate_scores = self._aggregate(results)
         summary = self._summarize(results, aggregate_scores)
+
+        # Log per-metric summary to experiment JSONL for quick post-eval debugging.
+        if results:
+            scores_by_metric: dict[str, list[float]] = {}
+            for r in results:
+                for key, m in (r.get("metrics") or {}).items():
+                    if m.get("score") is not None:
+                        scores_by_metric.setdefault(key, []).append(float(m["score"]))
+            metric_summary = {
+                k: {
+                    "avg": round(sum(v) / len(v), 4),
+                    "pass_rate": round(sum(1 for r in results if (r.get("metrics") or {}).get(k, {}).get("passed")) / len(results), 4),
+                    "n": len(v),
+                }
+                for k, v in scores_by_metric.items()
+            }
+            if metric_summary:
+                log_job_status(
+                    "Evaluation metrics summary: %s",
+                    metric_summary,
+                    extra={
+                        "phase": "eval_metrics_summary",
+                        "sample_count": len(results),
+                        "metrics": metric_summary,
+                    },
+                )
+            else:
+                log_job_status_error(
+                    "Evaluation produced %d results but no metric scores were collected "
+                    "(all providers may have failed or returned no scores)",
+                    len(results),
+                    extra={
+                        "phase": "eval_metrics_summary",
+                        "sample_count": len(results),
+                        "metrics": {},
+                    },
+                )
+
         return EvaluationResult(
             sample_results=results,
             aggregate_scores=aggregate_scores,
