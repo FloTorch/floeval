@@ -48,6 +48,7 @@ class FlotorchADKLLM(BaseLlm):
         api_key: str,
         base_url: str,
         chat_endpoint: str = "chat/completions",
+        default_headers: Dict[str, str] | None = None,
     ):
         super().__init__(model=model_id, api_key=api_key, base_url=base_url)
         self._llm = FlotorchLLM(
@@ -55,6 +56,7 @@ class FlotorchADKLLM(BaseLlm):
             api_key=api_key,
             base_url=base_url,
             chat_endpoint=chat_endpoint,
+            default_headers=default_headers,
         )
 
     async def generate_content_async(
