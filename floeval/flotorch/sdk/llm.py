@@ -19,18 +19,22 @@ class FlotorchLLM:
         api_key: str,
         base_url: str,
         chat_endpoint: str = "chat/completions",
+        default_headers: Optional[Dict[str, str]] = None,
     ):
         self.model_id = model_id
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.chat_endpoint = chat_endpoint.lstrip("/")
         self._url = f"{self.base_url}/{self.chat_endpoint}"
+        self.default_headers = dict(default_headers or {})
 
     def _headers(self) -> Dict[str, str]:
-        return {
+        headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+        headers.update(self.default_headers)
+        return headers
 
     async def ainvoke(
         self,
@@ -41,6 +45,10 @@ class FlotorchLLM:
         **kwargs: Any,
     ) -> _LLMResponse:
         """Async chat completion request."""
+        extra_headers = kwargs.pop("extra_headers", None)
+        headers = self._headers()
+        if isinstance(extra_headers, dict):
+            headers.update({str(k): str(v) for k, v in extra_headers.items()})
         payload: Dict[str, Any] = {
             "model": self.model_id,
             "messages": messages,
@@ -54,7 +62,7 @@ class FlotorchLLM:
 
         result = await async_http_post(
             url=self._url,
-            headers=self._headers(),
+            headers=headers,
             json=payload,
         )
         return _LLMResponse(result)
