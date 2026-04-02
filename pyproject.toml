@@ -13,6 +13,11 @@ authors = [
     {name = "Floeval Team", email = "org.admin@flotorch.ai"}
 ]
 
+maintainers = [
+    {name = "Shiva Prasad", email = "shiva.tantarapelly@flotorch.ai"},
+    {name = "Tuhin Mitra", email = "tuhin@flotorch.ai"}
+]
+
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
