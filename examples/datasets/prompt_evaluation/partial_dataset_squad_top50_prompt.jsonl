@@ -1,0 +1,50 @@
+{"user_input": "To whom did the Virgin Mary allegedly appear in 1858 in Lourdes France?", "ground_truth": "Saint Bernadette Soubirous", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What is in front of the Notre Dame Main Building?", "ground_truth": "a copper statue of Christ", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "The Basilica of the Sacred heart at Notre Dame is beside to which structure?", "ground_truth": "the Main Building", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What is the Grotto at Notre Dame?", "ground_truth": "a Marian place of prayer and reflection", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What sits on top of the Main Building at Notre Dame?", "ground_truth": "a golden statue of the Virgin Mary", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "When did the Scholastic Magazine of Notre dame begin publishing?", "ground_truth": "September 1876", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "How often is Notre Dame's the Juggler published?", "ground_truth": "twice", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What is the daily student paper at Notre Dame called?", "ground_truth": "The Observer", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "How many student news papers are found at Notre Dame?", "ground_truth": "three", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "In what year did the student paper Common Sense begin publication at Notre Dame?", "ground_truth": "1987", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "Where is the headquarters of the Congregation of the Holy Cross?", "ground_truth": "Rome", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What is the primary seminary of the Congregation of the Holy Cross?", "ground_truth": "Moreau Seminary", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What is the oldest structure at Notre Dame?", "ground_truth": "Old College", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What individuals live at Fatima House at Notre Dame?", "ground_truth": "Retired priests and brothers", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "Which prize did Frederick Buechner create?", "ground_truth": "Buechner Prize for Preaching", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "How many BS level degrees are offered in the College of Engineering at Notre Dame?", "ground_truth": "eight", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "In what year was the College of Engineering at Notre Dame formed?", "ground_truth": "1920", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "Before the creation of the College of Engineering similar studies were carried out at which Notre Dame college?", "ground_truth": "the College of Science", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "How many departments are within the Stinson-Remick Hall of Engineering?", "ground_truth": "five", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "The College of Science began to offer civil engineering courses beginning at what time at Notre Dame?", "ground_truth": "the 1870s", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What entity provides help with the management of time for new students at Notre Dame?", "ground_truth": "Learning Resource Center", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "How many colleges for undergraduates are at Notre Dame?", "ground_truth": "five", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What was created at Notre Dame in 1962 to assist first year students?", "ground_truth": "The First Year of Studies program", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "Which organization declared the First Year of Studies program at Notre Dame \"outstanding?\"", "ground_truth": "U.S. News & World Report", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "The granting of Doctorate degrees first occurred in what year at Notre Dame?", "ground_truth": "1924", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What type of degree is an M.Div.?", "ground_truth": "Master of Divinity", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "Which program at Notre Dame offers a Master of Education degree?", "ground_truth": "Alliance for Catholic Education", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "In what year was a Master of Arts course first offered at Notre Dame?", "ground_truth": "1854", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "Which department at Notre Dame is the only one to not offer a PhD program?", "ground_truth": "Department of Pre-Professional Studies", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What institute at Notre Dame studies  the reasons for violent conflict?", "ground_truth": "Joan B. Kroc Institute for International Peace Studies", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What is the title of Notre Dame's Theodore Hesburgh?", "ground_truth": "President Emeritus of the University of Notre Dame", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "In what year was the Joan B. Kroc Institute for International Peace Studies founded?", "ground_truth": "1986", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "To whom was John B. Kroc married?", "ground_truth": "Ray Kroc", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What company did Ray Kroc own?", "ground_truth": "McDonald's", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "How many stories tall is the main library at Notre Dame?", "ground_truth": "14", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What is the name of the main library at Notre Dame?", "ground_truth": "Theodore M. Hesburgh Library", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "In what year was the Theodore M. Hesburgh Library at Notre Dame finished?", "ground_truth": "1963", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "Which artist created the mural on the Theodore M. Hesburgh Library?", "ground_truth": "Millard Sheets", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What is a common name to reference the mural created by Millard Sheets at Notre Dame?", "ground_truth": "Touchdown Jesus", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "How many incoming students did Notre Dame admit in fall 2015?", "ground_truth": "3,577", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What percentage of students were admitted to Notre Dame in fall 2015?", "ground_truth": "19.7%", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "Where does Notre Dame rank in terms of academic profile among research universities in the US?", "ground_truth": "the top 10 to 15 in the nation", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What percentage of students at Notre Dame participated in the Early Action program?", "ground_truth": "39.1%", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "How many miles does the average student at Notre Dame travel to study there?", "ground_truth": "more than 750 miles", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "Where did U.S. News & World Report rank Notre Dame in its 2015-2016 university rankings?", "ground_truth": "18th overall", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "Forbes.com placed Notre Dame at what position compared to other US research universities?", "ground_truth": "8th", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "The undergrad school at the Mendoza College of Business was ranked where according to BusinessWeek?", "ground_truth": "1st overall", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "In 2014 what entity named Notre Dame 10th best of all American universities?", "ground_truth": "USA Today", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What percentage of Notre Dame students decide to study abroad?", "ground_truth": "57.6%", "prompt_ids": ["1", "2", "3"]}
+{"user_input": "What person was the Director of the Science Museum at Notre Dame in the late 19th century?", "ground_truth": "Father Joseph Carrier, C.S.C.", "prompt_ids": ["1", "2", "3"]}
