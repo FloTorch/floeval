@@ -39,6 +39,7 @@ class CriteriaBasedMetric(BaseMetric):
         self.execute_via = execute_via
         self.provider = "custom"
         self._llm_config: OpenAIProviderConfig | None = kwargs.get("llm_config")
+        self._extra_headers: dict[str, str] = dict(kwargs.get("extra_headers") or {})
         self._llm_helper: SimpleLLMHelper | None = None
 
     @property
@@ -51,6 +52,15 @@ class CriteriaBasedMetric(BaseMetric):
         self._llm_helper = None
 
     @property
+    def extra_headers(self) -> dict[str, str]:
+        return self._extra_headers
+
+    @extra_headers.setter
+    def extra_headers(self, value: dict[str, str] | None) -> None:
+        self._extra_headers = dict(value or {})
+        self._llm_helper = None
+
+    @property
     def llm_helper(self) -> SimpleLLMHelper:
         """Lazy-initialised SimpleLLMHelper. Raises if llm_config not set."""
         if self._llm_config is None:
@@ -59,7 +69,9 @@ class CriteriaBasedMetric(BaseMetric):
             )
         if self._llm_helper is None:
             self._llm_helper = SimpleLLMHelper(
-                self._llm_config, chat_model=self._llm_config.chat_model
+                self._llm_config,
+                chat_model=self._llm_config.chat_model,
+                extra_headers=self._extra_headers or None,
             )
         return self._llm_helper
 

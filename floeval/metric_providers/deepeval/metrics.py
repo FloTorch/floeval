@@ -37,6 +37,7 @@ class DeepEvalMetric(BaseMetric):
         super().__init__(*args, **kwargs)
         self.provider = "deepeval"
         self.llm_config = llm_config
+        self._extra_headers: Dict[str, Any] = dict(kwargs.get("extra_headers") or {})
 
         params = kwargs.get("params", {})
         if not isinstance(params, dict):
@@ -80,16 +81,13 @@ class DeepEvalMetric(BaseMetric):
         return metric_params
 
     def _create_llm_adapter(self, llm_config: LLMProviderConfig) -> DeepEvalLLMAdapter:
-        """Create and cache LLM adapter internally.
-
-        Args:
-            llm_config: LLM configuration (optional)
-
-        Returns:
-            DeepEvalLLMAdapter instance
-        """
+        """Create and cache LLM adapter internally."""
         model_name = llm_config.chat_model
-        return DeepEvalLLMAdapter(model_name=model_name, config=llm_config)
+        return DeepEvalLLMAdapter(
+            model_name=model_name,
+            config=llm_config,
+            extra_headers=self._extra_headers or None,
+        )
 
     @property
     def config(self):

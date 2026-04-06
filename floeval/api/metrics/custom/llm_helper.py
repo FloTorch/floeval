@@ -32,14 +32,22 @@ class SimpleLLMHelper:
     Args:
         config: OpenAI provider configuration.
         chat_model: Override model name (defaults to config.chat_model).
+        extra_headers: Optional headers forwarded on every API request
+            (e.g. gateway run-context headers for log correlation).
     """
 
-    def __init__(self, config: OpenAIProviderConfig, chat_model: str | None = None):
+    def __init__(
+        self,
+        config: OpenAIProviderConfig,
+        chat_model: str | None = None,
+        extra_headers: dict[str, str] | None = None,
+    ):
         """Initialize with config. Clients are created lazily on first use."""
         self._config = config
         self._chat_model = chat_model or config.chat_model
         self._base_url = _normalize_openai_base_url(config.base_url)
         self._api_key = config.api_key
+        self._extra_headers: dict[str, str] = dict(extra_headers or {})
 
         # Separate clients — lazily initialized, independent lifecycle
         self._sync_client: openai.OpenAI | None = None
@@ -55,6 +63,7 @@ class SimpleLLMHelper:
                     self._sync_client = openai.OpenAI(
                         base_url=self._base_url,
                         api_key=self._api_key,
+                        default_headers=self._extra_headers or None,
                     )
         return self._sync_client
 
@@ -65,6 +74,7 @@ class SimpleLLMHelper:
             self._async_client = openai.AsyncOpenAI(
                 base_url=self._base_url,
                 api_key=self._api_key,
+                default_headers=self._extra_headers or None,
             )
         return self._async_client
 

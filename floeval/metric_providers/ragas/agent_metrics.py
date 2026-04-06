@@ -36,7 +36,10 @@ class RAGASAgentGoalAccuracy(BaseMetric):
         super().__init__(name="agent_goal_accuracy", **kwargs)
         self.provider = "ragas"
         self.llm_config = llm_config
-        self.adapter = adapter or RAGASAdapter(config=llm_config)
+        self._extra_headers: dict = dict(kwargs.get("extra_headers") or {})
+        self.adapter = adapter or RAGASAdapter(
+            config=llm_config, extra_headers=self._extra_headers or None
+        )
         from ragas.metrics.collections import AgentGoalAccuracyWithReference
 
         self._metric = AgentGoalAccuracyWithReference(llm=self.adapter.agent_llm)
@@ -117,7 +120,10 @@ class RAGASToolCallAccuracy(BaseMetric):
         super().__init__(name="tool_call_accuracy", **kwargs)
         self.provider = "ragas"
         self.llm_config = llm_config
-        self.adapter = adapter or RAGASAdapter(config=llm_config)
+        self._extra_headers: dict = dict(kwargs.get("extra_headers") or {})
+        self.adapter = adapter or RAGASAdapter(
+            config=llm_config, extra_headers=self._extra_headers or None
+        )
         from ragas.metrics.collections import ToolCallAccuracy
 
         self._metric = ToolCallAccuracy()

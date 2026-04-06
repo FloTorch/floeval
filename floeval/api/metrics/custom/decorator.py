@@ -50,6 +50,7 @@ class FunctionBasedMetric(BaseMetric):
         self.threshold = threshold
         self.llm_config: OpenAIProviderConfig | None = kwargs.get("llm_config")
         self.chat_model: str | None = kwargs.get("chat_model")
+        self.extra_headers: dict[str, str] = dict(kwargs.get("extra_headers") or {})
 
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
         """Execute metric synchronously.
@@ -144,7 +145,11 @@ class FunctionBasedMetric(BaseMetric):
                         f"Metric '{self.name}' requires 'llm' parameter but no valid "
                         "OpenAIProviderConfig was provided."
                     )
-                args[param_name] = SimpleLLMHelper(self.llm_config, chat_model=self.chat_model)
+                args[param_name] = SimpleLLMHelper(
+                    self.llm_config,
+                    chat_model=self.chat_model,
+                    extra_headers=self.extra_headers or None,
+                )
             elif param_name == "sample":
                 args[param_name] = sample
         return args

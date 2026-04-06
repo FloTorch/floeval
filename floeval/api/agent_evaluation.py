@@ -50,6 +50,7 @@ class AgentEvaluation:
         agent_runner: Any | None = None,
         default_provider: str | None = "builtin",
         metric_params: Mapping[str, dict[str, Any]] | None = None,
+        run_headers: dict[str, str] | None = None,
     ):
         self.dataset = dataset
         self.metrics = metrics
@@ -58,6 +59,7 @@ class AgentEvaluation:
         self.agent_runner = agent_runner
         self.default_provider = default_provider or "builtin"
         self.metric_params = dict(metric_params or {})
+        self.run_headers: dict[str, str] = dict(run_headers or {})
         self._registry = MetricRegistry()
         self._resolved_metrics = self._resolve_metrics(metrics)
 
@@ -73,6 +75,8 @@ class AgentEvaluation:
                     and spec.llm_config is None
                 ):
                     spec.llm_config = self.llm_config
+                if self.run_headers and hasattr(spec, "extra_headers"):
+                    spec.extra_headers = self.run_headers
                 resolved.append(spec)
                 continue
 
@@ -87,6 +91,8 @@ class AgentEvaluation:
                 )
                 params = spec.get("params", {}) or {}
                 metric = self._create_metric(provider, metric_id, params)
+                if self.run_headers and hasattr(metric, "extra_headers"):
+                    metric.extra_headers = self.run_headers
                 resolved.append(metric)
                 continue
 
@@ -97,6 +103,8 @@ class AgentEvaluation:
                     metric_id = spec
                     provider = self._registry.resolve_best(metric_id, self.default_provider)
                 metric = self._create_metric(provider, metric_id, params={})
+                if self.run_headers and hasattr(metric, "extra_headers"):
+                    metric.extra_headers = self.run_headers
                 resolved.append(metric)
                 continue
 
@@ -150,6 +158,7 @@ class AgentEvaluation:
         if "llm_provider" in sig.parameters and "llm_provider" not in merged:
             merged["llm_provider"] = OpenAIProvider(
                 config_name=f"{provider}:{metric_id}",
+                extra_headers=self.run_headers or None,
                 **self.llm_config.model_dump(),
             )
 
@@ -161,6 +170,8 @@ class AgentEvaluation:
         """Create metric instance with dynamic dependency injection."""
         merged = self._merge_params(provider, metric_id, params)
         merged = self._inject_context_params(provider, metric_id, merged)
+        if self.run_headers and "extra_headers" not in merged:
+            merged["extra_headers"] = self.run_headers
 
         try:
             return self._registry.create(provider, metric_id, **merged)

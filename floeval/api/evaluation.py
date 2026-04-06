@@ -71,6 +71,7 @@ class Evaluation:
         dataset_generator_model: str | None = None,
         prompts_file: str | None = None,
         ragas_max_workers: int | None = None,
+        run_headers: dict[str, Any] | None = None,
     ):
         self.dataset_generator_model = dataset_generator_model
         self.default_provider = default_provider
@@ -79,6 +80,7 @@ class Evaluation:
         self.dataset: Dataset | PartialDataset = dataset
         self.metric_params = dict(metric_params or {})
         self._ragas_max_workers = ragas_max_workers
+        self._run_headers: dict[str, Any] = dict(run_headers or {})
         self._registry = MetricRegistry()
 
         # Cache adapters per provider
@@ -108,6 +110,7 @@ class Evaluation:
 
         llm_provider = OpenAIProvider(
             config_name=f"{self.dataset_generator_model}_generation",
+            extra_headers=self._run_headers or None,
             **(config_dict | {"chat_model": self.dataset_generator_model}),
         )
 
@@ -145,7 +148,9 @@ class Evaluation:
     def _get_ragas_adapter(self, llm_config: Any | None) -> RAGASAdapter:
         """Return cached RAGAS adapter, creating it if needed."""
         if self._provider_adapters["ragas"]["adapter"] is None:
-            self._provider_adapters["ragas"]["adapter"] = RAGASAdapter(config=llm_config)
+            self._provider_adapters["ragas"]["adapter"] = RAGASAdapter(
+                config=llm_config, extra_headers=self._run_headers or None
+            )
         return cast(RAGASAdapter, self._provider_adapters["ragas"]["adapter"])
 
     def _require_dataset(self) -> Dataset:
@@ -190,6 +195,9 @@ class Evaluation:
             merged["adapter"] = self._get_ragas_adapter(llm_config)
         elif provider == "deepeval" and "llm_config" not in merged and self.llm_config:
             merged["llm_config"] = self.llm_config
+        # Inject run headers so metric LLM clients carry gateway correlation headers
+        if self._run_headers and "extra_headers" not in merged:
+            merged["extra_headers"] = self._run_headers
 
         metric_factory = self._registry.get_class(provider, metric_id)
         if metric_factory is None:
@@ -226,6 +234,8 @@ class Evaluation:
                     and spec.llm_config is None
                 ):
                     spec.llm_config = self.llm_config
+                if self._run_headers and hasattr(spec, "extra_headers"):
+                    spec.extra_headers = self._run_headers
                 resolved.append(spec)
                 continue
 
@@ -244,6 +254,8 @@ class Evaluation:
                     )
 
                 metric = self._create_metric_instance(provider, metric_id, params)
+                if self._run_headers and hasattr(metric, "extra_headers"):
+                    metric.extra_headers = self._run_headers
                 resolved.append(metric)
                 continue
 
@@ -258,6 +270,8 @@ class Evaluation:
                     )
 
                 metric = self._create_metric_instance(provider, metric_id, params={})
+                if self._run_headers and hasattr(metric, "extra_headers"):
+                    metric.extra_headers = self._run_headers
                 resolved.append(metric)
                 continue
 
