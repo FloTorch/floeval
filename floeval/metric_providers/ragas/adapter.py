@@ -42,7 +42,11 @@ class LangChainStructuredLLM(InstructorBaseRagasLLM):
     response_format.
     """
 
-    def __init__(self, config: LLMProviderConfig | None = None):
+    def __init__(
+        self,
+        config: LLMProviderConfig | None = None,
+        extra_headers: Dict[str, str] | None = None,
+    ):
         llm_args: Dict[str, Any] = {"temperature": 0.01, "model": "gpt-4o-mini"}
         if config:
             if config.base_url:
@@ -51,6 +55,8 @@ class LangChainStructuredLLM(InstructorBaseRagasLLM):
                 llm_args["openai_api_key"] = config.api_key
             if config.chat_model:
                 llm_args["model"] = config.chat_model
+        if extra_headers:
+            llm_args["default_headers"] = extra_headers
         self._llm = ChatOpenAI(**llm_args)
 
     def generate(self, prompt: str, response_model: Type[T]) -> T:
@@ -86,7 +92,10 @@ def _extract_json(text: str) -> dict:
     raise ValueError(f"Could not extract JSON from response: {text[:200]}...")
 
 
-def create_ragas_llm(config: LLMProviderConfig | None = None) -> LangchainLLMWrapper:
+def create_ragas_llm(
+    config: LLMProviderConfig | None = None,
+    extra_headers: Dict[str, str] | None = None,
+) -> LangchainLLMWrapper:
     """Create RAGAS LLM wrapper configured with custom llm configuration.
 
     Args:
@@ -102,12 +111,15 @@ def create_ragas_llm(config: LLMProviderConfig | None = None) -> LangchainLLMWra
         llm_args["openai_api_key"] = config.api_key
     if config and config.chat_model:
         llm_args["model"] = config.chat_model
+    if extra_headers:
+        llm_args["default_headers"] = extra_headers
     llm = ChatOpenAI(**llm_args)
     return LangchainLLMWrapper(llm)
 
 
 def create_ragas_embeddings(
     config: LLMProviderConfig | None = None,
+    extra_headers: Dict[str, str] | None = None,
 ) -> LangchainEmbeddingsWrapper:
     """Create RAGAS embeddings wrapper configured with custom llm configuration.
 
@@ -126,12 +138,15 @@ def create_ragas_embeddings(
         embedding_args["openai_api_key"] = config.api_key
     if config and config.embedding_model:
         embedding_args["model"] = config.embedding_model
+    if extra_headers:
+        embedding_args["default_headers"] = extra_headers
     embeddings = OpenAIEmbeddings(**embedding_args)
     return LangchainEmbeddingsWrapper(embeddings=embeddings)
 
 
 def create_ragas_instructor_llm(
     config: LLMProviderConfig | None = None,
+    extra_headers: Dict[str, str] | None = None,
 ):
     """Create LLM for RAGAS agent metrics (agent_goal_accuracy).
 
@@ -139,7 +154,7 @@ def create_ragas_instructor_llm(
     with any OpenAI-compatible API. Pass the same llm_config
     as the rest of evaluation - no separate RAGAS config needed.
     """
-    return LangChainStructuredLLM(config)
+    return LangChainStructuredLLM(config, extra_headers=extra_headers)
 
 
 def transform_agent_sample_to_ragas_messages(
@@ -170,13 +185,20 @@ class RAGASAdapter:
     Similar to DeepEvalAdapter for consistency across providers.
     """
 
-    def __init__(self, config: LLMProviderConfig | None = None):
+    def __init__(
+        self,
+        config: LLMProviderConfig | None = None,
+        extra_headers: Dict[str, str] | None = None,
+    ):
         """Initialize RAGAS adapter with llm configuration.
 
         Args:
             config: Optional LLMProviderConfig configuration. If None, uses environment defaults.
+            extra_headers: Optional headers forwarded on every LLM/embedding API request
+                (e.g. gateway run-context headers for log correlation).
         """
         self.config = config
+        self._extra_headers: Dict[str, str] = dict(extra_headers or {})
         self._llm: LangchainLLMWrapper | None = None
         self._embeddings: LangchainEmbeddingsWrapper | None = None
         self._agent_llm = None
@@ -185,14 +207,16 @@ class RAGASAdapter:
     def llm(self) -> LangchainLLMWrapper:
         """Get or create RAGAS LLM wrapper (cached)."""
         if self._llm is None:
-            self._llm = create_ragas_llm(self.config)
+            self._llm = create_ragas_llm(self.config, extra_headers=self._extra_headers or None)
         return self._llm
 
     @property
     def embeddings(self) -> LangchainEmbeddingsWrapper:
         """Get or create RAGAS embeddings wrapper (cached)."""
         if self._embeddings is None:
-            self._embeddings = create_ragas_embeddings(self.config)
+            self._embeddings = create_ragas_embeddings(
+                self.config, extra_headers=self._extra_headers or None
+            )
         return self._embeddings
 
     @property
@@ -201,7 +225,9 @@ class RAGASAdapter:
         Uses LangChain + JSON parse; works with any OpenAI-compatible API.
         """
         if self._agent_llm is None:
-            self._agent_llm = create_ragas_instructor_llm(self.config)
+            self._agent_llm = create_ragas_instructor_llm(
+                self.config, extra_headers=self._extra_headers or None
+            )
         return self._agent_llm
 
     def transform_sample(self, sample: Sample | dict[str, str | Sequence[Any]]) -> SingleTurnSample:

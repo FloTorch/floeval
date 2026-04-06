@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 import logging
 import os
 import time
@@ -29,6 +28,7 @@ from floeval.metric_providers.deepeval.custom_adapter import (
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
 from floeval.utils.job_status import log_job_status, log_job_status_error
 from floeval.utils.loaders import load_prompts_file
+from floeval.utils.metric_constructor_kwargs import filter_kwargs_for_metric_factory
 from floeval.utils.ragas_results import extract_ragas_score
 
 logger = logging.getLogger(__name__)
@@ -71,6 +71,7 @@ class Evaluation:
         dataset_generator_model: str | None = None,
         prompts_file: str | None = None,
         ragas_max_workers: int | None = None,
+        run_headers: dict[str, Any] | None = None,
     ):
         self.dataset_generator_model = dataset_generator_model
         self.default_provider = default_provider
@@ -79,12 +80,21 @@ class Evaluation:
         self.dataset: Dataset | PartialDataset = dataset
         self.metric_params = dict(metric_params or {})
         self._ragas_max_workers = ragas_max_workers
+        self._run_headers: dict[str, Any] = dict(run_headers or {})
         self._registry = MetricRegistry()
 
         # Cache adapters per provider
         self._provider_adapters: dict[str, Any] = {
             "ragas": {"adapter": None},
         }
+
+        if isinstance(self.dataset, PartialDataset) and (
+            self.llm_config is None or not self.dataset_generator_model
+        ):
+            raise ValueError(
+                "llm_config must be provided to Evaluation() when using a "
+                "PartialDataset. dataset_generator_model is also required."
+            )
 
         self.metrics = self._resolve_metrics(metrics)
 
@@ -108,6 +118,7 @@ class Evaluation:
 
         llm_provider = OpenAIProvider(
             config_name=f"{self.dataset_generator_model}_generation",
+            extra_headers=self._run_headers or None,
             **(config_dict | {"chat_model": self.dataset_generator_model}),
         )
 
@@ -145,7 +156,9 @@ class Evaluation:
     def _get_ragas_adapter(self, llm_config: Any | None) -> RAGASAdapter:
         """Return cached RAGAS adapter, creating it if needed."""
         if self._provider_adapters["ragas"]["adapter"] is None:
-            self._provider_adapters["ragas"]["adapter"] = RAGASAdapter(config=llm_config)
+            self._provider_adapters["ragas"]["adapter"] = RAGASAdapter(
+                config=llm_config, extra_headers=self._run_headers or None
+            )
         return cast(RAGASAdapter, self._provider_adapters["ragas"]["adapter"])
 
     def _require_dataset(self) -> Dataset:
@@ -190,26 +203,15 @@ class Evaluation:
             merged["adapter"] = self._get_ragas_adapter(llm_config)
         elif provider == "deepeval" and "llm_config" not in merged and self.llm_config:
             merged["llm_config"] = self.llm_config
+        if self._run_headers and "extra_headers" not in merged:
+            merged["extra_headers"] = self._run_headers
 
         metric_factory = self._registry.get_class(provider, metric_id)
         if metric_factory is None:
             available = self._registry.list_metrics(provider)
             raise KeyError(f"Unknown metric: {provider}:{metric_id}. Available: {available}")
 
-        # Filter params by constructor signature when possible
-        try:
-            if callable(metric_factory) and not isinstance(metric_factory, type):
-                sig = inspect.signature(metric_factory)
-            else:
-                sig = inspect.signature(metric_factory.__init__)
-            accepted = set(sig.parameters) - {"self"}
-            has_var_kw = any(
-                p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
-            )
-            if not has_var_kw:
-                merged = {k: v for k, v in merged.items() if k in accepted}
-        except (TypeError, ValueError, AttributeError):
-            pass
+        merged = filter_kwargs_for_metric_factory(merged, metric_factory)
 
         return cast(BaseMetric, self._registry.create(provider, metric_id, **merged))
 
@@ -226,6 +228,8 @@ class Evaluation:
                     and spec.llm_config is None
                 ):
                     spec.llm_config = self.llm_config
+                if self._run_headers and hasattr(spec, "extra_headers"):
+                    spec.extra_headers = self._run_headers
                 resolved.append(spec)
                 continue
 
@@ -244,6 +248,8 @@ class Evaluation:
                     )
 
                 metric = self._create_metric_instance(provider, metric_id, params)
+                if self._run_headers and hasattr(metric, "extra_headers"):
+                    metric.extra_headers = self._run_headers
                 resolved.append(metric)
                 continue
 
@@ -258,6 +264,8 @@ class Evaluation:
                     )
 
                 metric = self._create_metric_instance(provider, metric_id, params={})
+                if self._run_headers and hasattr(metric, "extra_headers"):
+                    metric.extra_headers = self._run_headers
                 resolved.append(metric)
                 continue
 
