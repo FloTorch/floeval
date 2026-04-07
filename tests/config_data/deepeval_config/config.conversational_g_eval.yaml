@@ -1,0 +1,14 @@
+llm_config:
+  api_key: ${FLOEVAL_API_KEY}
+  base_url: ${FLOEVAL_BASE_URL}
+  chat_model: flotorch/evaluation-testing-chat-model
+  embedding_model: flotorch/evaluation-testing-embedding-model
+
+evaluation_config:
+  metrics:
+    - provider: "deepeval"
+      id: "conversational_g_eval"
+      params:
+        threshold: 0.3
+        evaluation_name: "Return policy clarity"
+        criteria: "The assistant correctly communicates the return window and need for a receipt."

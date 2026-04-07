@@ -13,11 +13,12 @@ pytestmark = pytest.mark.unit
 
 def test_partial_dataset_without_llm_config_raises() -> None:
     partial = PartialDataset(samples=[PartialSample(user_input="hello")])
+    ev = Evaluation(
+        dataset=partial,
+        metrics=["deepeval:exact_match"],
+    )
     with pytest.raises(ValueError, match="llm_config"):
-        Evaluation(
-            dataset=partial,
-            metrics=["deepeval:exact_match"],
-        )
+        ev._ensure_dataset_sync()
 
 
 def test_partial_dataset_populates_via_mock() -> None:
@@ -35,6 +36,7 @@ def test_partial_dataset_populates_via_mock() -> None:
             llm_config=llm,
             dataset_generator_model="gpt-4o-mini",
         )
+        ev._ensure_dataset_sync()
 
     mock_pop.assert_called_once()
     assert ev.dataset is filled

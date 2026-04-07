@@ -1,0 +1,14 @@
+{
+  "conversational_samples": [
+    {
+      "user_input": "Opening turn for indexing",
+      "turns": [
+        { "role": "user", "content": "Can I return this item after 30 days?" },
+        { "role": "assistant", "content": "Our policy allows returns within 14 days with receipt." }
+      ],
+      "scenario": "Customer asks about returns.",
+      "expected_outcome": "Assistant states the 14-day policy clearly.",
+      "conversation_context": ["Store policy: returns accepted within 14 days with receipt."]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "conversational_samples": [
+    {
+      "turns": [
+        { "role": "user", "content": "What topics should the assistant stay within?" },
+        { "role": "assistant", "content": "I can discuss product policies and shipping only." }
+      ],
+      "reference_topics": ["product support", "shipping"],
+      "reference": "Assistant stays on policy topics."
+    }
+  ]
+}

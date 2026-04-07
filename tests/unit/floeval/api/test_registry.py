@@ -1,5 +1,7 @@
 """MetricRegistry smoke tests (providers register on import)."""
 
+# ruff: noqa: D103 — test names describe behavior
+
 import pytest
 
 import floeval.metric_providers  # noqa: F401 — register deepeval/ragas/builtin
@@ -21,6 +23,7 @@ def test_list_providers_includes_expected_backends() -> None:
         ("deepeval", "exact_match"),
         ("deepeval", "pattern_match"),
         ("deepeval", "faithfulness"),
+        ("deepeval", "conversational_g_eval"),
         ("ragas", "answer_relevancy"),
         ("ragas", "context_recall"),
     ],

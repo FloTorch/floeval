@@ -1,0 +1,17 @@
+{
+  "conversational_samples": [
+    {
+      "user_input": "Optional synopsis for mixed pipelines",
+      "turns": [
+        { "role": "user", "content": "What is your refund policy?" },
+        {
+          "role": "assistant",
+          "content": "Refunds are available within 30 days for unused items."
+        }
+      ],
+      "scenario": "E-commerce support chat",
+      "expected_outcome": "Assistant gives the 30-day refund rule.",
+      "conversation_context": ["Knowledge base: refunds within 30 days."]
+    }
+  ]
+}
