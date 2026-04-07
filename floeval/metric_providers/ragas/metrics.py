@@ -6,9 +6,10 @@ that can be configured with custom LLM providers.
 
 import copy
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar, Dict, Literal, Optional
 
-from ragas.metrics import (
+from ragas.metrics._topic_adherence import TopicAdherenceScore
+from ragas.metrics.collections import (
     NoiseSensitivity,
     answer_relevancy,
     context_entity_recall,
@@ -18,8 +19,12 @@ from ragas.metrics import (
 )
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
+from floeval.config.schemas.io.conversational_dataset import ConversationalSample
 from floeval.config.schemas.io.llm import LLMProviderConfig
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
+from floeval.metric_providers.ragas.multiturn_adapter import (
+    conversational_sample_to_ragas_multiturn,
+)
 from floeval.utils.asyncio_compat import run_coroutine_sync
 
 logger = logging.getLogger(__name__)
@@ -569,6 +574,98 @@ class RAGASNoiseSensitivity(RAGASMetric):
             )
         except Exception as e:
             logger.error(f"Error computing noise sensitivity (async): {e}", exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+
+class RAGASMultiTurnTopicAdherence(BaseMetric):
+    """RAGAS multi-turn topic adherence (``MultiTurnSample`` + ``reference_topics``)."""
+
+    execute_via: ClassVar[str] = "ragas"
+    ragas_sample_kind: ClassVar[str] = "multi_turn"
+
+    def __init__(
+        self,
+        llm_config: LLMProviderConfig | None = None,
+        adapter: RAGASAdapter | None = None,
+        mode: Literal["precision", "recall", "f1"] = "f1",
+        threshold: float | None = None,
+        name: str = "topic_adherence",
+        **kwargs: Any,
+    ):
+        super().__init__(name=name, **kwargs)
+        self.provider = "ragas"
+        self.mode = mode
+        self.threshold = threshold if threshold is not None else 0.5
+        self.llm_config = llm_config
+        self.adapter = adapter or RAGASAdapter(config=llm_config)
+        self._ragas = TopicAdherenceScore(mode=mode)
+        self._ragas.llm = self.adapter.llm
+
+    @property
+    def ragas_multiturn_metric(self) -> TopicAdherenceScore:
+        """Native RAGAS metric object for ``ragas.evaluate`` / ``aevaluate``."""
+        return self._ragas
+
+    def _build_metadata(self, score_float: float, error: Optional[str] = None) -> Dict[str, Any]:
+        metadata: Dict[str, Any] = {
+            "provider": self.provider,
+            "metric_name": self.name,
+            "llm_config": self.llm_config is not None,
+        }
+        if error:
+            metadata["error"] = error
+            metadata["passed"] = False
+        elif self.threshold is not None:
+            metadata["threshold"] = self.threshold
+            metadata["passed"] = score_float >= self.threshold
+        return metadata
+
+    def evaluate(self, sample: ConversationalSample, **kwargs: Any) -> MetricResult:
+        try:
+            mts = conversational_sample_to_ragas_multiturn(sample)
+            if not mts.reference_topics:
+                return MetricResult(
+                    score=None,
+                    metadata={
+                        "error": "topic_adherence requires reference_topics on the sample",
+                        "provider": "ragas",
+                    },
+                )
+            score = run_coroutine_sync(lambda: self._ragas.multi_turn_ascore(mts))
+            score_float = float(score)
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error("Error computing topic_adherence (multi-turn): %s", e, exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+    async def aevaluate(self, sample: ConversationalSample, **kwargs: Any) -> MetricResult:
+        try:
+            mts = conversational_sample_to_ragas_multiturn(sample)
+            if not mts.reference_topics:
+                return MetricResult(
+                    score=None,
+                    metadata={
+                        "error": "topic_adherence requires reference_topics on the sample",
+                        "provider": "ragas",
+                    },
+                )
+            score = await self._ragas.multi_turn_ascore(mts)
+            score_float = float(score)
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error("Error computing topic_adherence (async multi-turn): %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),

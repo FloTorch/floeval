@@ -2,11 +2,14 @@
 
 This module registers DeepEval metrics (answer_relevancy, faithfulness,
 contextual_precision, contextual_recall, contextual_relevancy, hallucination,
-toxicity, exact_match, pattern_match, json_correctness) with the global
-metric registry.
+toxicity, exact_match, pattern_match, json_correctness, conversational_g_eval)
+with the global metric registry.
 """
 
 from floeval.api.metrics.registry import MetricRegistry
+from floeval.metric_providers.deepeval.conversational_metrics import (
+    ConversationalGEvalDeepEvalMetric,
+)
 from floeval.metric_providers.deepeval.metrics import (
     AnswerRelevancyDeepEvalMetric,
     ContextualPrecisionDeepEvalMetric,
@@ -37,6 +40,7 @@ _registry.register("deepeval", "toxicity", ToxicityDeepEvalMetric)
 _registry.register("deepeval", "exact_match", ExactMatchDeepEvalMetric)
 _registry.register("deepeval", "pattern_match", PatternMatchDeepEvalMetric)
 _registry.register("deepeval", "json_correctness", JsonCorrectnessDeepEvalMetric)
+_registry.register("deepeval", "conversational_g_eval", ConversationalGEvalDeepEvalMetric)
 
 __all__ = [
     "FaithfulnessDeepEvalMetric",
@@ -49,4 +53,5 @@ __all__ = [
     "ExactMatchDeepEvalMetric",
     "PatternMatchDeepEvalMetric",
     "JsonCorrectnessDeepEvalMetric",
+    "ConversationalGEvalDeepEvalMetric",
 ]

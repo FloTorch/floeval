@@ -1,7 +1,5 @@
 """Agent evaluation orchestrator."""
 
-from __future__ import annotations
-
 import asyncio
 import inspect
 import json
@@ -20,6 +18,10 @@ from floeval.config.schemas.io.agent_dataset import (
 )
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
 from floeval.core.execution.llm_executor import OpenAIProvider
+from floeval.metric_providers.deepeval.batch_eval import (
+    partition_deepeval_metrics,
+    run_deepeval_conversational_batch_for_agent_samples,
+)
 from floeval.utils.asyncio_compat import run_coroutine_sync
 
 logger = logging.getLogger(__name__)
@@ -166,7 +168,10 @@ class AgentEvaluation:
             return self._registry.create(provider, metric_id, **merged)
         except TypeError as e:
             if "llm_config" in merged or "llm_provider" in merged or "adapter" in merged:
-                fallback = {k: v for k, v in merged.items() if k not in ("llm_config", "llm_provider", "adapter")
+                fallback = {
+                    k: v
+                    for k, v in merged.items()
+                    if k not in ("llm_config", "llm_provider", "adapter")
                 }
                 try:
                     return self._registry.create(provider, metric_id, **fallback)
@@ -276,10 +281,33 @@ class AgentEvaluation:
                 summary={"error": "No full samples to evaluate"},
             )
 
+        llm_deepeval, conv_deepeval = partition_deepeval_metrics(
+            [m for m in self._resolved_metrics if getattr(m, "execute_via", None) == "deepeval"]
+        )
+        per_sample_metrics = [m for m in self._resolved_metrics if m not in conv_deepeval]
+        if llm_deepeval:
+            names = [m.name for m in llm_deepeval]
+            raise ValueError(
+                "AgentEvaluation does not support LLMTestCase DeepEval metrics "
+                f"({names}); use conversational DeepEval metrics or Evaluation()."
+            )
+
         sample_results: list[dict[str, Any]] = []
         metric_scores: dict[str, list[float]] = {}
 
-        for sample in full_samples:
+        merged_by_index: list[dict[str, Any]] | None = None
+        if conv_deepeval:
+            loop = asyncio.get_running_loop()
+            merged_by_index = await loop.run_in_executor(
+                None,
+                lambda: run_deepeval_conversational_batch_for_agent_samples(
+                    agent_rows=full_samples,
+                    floeval_metrics=conv_deepeval,
+                    llm_config=self.llm_config,
+                ),
+            )
+
+        for idx, sample in enumerate(full_samples):
             row: dict[str, Any] = {
                 "user_input": sample.user_input,
                 "final_response": sample.trace.final_response,
@@ -287,7 +315,14 @@ class AgentEvaluation:
                 "metrics": {},
             }
 
-            for metric in self._resolved_metrics:
+            if merged_by_index is not None and idx < len(merged_by_index):
+                deepeval_block = merged_by_index[idx].get("metrics", {})
+                for dk, dv in deepeval_block.items():
+                    row["metrics"][dk] = dv
+                    if isinstance(dv, dict) and dv.get("score") is not None:
+                        metric_scores.setdefault(dk, []).append(float(dv["score"]))
+
+            for metric in per_sample_metrics:
                 name = getattr(metric, "name", metric.__class__.__name__)
                 try:
                     if asyncio.iscoroutinefunction(getattr(metric, "aevaluate", None)):

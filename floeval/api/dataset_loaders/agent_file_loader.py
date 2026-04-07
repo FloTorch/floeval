@@ -3,6 +3,7 @@
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 from floeval.config.schemas.io.agent_dataset import (
     AgentDataset,
@@ -166,12 +167,22 @@ class AgentDatasetLoader:
         reference_outcome = AgentDatasetLoader._get_reference_outcome(data)
         ref_tool_calls = AgentDatasetLoader._parse_reference_tool_calls(data)
 
+        def _conv_meta() -> dict[str, Any]:
+            return {
+                "scenario": data.get("scenario"),
+                "expected_outcome": data.get("expected_outcome"),
+                "user_description": data.get("user_description"),
+                "chatbot_role": data.get("chatbot_role"),
+                "conversation_context": data.get("conversation_context"),
+            }
+
         if "trace" not in data:
             return PartialAgentSample(
                 user_input=user_input,
                 reference_outcome=reference_outcome,
                 reference_tool_calls=ref_tool_calls,
                 metadata=data.get("metadata", {}),
+                **_conv_meta(),
             )
 
         trace = AgentDatasetLoader._trace_from_dict(data["trace"])
@@ -189,4 +200,5 @@ class AgentDatasetLoader:
             reference_tool_calls=ref_tool_calls,
             agent_traces=agent_traces,
             metadata=data.get("metadata", {}),
+            **_conv_meta(),
         )
