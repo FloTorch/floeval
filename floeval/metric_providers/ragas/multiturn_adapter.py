@@ -75,13 +75,9 @@ def conversational_sample_to_ragas_multiturn(
                     )
                 )
 
-    ref = sample.reference
-    if ref is None and sample.expected_outcome:
-        ref = sample.expected_outcome
-
     return MultiTurnSample(
         user_input=messages,
-        reference=ref,
+        reference=sample.reference,
         reference_topics=sample.reference_topics,
         reference_tool_calls=ref_tools,
         rubrics=sample.rubrics,

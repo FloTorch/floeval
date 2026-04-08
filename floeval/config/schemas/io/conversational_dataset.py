@@ -2,7 +2,7 @@
 
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AliasChoices, BaseModel, Field, model_validator
 
 from floeval.config.schemas.io.conversation import ConversationTurn, ToolCallPayload
 
@@ -12,54 +12,56 @@ type ConversationalDatasetRow = ConversationalSample
 class PartialConversationalSample(BaseModel):
     """Partial conversational row (e.g. before optional fields are filled)."""
 
+    # ------------- Transcript — DeepEval + RAGAS (Turn list / MultiTurnSample.user_input) -------------
     turns: list[ConversationTurn] = Field(
         ..., description="Transcript turns (user/assistant alternation)."
     )
-    user_input: str | None = Field(
-        default=None,
-        description="Optional synopsis; not a second source of truth for the transcript.",
-    )
+    # ------------- DeepEval-specific (ConversationalTestCase) -------------
     scenario: str | None = None
-    expected_outcome: str | None = None
     user_description: str | None = None
     chatbot_role: str | None = None
     conversation_context: list[str] | None = None
+    # ------------- Expected outcome — DeepEval ``expected_outcome`` + RAGAS ``reference`` -------------
     reference: str | None = Field(
         default=None,
-        description="RAGAS MultiTurnSample.reference / expected conversation outcome.",
+        validation_alias=AliasChoices("reference", "expected_outcome"),
+        description="Desired end state of the conversation; maps to DeepEval expected_outcome and RAGAS reference.",
     )
+    # ------------- RAGAS-specific (MultiTurnSample) -------------
     reference_topics: list[str] | None = Field(
         default=None,
         description="RAGAS topic_adherence reference topics.",
     )
     reference_tool_calls: list[ToolCallPayload] | None = None
     rubrics: dict[str, str] | None = None
+    # ------------- Floeval row metadata (not passed to DeepEval/RAGAS adapters) -------------
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ConversationalSample(BaseModel):
     """Gold conversational transcript for DeepEval/RAGAS multi-turn adapters."""
 
+    # ------------- Transcript — DeepEval + RAGAS (Turn list / MultiTurnSample.user_input) -------------
     turns: list[ConversationTurn] = Field(..., min_length=1)
-    user_input: str | None = Field(
-        default=None,
-        description="Optional synopsis; not a second source of truth for the transcript.",
-    )
+    # ------------- DeepEval-specific (ConversationalTestCase) -------------
     scenario: str | None = None
-    expected_outcome: str | None = None
     user_description: str | None = None
     chatbot_role: str | None = None
     conversation_context: list[str] | None = None
+    # ------------- Expected outcome — DeepEval ``expected_outcome`` + RAGAS ``reference`` -------------
     reference: str | None = Field(
         default=None,
-        description="RAGAS MultiTurnSample.reference / expected conversation outcome.",
+        validation_alias=AliasChoices("reference", "expected_outcome"),
+        description="Desired end state of the conversation; maps to DeepEval expected_outcome and RAGAS reference.",
     )
+    # ------------- RAGAS-specific (MultiTurnSample) -------------
     reference_topics: list[str] | None = Field(
         default=None,
         description="RAGAS topic_adherence reference topics.",
     )
     reference_tool_calls: list[ToolCallPayload] | None = None
     rubrics: dict[str, str] | None = None
+    # ------------- Floeval row metadata (not passed to DeepEval/RAGAS adapters) -------------
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
