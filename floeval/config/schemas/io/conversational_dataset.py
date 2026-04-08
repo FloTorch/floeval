@@ -21,10 +21,10 @@ class PartialConversationalSample(BaseModel):
     user_description: str | None = None
     chatbot_role: str | None = None
     conversation_context: list[str] | None = None
-    # ------------- Expected outcome — DeepEval ``expected_outcome`` + RAGAS ``reference`` -------------
-    reference: str | None = Field(
+    # ------------- Expected outcome — DeepEval ``expected_outcome`` + RAGAS ``MultiTurnSample.reference`` -------------
+    reference_outcome: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("reference", "expected_outcome"),
+        validation_alias=AliasChoices("reference_outcome", "reference", "expected_outcome"),
         description="Desired end state of the conversation; maps to DeepEval expected_outcome and RAGAS reference.",
     )
     # ------------- RAGAS-specific (MultiTurnSample) -------------
@@ -48,10 +48,10 @@ class ConversationalSample(BaseModel):
     user_description: str | None = None
     chatbot_role: str | None = None
     conversation_context: list[str] | None = None
-    # ------------- Expected outcome — DeepEval ``expected_outcome`` + RAGAS ``reference`` -------------
-    reference: str | None = Field(
+    # ------------- Expected outcome — DeepEval ``expected_outcome`` + RAGAS ``MultiTurnSample.reference`` -------------
+    reference_outcome: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("reference", "expected_outcome"),
+        validation_alias=AliasChoices("reference_outcome", "reference", "expected_outcome"),
         description="Desired end state of the conversation; maps to DeepEval expected_outcome and RAGAS reference.",
     )
     # ------------- RAGAS-specific (MultiTurnSample) -------------

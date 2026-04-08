@@ -77,7 +77,7 @@ def conversational_sample_to_ragas_multiturn(
 
     return MultiTurnSample(
         user_input=messages,
-        reference=sample.reference,
+        reference=sample.reference_outcome,
         reference_topics=sample.reference_topics,
         reference_tool_calls=ref_tools,
         rubrics=sample.rubrics,

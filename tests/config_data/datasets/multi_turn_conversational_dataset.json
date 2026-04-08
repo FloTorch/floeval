@@ -6,7 +6,7 @@
         { "role": "assistant", "content": "Our policy allows returns within 14 days with receipt." }
       ],
       "scenario": "Customer asks about returns.",
-      "reference": "Assistant states the 14-day policy clearly.",
+      "reference_outcome": "Assistant states the 14-day policy clearly.",
       "conversation_context": ["Store policy: returns accepted within 14 days with receipt."]
     }
   ]

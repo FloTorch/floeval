@@ -6,7 +6,7 @@
         { "role": "assistant", "content": "I can discuss product policies and shipping only." }
       ],
       "reference_topics": ["product support", "shipping"],
-      "reference": "Assistant stays on policy topics."
+      "reference_outcome": "Assistant stays on policy topics."
     }
   ]
 }

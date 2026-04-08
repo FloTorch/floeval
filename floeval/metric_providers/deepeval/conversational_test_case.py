@@ -34,7 +34,7 @@ def conversational_sample_to_deepeval(
     return ConversationalTestCase(
         turns=deepeval_turns,
         scenario=sample.scenario,
-        expected_outcome=sample.reference,
+        expected_outcome=sample.reference_outcome,
         user_description=sample.user_description,
         chatbot_role=sample.chatbot_role,
         context=sample.conversation_context,

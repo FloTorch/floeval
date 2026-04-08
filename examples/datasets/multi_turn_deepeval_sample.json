@@ -9,7 +9,7 @@
         }
       ],
       "scenario": "E-commerce support chat",
-      "reference": "Assistant gives the 30-day refund rule.",
+      "reference_outcome": "Assistant gives the 30-day refund rule.",
       "conversation_context": ["Knowledge base: refunds within 30 days."]
     }
   ]

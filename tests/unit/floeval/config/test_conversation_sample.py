@@ -43,7 +43,7 @@ def test_conversational_sample_accepts_expected_outcome_alias() -> None:
             "expected_outcome": "Done",
         }
     )
-    assert s.reference == "Done"
+    assert s.reference_outcome == "Done"
 
 
 def test_conversational_dataset_from_dict_roundtrip() -> None:
