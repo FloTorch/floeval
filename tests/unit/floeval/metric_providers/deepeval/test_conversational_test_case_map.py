@@ -17,7 +17,7 @@ def test_sample_to_conversational_test_case_maps_fields() -> None:
                 {"role": "assistant", "content": "Hi"},
             ],
             "scenario": "S",
-            "expected_outcome": "E",
+            "reference": "E",
             "user_description": "U",
             "chatbot_role": "C",
             "conversation_context": ["ctx"],

@@ -33,6 +33,19 @@ def test_conversational_sample_too_few_turns_raises() -> None:
         )
 
 
+def test_conversational_sample_accepts_expected_outcome_alias() -> None:
+    s = ConversationalSample.model_validate(
+        {
+            "turns": [
+                {"role": "user", "content": "Q?"},
+                {"role": "assistant", "content": "A."},
+            ],
+            "expected_outcome": "Done",
+        }
+    )
+    assert s.reference == "Done"
+
+
 def test_conversational_dataset_from_dict_roundtrip() -> None:
     data = {
         "conversational_samples": [
