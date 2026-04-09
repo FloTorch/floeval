@@ -101,19 +101,7 @@ class DAG:
 
     @staticmethod
     def from_builder_json(raw: dict[str, Any]) -> DAG:
-        """Build DAG from builder JSON (same format as flobench).
-
-        Expected structure:
-        {
-          "config": {
-            "uid": "...",
-            "name": "...",
-            "nodes": [{"id", "type", "callableName", "resources": [...]}, ...],
-            "edges": [{"sourceNodeId", "targetNodeId"}, ...]
-          },
-          "invocationId": "..."
-        }
-        """
+        """Parse DAG from workflow builder JSON (config + nodes + edges)."""
         cfg = raw.get("config")
         if not cfg:
             raise ValueError("Missing 'config' in DAG JSON")

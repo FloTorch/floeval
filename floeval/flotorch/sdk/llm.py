@@ -1,8 +1,9 @@
-"""Minimal FloTorch LLM for OpenAI-compatible chat completions (no tracing)."""
+"""HTTP client for OpenAI-style chat/completions (used by FlotorchADKLLM)."""
 
 from __future__ import annotations
 
 import logging
+import traceback
 from typing import Any, Dict, List, Optional
 
 from floeval.flotorch.sdk.utils.http_utils import async_http_post
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class FlotorchLLM:
-    """OpenAI-compatible HTTP chat completion client for agent evaluation."""
+    """POST JSON to base_url/chat_endpoint."""
 
     def __init__(
         self,
@@ -40,23 +41,35 @@ class FlotorchLLM:
         extra_body: Optional[Dict] = None,
         **kwargs: Any,
     ) -> _LLMResponse:
-        """Async chat completion request."""
+        """Chat completion (async)."""
+        kw = dict(kwargs)
+        kw.pop("return_headers", None)
+
         payload: Dict[str, Any] = {
             "model": self.model_id,
             "messages": messages,
-            **(extra_body or {}),
+            "extra_body": extra_body if extra_body is not None else {},
         }
         if tools:
             payload["tools"] = tools
         if response_format:
             payload["response_format"] = response_format
-        payload.update(kwargs)
+        payload.update(kw)
 
-        result = await async_http_post(
-            url=self._url,
-            headers=self._headers(),
-            json=payload,
-        )
+        try:
+            result = await async_http_post(
+                url=self._url,
+                headers=self._headers(),
+                json=payload,
+                timeout=120.0,
+            )
+        except Exception:
+            print(
+                f"[floeval-debug] FlotorchLLM.ainvoke failed model={self.model_id} url={self._url}",
+                flush=True,
+            )
+            traceback.print_exc()
+            raise
         return _LLMResponse(result)
 
 
