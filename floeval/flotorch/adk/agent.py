@@ -221,7 +221,6 @@ class FlotorchADKAgent:
                     tools.append(toolset)
             except Exception as exc:
                 print("[floeval-debug] MCP toolset build exception:", flush=True)
-                traceback.print_exc()
                 logger.warning(
                     "Failed to build MCP toolset name=%s proxy=%s: %s — skipping",
                     tool_cfg.get("name"),

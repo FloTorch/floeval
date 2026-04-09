@@ -46,13 +46,13 @@ class FlotorchLLM:
         **kwargs: Any,
     ) -> _LLMResponse:
         """Async chat completion request."""
+
         json_payload_kwargs = dict(kwargs)
+        json_payload_kwargs.pop("return_headers", None)
         request_extra_headers = json_payload_kwargs.pop("extra_headers", None)
         headers = self._headers()
         if isinstance(request_extra_headers, dict):
-            headers.update(
-                {str(k): str(v) for k, v in request_extra_headers.items()}
-            )
+            headers.update({str(k): str(v) for k, v in request_extra_headers.items()})
 
         payload: Dict[str, Any] = {
             "model": self.model_id,
@@ -63,13 +63,20 @@ class FlotorchLLM:
             payload["tools"] = tools
         if response_format:
             payload["response_format"] = response_format
-        payload.update(json_payload_kwargs)
+        try:
+            result = await async_http_post(
+                url=self._url,
+                headers=headers,
+                json=payload,
+                timeout=120.0,
+            )
+        except Exception:
+            print(
+                f"[floeval-debug] FlotorchLLM.ainvoke failed model={self.model_id} url={self._url}",
+                flush=True,
+            )
+            raise
 
-        result = await async_http_post(
-            url=self._url,
-            headers=headers,
-            json=payload,
-        )
         return _LLMResponse(result)
 
 
