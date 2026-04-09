@@ -1,8 +1,4 @@
-"""DAG-based agent workflow executor.
-
-Executes multiple agents according to DAG topology, captures all traces.
-Mirrors flobench ExecutionRuntimeWorkflow (in-process, no Temporal).
-"""
+"""Run a DAG of agents in-process and collect traces."""
 
 from __future__ import annotations
 
