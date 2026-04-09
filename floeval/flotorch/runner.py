@@ -1,12 +1,9 @@
-"""FloTorch ADK runner for Mode 4 agent evaluation.
-
-If you see "Error on session runner task: Attempted to exit cancel scope in a
-different task than it was entered in" — this comes from google-adk when the
-agent uses MCP tools. See MODE4_FLOW_ANALYSIS.md for flow and root cause.
-"""
+"""Run an ADK agent and build AgentTrace from session events (Mode 4)."""
 
 from __future__ import annotations
 
+import logging
+import traceback
 import uuid
 from typing import TYPE_CHECKING
 
@@ -23,6 +20,8 @@ if TYPE_CHECKING:
     from google.adk.agents import BaseAgent
     from google.genai import types
 
+logger = logging.getLogger(__name__)
+
 
 def _make_user_content(text: str) -> "types.Content":
     """Create Content for user message."""
@@ -35,10 +34,7 @@ def _make_user_content(text: str) -> "types.Content":
 
 
 class FloTorchRunner:
-    """Run ADK agent with InMemorySessionService and extract traces.
-
-    Use with AgentEvaluation as agent_runner for Mode 4.
-    """
+    """In-memory ADK runner; trace from session.events after each run."""
 
     APP_NAME = "floeval_agent_eval"
     USER_ID = "eval_user"
@@ -48,6 +44,18 @@ class FloTorchRunner:
         self.agent = agent
         self._session_service = None
         self._runner = None
+
+    async def aclose(self) -> None:
+        """Close MCP tool transports (call after batch eval)."""
+        if self.agent and hasattr(self.agent, "tools"):
+            for tool in self.agent.tools or []:
+                if hasattr(tool, "close"):
+                    try:
+                        await tool.close()
+                    except Exception as exc:
+                        logger.debug("Error closing tool %s: %s", type(tool).__name__, exc)
+        self._runner = None
+        self._session_service = None
 
     def _ensure_runner(self):
         """Lazy-initialize Runner with InMemorySessionService."""
@@ -82,13 +90,19 @@ class FloTorchRunner:
         session_id = session.id
 
         content = _make_user_content(user_input)
+        print(f"[floeval-debug] FloTorchRunner.arun start session={session_id}", flush=True)
 
-        async for _ in self._runner.run_async(
-            user_id=self.USER_ID,
-            session_id=session_id,
-            new_message=content,
-        ):
-            pass
+        try:
+            async for _ in self._runner.run_async(
+                user_id=self.USER_ID,
+                session_id=session_id,
+                new_message=content,
+            ):
+                pass
+        except Exception:
+            print("[floeval-debug] FloTorchRunner.run_async raised:", flush=True)
+            traceback.print_exc()
+            raise
 
         session = await self._session_service.get_session(
             app_name=self.APP_NAME,
@@ -96,9 +110,14 @@ class FloTorchRunner:
             session_id=session_id,
         )
         if session is None or not session.events:
+            print(f"[floeval-debug] FloTorchRunner.arun no session events session={session_id}", flush=True)
             return AgentTrace.from_simple_response(user_input, "")
 
         messages = process_session_events(session.events)
+        print(
+            f"[floeval-debug] FloTorchRunner.arun done events={len(session.events)} trace_msgs={len(messages)}",
+            flush=True,
+        )
         return AgentTrace.from_messages(messages)
 
     def run_on_dataset(self, partial_samples: list[PartialAgentSample]) -> list[AgentSample]:
@@ -113,7 +132,7 @@ class FloTorchRunner:
     async def run_on_dataset_async(
         self, partial_samples: list[PartialAgentSample]
     ) -> list[AgentSample]:
-        """Run agent on each partial sample (async, same event loop — avoids ADK cleanup errors)."""
+        """Async batch run (one event loop for all samples)."""
         full = []
         for partial in partial_samples:
             text = _to_display_str(partial.user_input)
