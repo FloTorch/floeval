@@ -1,10 +1,12 @@
 """Tests for Floeval → DeepEval conversational test case mapping."""
 
+# ruff: noqa: D103 — test names describe behavior
+
 import pytest
 from deepeval.test_case import ConversationalTestCase
 
 from floeval.config.schemas.io.conversational_dataset import ConversationalSample
-from floeval.metric_providers.deepeval.conversational_test_case import (
+from floeval.metric_providers.deepeval.multiturn_adapter import (
     sample_to_conversational_test_case,
 )
 

@@ -13,11 +13,11 @@ from floeval.config.schemas.io.agent_dataset import AgentSample
 from floeval.config.schemas.io.conversational_dataset import ConversationalSample
 from floeval.config.schemas.io.dataset import Dataset
 from floeval.config.schemas.io.llm import LLMProviderConfig
-from floeval.metric_providers.deepeval.conversational_test_case import (
+from floeval.metric_providers.deepeval.custom_adapter import DeepEvalCustomMetricAdapter
+from floeval.metric_providers.deepeval.multiturn_adapter import (
     agent_sample_to_conversational_test_case,
     conversational_sample_to_deepeval,
 )
-from floeval.metric_providers.deepeval.custom_adapter import DeepEvalCustomMetricAdapter
 from floeval.utils.job_status import log_job_status, log_job_status_error
 
 logger = logging.getLogger(__name__)

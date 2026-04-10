@@ -8,10 +8,10 @@ from deepeval.metrics import ConversationalGEval
 from floeval.api.metrics.base import MetricResult
 from floeval.config.schemas.io.agent_dataset import AgentSample
 from floeval.config.schemas.io.conversational_dataset import ConversationalSample
-from floeval.metric_providers.deepeval.conversational_test_case import (
+from floeval.metric_providers.deepeval.metrics import DeepEvalMetric
+from floeval.metric_providers.deepeval.multiturn_adapter import (
     conversational_row_to_deepeval,
 )
-from floeval.metric_providers.deepeval.metrics import DeepEvalMetric
 
 
 class ConversationalGEvalDeepEvalMetric(DeepEvalMetric):
