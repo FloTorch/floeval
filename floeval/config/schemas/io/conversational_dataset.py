@@ -4,7 +4,10 @@ from typing import Any, Literal, Self
 
 from pydantic import AliasChoices, BaseModel, Field, model_validator
 
-from floeval.config.schemas.io.conversation import ConversationTurn, ToolCallPayload
+from floeval.config.schemas.io.conversation import (
+    ConversationTurn,
+    ToolCallPayloadInput,
+)
 
 type ConversationalDatasetRow = ConversationalSample
 
@@ -32,7 +35,7 @@ class PartialConversationalSample(BaseModel):
         default=None,
         description="RAGAS topic_adherence reference topics.",
     )
-    reference_tool_calls: list[ToolCallPayload] | None = None
+    reference_tool_calls: list[ToolCallPayloadInput] | None = None
     rubrics: dict[str, str] | None = None
     # ------------- Floeval row metadata (not passed to DeepEval/RAGAS adapters) -------------
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -59,7 +62,7 @@ class ConversationalSample(BaseModel):
         default=None,
         description="RAGAS topic_adherence reference topics.",
     )
-    reference_tool_calls: list[ToolCallPayload] | None = None
+    reference_tool_calls: list[ToolCallPayloadInput] | None = None
     rubrics: dict[str, str] | None = None
     # ------------- Floeval row metadata (not passed to DeepEval/RAGAS adapters) -------------
     metadata: dict[str, Any] = Field(default_factory=dict)

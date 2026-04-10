@@ -1,35 +1,19 @@
 """Map Floeval conversational rows to RAGAS ``MultiTurnSample``."""
 
-from typing import Any
-
 from ragas import MultiTurnSample
 from ragas.messages import AIMessage, HumanMessage, ToolCall as RAGASToolCall, ToolMessage
 
+from floeval.config.schemas.io.conversation import ToolCallPayload, ToolCallPayloadInput
 from floeval.config.schemas.io.conversational_dataset import ConversationalSample
 
 
-def _tool_args_from_payload(raw: dict[str, Any]) -> dict[str, Any]:
-    if "args" in raw and isinstance(raw["args"], dict):
-        return raw["args"]
-    inp = raw.get("input")
-    if isinstance(inp, dict):
-        return inp
-    ip = raw.get("input_parameters")
-    if isinstance(ip, dict):
-        return ip
-    return {}
+def _normalize_tool(tool: ToolCallPayloadInput) -> ToolCallPayload:
+    return tool if isinstance(tool, ToolCallPayload) else ToolCallPayload.model_validate(tool)
 
 
-def _tool_name_from_payload(raw: dict[str, Any]) -> str:
-    name = raw.get("name")
-    return str(name) if name is not None else ""
-
-
-def _tool_output_from_payload(raw: dict[str, Any]) -> str:
-    out = raw.get("output")
-    if out is None:
-        return ""
-    return out if isinstance(out, str) else str(out)
+def _to_ragas_tool_call(tool: ToolCallPayloadInput) -> RAGASToolCall:
+    tc = _normalize_tool(tool)
+    return RAGASToolCall(name=tc.name, args=tc.args)
 
 
 def conversational_sample_to_ragas_multiturn(
@@ -47,33 +31,17 @@ def conversational_sample_to_ragas_multiturn(
             continue
         ragas_calls: list[RAGASToolCall] = []
         for tr in tools_raw:
-            if isinstance(tr, dict):
-                ragas_calls.append(
-                    RAGASToolCall(
-                        name=_tool_name_from_payload(tr),
-                        args=_tool_args_from_payload(tr),
-                    )
-                )
-            else:
-                ragas_calls.append(RAGASToolCall(name="tool", args={}))
+            ragas_calls.append(_to_ragas_tool_call(tr))
         messages.append(AIMessage(content=turn.content, tool_calls=ragas_calls))
         for tr in tools_raw:
-            if isinstance(tr, dict):
-                messages.append(ToolMessage(content=_tool_output_from_payload(tr)))
-            else:
-                messages.append(ToolMessage(content=""))
+            tc = _normalize_tool(tr)
+            messages.append(ToolMessage(content=tc.output or ""))
 
     ref_tools: list[RAGASToolCall] | None = None
     if sample.reference_tool_calls:
         ref_tools = []
         for tr in sample.reference_tool_calls:
-            if isinstance(tr, dict):
-                ref_tools.append(
-                    RAGASToolCall(
-                        name=_tool_name_from_payload(tr),
-                        args=_tool_args_from_payload(tr),
-                    )
-                )
+            ref_tools.append(_to_ragas_tool_call(tr))
 
     return MultiTurnSample(
         user_input=messages,

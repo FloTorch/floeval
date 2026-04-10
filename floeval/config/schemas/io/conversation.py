@@ -2,10 +2,25 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
-# Opaque JSON-serializable tool payload until DeepEval / callers narrow it further.
-type ToolCallPayload = Any
+
+class ToolCallPayload(BaseModel):
+    """Unified tool-call payload across dataset formats and adapters."""
+
+    name: str = Field(..., description="Tool/function name.")
+    args: dict[str, Any] = Field(
+        default_factory=dict,
+        validation_alias=AliasChoices("args", "input", "input_parameters"),
+        description="Tool input arguments.",
+    )
+    output: str | None = Field(
+        default=None,
+        description="Optional tool output to align assistant tool calls with tool messages.",
+    )
+
+
+type ToolCallPayloadInput = ToolCallPayload | dict[str, Any]
 
 type ConversationRole = Literal["user", "assistant"]
 
@@ -19,7 +34,7 @@ class ConversationTurn(BaseModel):
         default=None,
         description="Optional retrieval chunks (assistant turns only; maps to DeepEval Turn).",
     )
-    tools_called: list[ToolCallPayload] | None = Field(
+    tools_called: list[ToolCallPayloadInput] | None = Field(
         default=None,
         description="Optional tool calls (assistant turns only).",
     )

@@ -15,7 +15,21 @@ from floeval.config.schemas.io.agent_dataset import (
     ToolMessage,
     _to_display_str,
 )
+from floeval.config.schemas.io.conversation import ToolCallPayload, ToolCallPayloadInput
 from floeval.config.schemas.io.conversational_dataset import ConversationalSample
+
+
+def _normalize_tool(tool: ToolCallPayloadInput) -> ToolCallPayload:
+    return tool if isinstance(tool, ToolCallPayload) else ToolCallPayload.model_validate(tool)
+
+
+def _to_deepeval_tool_call(tool: ToolCallPayloadInput) -> DeepEvalToolCall:
+    tc = _normalize_tool(tool)
+    return DeepEvalToolCall(
+        name=tc.name,
+        input_parameters=tc.args,
+        output=tc.output,
+    )
 
 
 def conversational_sample_to_deepeval(
@@ -28,7 +42,7 @@ def conversational_sample_to_deepeval(
         if t.retrieval_context is not None:
             turn_kw["retrieval_context"] = t.retrieval_context
         if t.tools_called is not None:
-            turn_kw["tools_called"] = t.tools_called
+            turn_kw["tools_called"] = [_to_deepeval_tool_call(tc) for tc in t.tools_called]
         deepeval_turns.append(Turn(**turn_kw))
 
     return ConversationalTestCase(

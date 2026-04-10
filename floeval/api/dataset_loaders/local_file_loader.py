@@ -101,7 +101,7 @@ def get_loader_for_file(file_path: str | Path) -> type[BaseDatasetLoader]:
     ext = file_path.suffix[1:].lower()
     if ext == "jsonl":
         return JSONLLoader
-    if ext == "json":
+    elif ext == "json":
         return JSONLoader
     raise ValueError(f"Unsupported file type: {ext}")
 
@@ -115,6 +115,6 @@ def get_conversational_loader_for_file(file_path: str | Path) -> type[BaseDatase
     ext = file_path.suffix[1:].lower()
     if ext == "jsonl":
         return ConversationalJSONLLoader
-    if ext == "json":
+    elif ext == "json":
         return ConversationalJSONLoader
     raise ValueError(f"Unsupported file type: {ext}")

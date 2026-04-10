@@ -65,3 +65,35 @@ def test_conversational_dataset_from_dict_roundtrip() -> None:
     assert isinstance(sp, ConversationalSample)
     assert sp.scenario == "Support"
     assert sp.conversation_context == ["policy: be nice"]
+
+
+def test_tool_call_payload_aliases_are_unified_to_args() -> None:
+    s = ConversationalSample.model_validate(
+        {
+            "turns": [
+                {"role": "user", "content": "Q?"},
+                {
+                    "role": "assistant",
+                    "content": "A.",
+                    "tools_called": [
+                        {
+                            "name": "ragas_style",
+                            "args": {"k": "v"},
+                            "output": "ok",
+                        },
+                        {
+                            "name": "deepeval_style",
+                            "input_parameters": {"x": 1},
+                            "output": "done",
+                        },
+                    ],
+                },
+            ]
+        }
+    )
+    assert s.turns[1].tools_called is not None
+    first, second = s.turns[1].tools_called
+    assert first.args == {"k": "v"}
+    assert first.output == "ok"
+    assert second.args == {"x": 1}
+    assert second.output == "done"
