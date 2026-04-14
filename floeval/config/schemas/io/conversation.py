@@ -2,7 +2,7 @@
 
 from typing import Any, Literal
 
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 
 
 class ToolCallPayload(BaseModel):
@@ -36,5 +36,16 @@ class ConversationTurn(BaseModel):
     )
     tools_called: list[ToolCallPayloadInput] | None = Field(
         default=None,
+        validation_alias=AliasChoices("tools_called", "tool_calls"),
         description="Optional tool calls (assistant turns only).",
     )
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def _normalize_role_aliases(cls, value: object) -> object:
+        if isinstance(value, str):
+            if value == "human":
+                return "user"
+            if value == "ai":
+                return "assistant"
+        return value

@@ -36,7 +36,11 @@ class JSONLoader(BaseDatasetLoader):
     @staticmethod
     def _load_data(file_path: str) -> list[dict]:
         with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f).get("samples", [])
+            payload = json.load(f)
+        if not isinstance(payload, dict):
+            return []
+        samples = payload.get("samples")
+        return samples if isinstance(samples, list) else []
 
     @classmethod
     def to_samples(cls, file_path: str) -> list[Sample]:
@@ -77,7 +81,12 @@ class ConversationalJSONLoader(BaseDatasetLoader):
             payload = json.load(f)
         rows = payload.get("conversational_samples")
         if not isinstance(rows, list):
-            raise ValueError("JSON must contain 'conversational_samples' array")
+            rows = payload.get("samples")
+        if not isinstance(rows, list):
+            raise ValueError(
+                "JSON must contain 'conversational_samples' array "
+                "(or 'samples' as an alias)."
+            )
         return rows
 
     @classmethod

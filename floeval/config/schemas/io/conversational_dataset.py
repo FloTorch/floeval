@@ -12,12 +12,32 @@ from floeval.config.schemas.io.conversation import (
 type ConversationalDatasetRow = ConversationalSample
 
 
+def _normalize_conversation_row_input(value: object) -> object:
+    if not isinstance(value, dict):
+        return value
+    data = dict(value)
+    if "turns" in data:
+        return data
+    trace = data.get("trace")
+    if isinstance(trace, dict):
+        trace_messages = trace.get("messages")
+        if isinstance(trace_messages, list):
+            data["turns"] = trace_messages
+            return data
+    messages = data.get("messages")
+    if isinstance(messages, list):
+        data["turns"] = messages
+    return data
+
+
 class PartialConversationalSample(BaseModel):
     """Partial conversational row (e.g. before optional fields are filled)."""
 
     # ------------- Transcript — DeepEval + RAGAS (Turn list / MultiTurnSample.user_input) -------------
     turns: list[ConversationTurn] = Field(
-        ..., description="Transcript turns (user/assistant alternation)."
+        ...,
+        validation_alias=AliasChoices("turns", "messages"),
+        description="Transcript turns (user/assistant alternation).",
     )
     # ------------- DeepEval-specific (ConversationalTestCase) -------------
     scenario: str | None = None
@@ -39,6 +59,11 @@ class PartialConversationalSample(BaseModel):
     rubrics: dict[str, str] | None = None
     # ------------- Floeval row metadata (not passed to DeepEval/RAGAS adapters) -------------
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_turns_aliases(cls, value: object) -> object:
+        return _normalize_conversation_row_input(value)
 
 
 class ConversationalSample(BaseModel):
@@ -66,6 +91,11 @@ class ConversationalSample(BaseModel):
     rubrics: dict[str, str] | None = None
     # ------------- Floeval row metadata (not passed to DeepEval/RAGAS adapters) -------------
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_turns_aliases(cls, value: object) -> object:
+        return _normalize_conversation_row_input(value)
 
     @model_validator(mode="after")
     def _validate_turns_shape(self) -> Self:
