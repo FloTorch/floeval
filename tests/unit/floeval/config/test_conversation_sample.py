@@ -5,7 +5,7 @@
 import pytest
 
 from floeval.api.dataset import conversational_dataset_from_dict
-from floeval.config.schemas.io.conversation import ConversationTurn
+from floeval.config.schemas.io.conversation import ConversationTurn, ToolCallPayload
 from floeval.config.schemas.io.conversational_dataset import ConversationalSample
 
 
@@ -93,7 +93,70 @@ def test_tool_call_payload_aliases_are_unified_to_args() -> None:
     )
     assert s.turns[1].tools_called is not None
     first, second = s.turns[1].tools_called
+    assert isinstance(first, ToolCallPayload)
+    assert isinstance(second, ToolCallPayload)
     assert first.args == {"k": "v"}
     assert first.output == "ok"
     assert second.args == {"x": 1}
     assert second.output == "done"
+
+
+def test_conversation_turn_accepts_agent_role_aliases() -> None:
+    s = ConversationalSample.model_validate(
+        {
+            "turns": [
+                {"role": "human", "content": "Q?"},
+                {"role": "ai", "content": "A."},
+            ]
+        }
+    )
+    assert s.turns[0].role == "user"
+    assert s.turns[1].role == "assistant"
+
+
+def test_conversation_turn_accepts_tool_calls_alias() -> None:
+    s = ConversationalSample.model_validate(
+        {
+            "turns": [
+                {"role": "user", "content": "Q?"},
+                {
+                    "role": "assistant",
+                    "content": "A.",
+                    "tool_calls": [{"name": "lookup", "args": {"id": 1}}],
+                },
+            ]
+        }
+    )
+    assert s.turns[1].tools_called is not None
+    tool_call = s.turns[1].tools_called[0]
+    assert isinstance(tool_call, ToolCallPayload)
+    assert tool_call.name == "lookup"
+    assert tool_call.args == {"id": 1}
+
+
+def test_conversational_sample_accepts_messages_alias_for_turns() -> None:
+    s = ConversationalSample.model_validate(
+        {
+            "messages": [
+                {"role": "user", "content": "Q?"},
+                {"role": "assistant", "content": "A."},
+            ]
+        }
+    )
+    assert len(s.turns) == 2
+
+
+def test_conversational_sample_accepts_trace_messages_shape() -> None:
+    s = ConversationalSample.model_validate(
+        {
+            "trace": {
+                "messages": [
+                    {"role": "human", "content": "Q?"},
+                    {"role": "ai", "content": "A."},
+                ]
+            }
+        }
+    )
+    assert len(s.turns) == 2
+    assert s.turns[0].role == "user"
+    assert s.turns[1].role == "assistant"
