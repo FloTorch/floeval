@@ -153,10 +153,17 @@ class AgentEvaluation:
         if self.llm_config is None:
             return merged
 
-        if "llm_config" in sig.parameters and "llm_config" not in merged:
+        has_var_kw = any(
+            p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+        )
+
+        can_accept_llm_config = "llm_config" in sig.parameters or has_var_kw
+        can_accept_llm_provider = "llm_provider" in sig.parameters or has_var_kw
+
+        if can_accept_llm_config and "llm_config" not in merged:
             merged["llm_config"] = self.llm_config
 
-        if "llm_provider" in sig.parameters and "llm_provider" not in merged:
+        if can_accept_llm_provider and "llm_provider" not in merged:
             merged["llm_provider"] = OpenAIProvider(
                 config_name=f"{provider}:{metric_id}",
                 extra_headers=self.run_headers or None,

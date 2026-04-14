@@ -43,7 +43,7 @@ def _extract_tool_calls(msg) -> list[ToolCall]:
 
 
 def _capture_response(response) -> None:
-    """Capture LLM response into trace context."""
+    """Capture LLM response (content + token usage) into trace context."""
     trace = get_current_trace()
     if trace is None:
         return
@@ -60,6 +60,13 @@ def _capture_response(response) -> None:
             content=content if isinstance(content, str) else str(content),
             tool_calls=tool_calls if tool_calls else None,
         )
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            trace.add_token_usage(
+                total_tokens=getattr(usage, "total_tokens", 0) or 0,
+                prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
+                completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
+            )
     except Exception as e:
         logger.debug("OpenAI patcher capture failed: %s", e)
 

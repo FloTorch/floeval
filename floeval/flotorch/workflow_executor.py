@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from typing import Any
 
 from floeval.config.schemas.io.agent_dataset import AIMessage, AgentTrace
@@ -15,6 +16,10 @@ from floeval.flotorch.dag import (
     NodeType,
     aggregate_parent_results,
     initial_ready,
+)
+from floeval.utils.agent_trace.trace_context import (
+    collect_session_token_usage,
+    start_session_token_tracking,
 )
 
 logger = logging.getLogger(__name__)
@@ -175,12 +180,25 @@ class WorkflowExecutor:
             )
 
             final_text = ""
+            start_session_token_tracking()
+            node_start_time = time.time()
             async for _ in runner.run_async(
                 user_id=self.user_id,
                 session_id=session_id,
                 new_message=content,
             ):
                 pass
+            node_end_time = time.time()
+
+            # Prefer contextvar tokens captured by FlotorchADKLLM (per-agent, no cross-contamination).
+            # Fall back to ADK event usage_metadata for standard Gemini/OpenAI ADK LLMs.
+            token_usage = collect_session_token_usage()
+            if token_usage and token_usage["total"] > 0:
+                total_tokens = token_usage["total"]
+                prompt_tokens = token_usage["prompt"]
+                completion_tokens = token_usage["completion"]
+            else:
+                total_tokens = prompt_tokens = completion_tokens = 0
 
             session = await session_service.get_session(
                 app_name=self.app_name,
@@ -200,8 +218,34 @@ class WorkflowExecutor:
                         break
                 if not final_text:
                     final_text = trace.final_response
+
+                # Only use ADK usage_metadata if FlotorchADKLLM contextvar didn't populate tokens.
+                # Note: session is shared across nodes so we cannot sum all events here
+                # (they include prior agents' events). The contextvar approach is per-invocation safe.
+                if total_tokens == 0:
+                    for event in session.events:
+                        usage = getattr(event, "usage_metadata", None)
+                        if usage is not None:
+                            total_tokens += getattr(usage, "total_token_count", 0) or 0
+                            prompt_tokens += getattr(usage, "prompt_token_count", 0) or 0
+                            completion_tokens += getattr(usage, "candidates_token_count", 0) or 0
+
+                trace = trace.model_copy(update={
+                    "start_time": node_start_time,
+                    "end_time": node_end_time,
+                    "total_tokens": total_tokens or None,
+                    "prompt_tokens": prompt_tokens or None,
+                    "completion_tokens": completion_tokens or None,
+                })
             else:
                 trace = AgentTrace.from_simple_response(prompt, "")
+                trace = trace.model_copy(update={
+                    "start_time": node_start_time,
+                    "end_time": node_end_time,
+                    "total_tokens": total_tokens or None,
+                    "prompt_tokens": prompt_tokens or None,
+                    "completion_tokens": completion_tokens or None,
+                })
 
             result = {
                 "status": "SUCCESS",
@@ -365,3 +409,52 @@ class WorkflowExecutor:
             "final_output": final_output,
             "session_id": session_id,
         }
+
+    async def execute_and_build(
+        self,
+        wf_input: dict[str, Any] | str,
+        reference_outcome: Any | None = None,
+    ) -> "WorkflowExecution":
+        """Execute workflow DAG and return a WorkflowExecution for WorkflowEvaluation.
+
+        This is the preferred method when integrating with WorkflowEvaluation.
+        The existing execute() method is unchanged and still returns a raw dict.
+
+        Args:
+            wf_input: Workflow input (str or dict with "text" key).
+            reference_outcome: Optional expected outcome for reference-based metrics.
+
+        Returns:
+            WorkflowExecution: Structured result ready for WorkflowEvaluation.
+        """
+        from floeval.config.schemas.io.agent_dataset import WorkflowExecution
+
+        raw = await self.execute(wf_input)
+
+        agent_traces = raw.get("agent_traces", [])
+        agent_summaries: list[dict[str, Any]] = raw.get("agent_summaries", [])
+        agent_names = [s.get("agent_name", f"agent_{i}") for i, s in enumerate(agent_summaries)]
+
+        # Enrich each trace with its agent_name using model_copy (AgentTrace is frozen)
+        enriched_traces = []
+        for i, trace in enumerate(agent_traces):
+            name = agent_names[i] if i < len(agent_names) else f"agent_{i}"
+            enriched_traces.append(trace.model_copy(update={"agent_name": name}))
+
+        user_input_str = (
+            wf_input
+            if isinstance(wf_input, str)
+            else wf_input.get("text", str(wf_input))
+        )
+
+        return WorkflowExecution(
+            user_input=user_input_str,
+            final_output=raw.get("final_output", ""),
+            agent_traces=enriched_traces,
+            agent_names=agent_names,
+            node_results=raw.get("results", {}),
+            reference_outcome=reference_outcome,
+            session_id=raw.get("session_id"),
+            dag_graph_id=self.dag.graph_id,
+            metadata={"agent_summaries": agent_summaries},
+        )
