@@ -25,7 +25,7 @@ def test_deepeval_conversational_g_eval_from_config(
         load_yaml(config_data_dir / "deepeval_config" / "config.conversational_g_eval.yaml")
     )
     dataset = DatasetLoader.conversational_from_file(
-        config_data_dir / "datasets" / "multi_turn_conversational_dataset.json",
+        config_data_dir / "datasets" / "conversational_multi_turn_dataset.json",
         partial_dataset=False,
     )
     metrics = config_data["evaluation_config"]["metrics"]

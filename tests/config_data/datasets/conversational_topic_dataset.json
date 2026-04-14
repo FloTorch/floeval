@@ -1,13 +1,13 @@
 {
-  "conversational_samples": [
+  "samples": [
     {
-      "turns": [
+      "messages": [
         {
-          "role": "user",
+          "role": "human",
           "content": "Can you explain black holes in simple terms?"
         },
         {
-          "role": "assistant",
+          "role": "ai",
           "content": "A black hole is a region where gravity is so strong that light cannot escape."
         }
       ],

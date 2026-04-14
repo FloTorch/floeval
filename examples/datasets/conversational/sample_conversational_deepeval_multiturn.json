@@ -1,10 +1,10 @@
 {
-  "conversational_samples": [
+  "samples": [
     {
-      "turns": [
-        { "role": "user", "content": "What is your refund policy?" },
+      "messages": [
+        { "role": "human", "content": "What is your refund policy?" },
         {
-          "role": "assistant",
+          "role": "ai",
           "content": "Refunds are available within 30 days for unused items."
         }
       ],
