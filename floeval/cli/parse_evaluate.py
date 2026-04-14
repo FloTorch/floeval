@@ -1,14 +1,18 @@
 import argparse
 import json
+from collections import defaultdict
 from pathlib import Path
+from uuid import uuid4
 
 from floeval.api.agent_evaluation import AgentEvaluation, AgentEvaluationResult
 from floeval.api.dataset import DatasetLoader
 from floeval.api.evaluation import Evaluation, EvaluationResult
+from floeval.api.workflow_evaluation import WorkflowEvaluation
 from floeval.cli import CLIEvaluationConfig, ConfigError
 from floeval.cli.utils import CLIConfigLoader, check_if_file_exists
 from floeval.config.schemas.io.agent_dataset import AgentDataset
 from floeval.config.schemas.io.llm import LLMProviderConfig, OpenAIProviderConfig
+from floeval.utils.asyncio_compat import run_coroutine_sync
 
 
 def _is_partial_dataset(file_path: Path) -> bool:
@@ -126,6 +130,124 @@ def output_agent_results(results: AgentEvaluationResult, output_path: Path | Non
         _pretty_print_agent_results(results)
 
 
+def output_workflow_results(results: dict, output_path: Path | None):
+    """Save or print workflow CLI evaluation results."""
+    if output_path:
+        try:
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(results, f, indent=4, default=str)
+            print(f"Results successfully saved to {output_path}")
+        except Exception as e:
+            print(f"Error saving results to {output_path}: {e}")
+    else:
+        print(json.dumps(results, indent=2, default=str))
+
+
+def _run_workflow_evaluate(
+    dataset: AgentDataset,
+    llm_config: OpenAIProviderConfig,
+    eval_config: dict,
+    workflow_config: dict,
+    output_file: Path | None,
+):
+    """Run workflow evaluation via WorkflowExecutor + WorkflowEvaluation."""
+    try:
+        from floeval.flotorch.dag import DAG
+        from floeval.flotorch.workflow_executor import WorkflowExecutor
+    except ImportError as e:
+        raise ConfigError(
+            f"FloTorch integration required for workflow CLI mode. Import failed: {e}"
+        ) from e
+
+    dag_config = workflow_config.get("config") if isinstance(workflow_config, dict) else None
+    if not dag_config:
+        raise ConfigError(
+            "agent_workflow_config.config is required for workflow evaluation."
+        )
+
+    # Accept both old builder key `agentName` and runtime key `callable_name`.
+    # DAG.from_builder_json expects `callableName`.
+    normalized_dag_config = dict(dag_config)
+    normalized_nodes: list[dict] = []
+    for node in normalized_dag_config.get("nodes", []):
+        if not isinstance(node, dict):
+            normalized_nodes.append(node)
+            continue
+        node_copy = dict(node)
+        if "callableName" not in node_copy:
+            if "agentName" in node_copy:
+                node_copy["callableName"] = node_copy["agentName"]
+            elif "callable_name" in node_copy:
+                node_copy["callableName"] = node_copy["callable_name"]
+        normalized_nodes.append(node_copy)
+    normalized_dag_config["nodes"] = normalized_nodes
+
+    if not dataset.all_partial:
+        raise ConfigError(
+            "Workflow CLI evaluation currently expects a partial agent dataset "
+            "(samples with user_input/reference_outcome)."
+        )
+
+    metrics = list(eval_config.get("metrics") or [])
+    if not metrics:
+        raise ConfigError(
+            "metrics are required for workflow evaluation. "
+            "Add 'metrics' to evaluation_config."
+        )
+
+    per_sample_results: list[dict] = []
+    aggregate_totals: dict[str, float] = defaultdict(float)
+    aggregate_counts: dict[str, int] = defaultdict(int)
+
+    for idx, sample in enumerate(dataset.all_partial):
+        dag = DAG.from_builder_json(
+            {"config": normalized_dag_config, "invocationId": f"cli-wf-{uuid4()}"}
+        )
+        executor = WorkflowExecutor(
+            dag=dag,
+            llm_config=llm_config,
+            app_name="floeval-workflow-cli",
+            user_id=f"cli-user-{idx}",
+        )
+        execution = run_coroutine_sync(
+            lambda s=sample: executor.execute_and_build(
+                wf_input=s.user_input,
+                reference_outcome=s.reference_outcome,
+            )
+        )
+        wf_result = WorkflowEvaluation(
+            execution=execution,
+            metrics=metrics,
+            llm_config=llm_config,
+            metric_params=eval_config.get("metric_params", {}),
+        ).run()
+        result_payload = wf_result.model_dump()
+        per_sample_results.append(
+            {
+                "sample_index": idx,
+                "user_input": sample.user_input,
+                "result": result_payload,
+            }
+        )
+        for key, value in wf_result.aggregate_scores.items():
+            aggregate_totals[key] += float(value)
+            aggregate_counts[key] += 1
+
+    summary = {
+        key: round(aggregate_totals[key] / aggregate_counts[key], 4)
+        for key in aggregate_totals
+        if aggregate_counts[key] > 0
+    }
+    output_workflow_results(
+        {
+            "sample_count": len(per_sample_results),
+            "sample_results": per_sample_results,
+            "summary": summary,
+        },
+        output_file,
+    )
+
+
 def _run_agent_evaluate(args: argparse.Namespace):
     """Run agent evaluation (Mode 1 or 4)."""
     config_file = args.config
@@ -172,10 +294,21 @@ def _run_agent_evaluate(args: argparse.Namespace):
 
     dataset = AgentDataset.from_file(dataset_path)
 
-    if dataset.is_partial and not agent_name:
+    workflow_config = getattr(evaluation_config, "agent_workflow_config", None)
+
+    if dataset.is_partial and not agent_name and not workflow_config:
         raise ConfigError(
-            "Partial dataset requires agent_name for Mode 4. "
-            "Add 'agent_name' to evaluation_config in your config file."
+            "Partial dataset requires either agent_name (single-agent) or "
+            "agent_workflow_config (workflow). Add one to your config."
+        )
+
+    if workflow_config:
+        return _run_workflow_evaluate(
+            dataset=dataset,
+            llm_config=llm_config,
+            eval_config=eval_config,
+            workflow_config=workflow_config,
+            output_file=output_file,
         )
 
     agent_runner = None
