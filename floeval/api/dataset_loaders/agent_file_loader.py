@@ -13,6 +13,7 @@ from floeval.config.schemas.io.agent_dataset import (
     PartialAgentSample,
     ToolCall,
     ToolMessage,
+    WorkflowExecution,
 )
 
 logger = logging.getLogger(__name__)
@@ -188,5 +189,30 @@ class AgentDatasetLoader:
             reference_outcome=reference_outcome,
             reference_tool_calls=ref_tool_calls,
             agent_traces=agent_traces,
+            metadata=data.get("metadata", {}),
+        )
+
+    @staticmethod
+    def workflow_execution_from_dict(data: dict) -> WorkflowExecution:
+        """Parse a WorkflowExecution from a dict (e.g., a saved JSON result).
+
+        Expected keys: user_input, final_output, agent_traces, agent_names,
+        node_results, reference_outcome (optional), session_id (optional),
+        dag_graph_id (optional), metadata (optional).
+        """
+        agent_traces = [
+            AgentDatasetLoader._trace_from_dict(t)
+            for t in data.get("agent_traces", [])
+            if isinstance(t, dict)
+        ]
+        return WorkflowExecution(
+            user_input=data.get("user_input", ""),
+            final_output=data.get("final_output", ""),
+            agent_traces=agent_traces,
+            agent_names=data.get("agent_names", []),
+            node_results=data.get("node_results", {}),
+            reference_outcome=data.get("reference_outcome"),
+            session_id=data.get("session_id"),
+            dag_graph_id=data.get("dag_graph_id"),
             metadata=data.get("metadata", {}),
         )

@@ -447,3 +447,156 @@ class JsonCorrectnessDeepEvalMetric(DeepEvalMetric):
         )
         result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
         return self._extract_metric_result(result, "json_correctness")
+
+
+class TaskCompletionGEvalMetric(DeepEvalMetric):
+    """DeepEval G-Eval metric for agent task completion.
+
+    Uses DeepEval's G-Eval framework (criteria-based LLM judge) to evaluate
+    whether the agent completed the assigned task.
+
+    Registered as: deepeval:task_completion_geval
+
+    Preferred over builtin:task_completion when: user wants DeepEval's specific
+    G-Eval chain-of-thought evaluation methodology.
+    Prefer builtin:task_completion when: using custom gateway LLMs.
+
+    Requires: AgentSample with trace.final_response.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="task_completion_geval", **kwargs)
+
+    def evaluate(self, sample: "AgentSample", **kwargs) -> MetricResult:  # type: ignore[override]
+        try:
+            from deepeval.metrics import GEval
+            from deepeval.test_case import LLMTestCaseParams
+        except ImportError:
+            return MetricResult(
+                score=None,
+                metadata={
+                    "error": "deepeval GEval not available in installed version",
+                    "provider": "deepeval",
+                },
+            )
+
+        if self._llm_adapter is None:
+            raise ValueError(
+                "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
+            )
+
+        metric_kwargs: dict = {
+            "name": "Task Completion",
+            "criteria": (
+                "Determine whether the AI agent successfully completed the user's task "
+                "based on the final response."
+            ),
+            "evaluation_params": [
+                LLMTestCaseParams.INPUT,
+                LLMTestCaseParams.ACTUAL_OUTPUT,
+            ],
+            "model": self._llm_adapter,
+        }
+        # Forward threshold if provided
+        for k in ("threshold", "strict_mode", "verbose_mode"):
+            if k in self._metric_params:
+                metric_kwargs[k] = self._metric_params[k]
+
+        try:
+            metric_instance = GEval(**metric_kwargs)
+            test_case = self.adapter.transform_agent_sample(sample)
+            result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+            return self._extract_metric_result(result, "task_completion_geval")
+        except Exception as e:
+            logger.error("TaskCompletionGEvalMetric failed: %s", e, exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata={"error": str(e), "provider": "deepeval"},
+            )
+
+
+class ToolCorrectnessDeepEvalMetric(DeepEvalMetric):
+    """DeepEval ToolCorrectnessMetric for agent tool call evaluation.
+
+    Checks whether the agent called the correct tools with the correct arguments
+    compared to reference_tool_calls.
+
+    Registered as: deepeval:tool_correctness
+
+    Requires: reference_tool_calls in the AgentSample.
+    Returns score=None if reference_tool_calls not provided.
+
+    Preferred over builtin:tool_selection_accuracy when: tool argument semantic
+    matching (not exact string match) is needed.
+    Requires deepeval>=3.0 for ToolCorrectnessMetric.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name="tool_correctness", **kwargs)
+
+    def evaluate(self, sample: "AgentSample", **kwargs) -> MetricResult:  # type: ignore[override]
+        if not sample.reference_tool_calls:
+            return MetricResult(
+                score=None,
+                metadata={
+                    "reason": "reference_tool_calls required for deepeval:tool_correctness",
+                    "provider": "deepeval",
+                },
+            )
+
+        try:
+            from deepeval.metrics import ToolCorrectnessMetric  # type: ignore[import]
+        except ImportError:
+            return MetricResult(
+                score=None,
+                metadata={
+                    "error": (
+                        "deepeval ToolCorrectnessMetric not available. "
+                        "Upgrade deepeval>=3.0 to use this metric."
+                    ),
+                    "provider": "deepeval",
+                },
+            )
+
+        # Build DeepEval tool call objects — guard against missing ToolCall class
+        try:
+            from deepeval.test_case import ToolCall as DeepEvalToolCall  # type: ignore[import]
+
+            expected_tools = [
+                DeepEvalToolCall(name=tc.name, input_parameters=tc.args or {})
+                for tc in sample.reference_tool_calls
+            ]
+            actual_tools = [
+                DeepEvalToolCall(name=tc.name, input_parameters=tc.args or {})
+                for tc in (sample.trace.tool_calls_made if sample.trace else [])
+            ]
+        except (ImportError, AttributeError):
+            return MetricResult(
+                score=None,
+                metadata={
+                    "error": (
+                        "deepeval.test_case.ToolCall not available. "
+                        "Upgrade deepeval>=3.0 to use this metric."
+                    ),
+                    "provider": "deepeval",
+                },
+            )
+
+        try:
+            metric_instance = ToolCorrectnessMetric(**self._metric_params)
+            test_case = self.adapter.transform_agent_sample(sample)
+
+            # Attach tool call lists to test case only if the attributes exist
+            if hasattr(test_case, "tools_called"):
+                test_case.tools_called = actual_tools
+            if hasattr(test_case, "expected_tools"):
+                test_case.expected_tools = expected_tools
+
+            result = self._run_evaluate(metrics=[metric_instance], test_cases=[test_case])
+            return self._extract_metric_result(result, "tool_correctness")
+        except Exception as e:
+            logger.error("ToolCorrectnessDeepEvalMetric failed: %s", e, exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata={"error": str(e), "provider": "deepeval"},
+            )

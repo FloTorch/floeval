@@ -193,3 +193,97 @@ class RAGASToolCallAccuracy(BaseMetric):
                 score=None,
                 metadata={"error": str(e), "provider": "ragas"},
             )
+
+
+class RAGASTopicAdherence(BaseMetric):
+    """RAGAS TopicAdherenceScore — evaluates whether agent stays on assigned topic.
+
+    Evaluates topic adherence across a multi-turn conversation / trace.
+    Registered as: ragas:topic_adherence
+
+    Requires: trace with multiple turns.
+    Falls back gracefully if TopicAdherencScore is not available in the
+    installed ragas version (returns score=None with a descriptive error).
+    """
+
+    def __init__(
+        self,
+        llm_config: LLMProviderConfig | None = None,
+        adapter: RAGASAdapter | None = None,
+        **kwargs: Any,
+    ):
+        super().__init__(name="topic_adherence", **kwargs)
+        self.provider = "ragas"
+        self.llm_config = llm_config
+        self._extra_headers: dict[str, str] = dict(kwargs.get("extra_headers") or {})
+        self.adapter = adapter or RAGASAdapter(
+            config=llm_config, extra_headers=self._extra_headers or None
+        )
+        self._available = False
+        self._metric = None
+        try:
+            from ragas.metrics.collections import TopicAdherencScore  # type: ignore[import]
+
+            self._metric = TopicAdherencScore(llm=self.adapter.agent_llm)
+            self._available = True
+        except (ImportError, AttributeError):
+            logger.warning(
+                "ragas:topic_adherence not available in the installed ragas version. "
+                "The metric will return score=None."
+            )
+
+    def evaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
+        if not self._available or self._metric is None:
+            return MetricResult(
+                score=None,
+                metadata={
+                    "error": "TopicAdherencScore not available in installed ragas version",
+                    "provider": "ragas",
+                },
+            )
+        try:
+            messages = transform_agent_sample_to_ragas_messages(sample)
+            if not messages:
+                return MetricResult(
+                    score=None,
+                    metadata={"error": "No messages in trace", "provider": "ragas"},
+                )
+            result = run_coroutine_sync(lambda: self._metric.ascore(user_input=messages))
+            return MetricResult(
+                score=float(result.value),
+                metadata={"provider": "ragas", "metric_name": "topic_adherence"},
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.exception("RAGASTopicAdherence failed: %s", e)
+            return MetricResult(
+                score=None,
+                metadata={"error": str(e), "provider": "ragas"},
+            )
+
+    async def aevaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
+        if not self._available or self._metric is None:
+            return MetricResult(
+                score=None,
+                metadata={
+                    "error": "TopicAdherencScore not available in installed ragas version",
+                    "provider": "ragas",
+                },
+            )
+        try:
+            messages = transform_agent_sample_to_ragas_messages(sample)
+            if not messages:
+                return MetricResult(
+                    score=None,
+                    metadata={"error": "No messages in trace", "provider": "ragas"},
+                )
+            result = await self._metric.ascore(user_input=messages)
+            return MetricResult(
+                score=float(result.value),
+                metadata={"provider": "ragas", "metric_name": "topic_adherence"},
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.exception("RAGASTopicAdherence async failed: %s", e)
+            return MetricResult(
+                score=None,
+                metadata={"error": str(e), "provider": "ragas"},
+            )
