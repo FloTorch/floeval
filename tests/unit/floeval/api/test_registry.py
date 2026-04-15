@@ -36,6 +36,7 @@ def test_list_providers_includes_expected_backends() -> None:
         ("deepeval", "turn_contextual_recall"),
         ("deepeval", "turn_contextual_relevancy"),
         ("ragas", "answer_relevancy"),
+        ("ragas", "aspect_critic"),
         ("ragas", "context_recall"),
     ],
 )

@@ -1,6 +1,6 @@
 """RAGAS metric implementations with custom LLM provider support.
 
-This module provides RAGAS metrics (answer_relevancy, faithfulness)
+This module provides RAGAS metrics (answer_relevancy, faithfulness, aspect_critic)
 that can be configured with custom LLM providers.
 """
 
@@ -8,6 +8,7 @@ import copy
 import logging
 from typing import Any, ClassVar, Dict, Literal, Optional
 
+from ragas.metrics._aspect_critic import AspectCritic
 from ragas.metrics._topic_adherence import TopicAdherenceScore
 from ragas.metrics.collections import (
     NoiseSensitivity,
@@ -574,6 +575,88 @@ class RAGASNoiseSensitivity(RAGASMetric):
             )
         except Exception as e:
             logger.error(f"Error computing noise sensitivity (async): {e}", exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+
+class RAGASAspectCritic(RAGASMetric):
+    """RAGAS Aspect Critic metric with custom gateway support.
+
+    Evaluates whether a response satisfies a user-defined aspect definition.
+    Returns a binary score (0.0 or 1.0).
+    """
+
+    def __init__(
+        self,
+        llm_config: LLMProviderConfig | None = None,
+        adapter: RAGASAdapter | None = None,
+        definition: str | None = None,
+        aspect_name: str | None = None,
+        strictness: int | None = None,
+        threshold: float | None = None,
+        name: str = "aspect_critic",
+        **kwargs: Any,
+    ):
+        params = kwargs.get("params", {})
+        resolved_definition = definition or (
+            params.get("definition") if isinstance(params, dict) else None
+        )
+        if not resolved_definition:
+            raise ValueError("RAGAS aspect_critic requires a non-empty 'definition'.")
+
+        resolved_aspect_name = aspect_name or (
+            params.get("aspect_name") if isinstance(params, dict) else None
+        )
+        resolved_strictness = strictness
+        if resolved_strictness is None and isinstance(params, dict):
+            resolved_strictness = params.get("strictness")
+
+        ragas_kwargs: dict[str, Any] = {
+            "name": resolved_aspect_name or name,
+            "definition": resolved_definition,
+        }
+        if resolved_strictness is not None:
+            ragas_kwargs["strictness"] = resolved_strictness
+
+        super().__init__(
+            ragas_metric_instance=AspectCritic(**ragas_kwargs),
+            llm_config=llm_config,
+            adapter=adapter,
+            threshold=threshold,
+            name=name,
+            **kwargs,
+        )
+
+    def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = run_coroutine_sync(lambda: self.ragas_metric.single_turn_ascore(ragas_sample))
+            score_float = float(score)
+
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error("Error computing aspect_critic: %s", e, exc_info=True)
+            return MetricResult(
+                score=None,
+                metadata=self._build_metadata(0.0, error=str(e)),
+            )
+
+    async def aevaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
+        try:
+            ragas_sample = self.adapter.transform_sample(sample)
+            score = await self.ragas_metric.single_turn_ascore(ragas_sample)
+            score_float = float(score)
+            return MetricResult(
+                score=score_float,
+                metadata=self._build_metadata(score_float),
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error("Error computing aspect_critic (async): %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
