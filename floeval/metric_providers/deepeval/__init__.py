@@ -7,6 +7,19 @@ with the global metric registry.
 """
 
 from floeval.api.metrics.registry import MetricRegistry
+from floeval.metric_providers.deepeval.conversational_multiturn_metrics import (
+    ConversationCompletenessDeepEvalMetric,
+    GoalAccuracyDeepEvalMetric,
+    KnowledgeRetentionDeepEvalMetric,
+    RoleAdherenceDeepEvalMetric,
+    ToolUseDeepEvalMetric,
+    TopicAdherenceDeepEvalMetric,
+    TurnContextualPrecisionDeepEvalMetric,
+    TurnContextualRecallDeepEvalMetric,
+    TurnContextualRelevancyDeepEvalMetric,
+    TurnFaithfulnessDeepEvalMetric,
+    TurnRelevancyDeepEvalMetric,
+)
 from floeval.metric_providers.deepeval.conversational_metrics import (
     ConversationalGEvalDeepEvalMetric,
 )
@@ -41,6 +54,23 @@ _registry.register("deepeval", "exact_match", ExactMatchDeepEvalMetric)
 _registry.register("deepeval", "pattern_match", PatternMatchDeepEvalMetric)
 _registry.register("deepeval", "json_correctness", JsonCorrectnessDeepEvalMetric)
 _registry.register("deepeval", "conversational_g_eval", ConversationalGEvalDeepEvalMetric)
+_registry.register("deepeval", "turn_relevancy", TurnRelevancyDeepEvalMetric)
+_registry.register("deepeval", "role_adherence", RoleAdherenceDeepEvalMetric)
+_registry.register("deepeval", "knowledge_retention", KnowledgeRetentionDeepEvalMetric)
+_registry.register(
+    "deepeval", "conversation_completeness", ConversationCompletenessDeepEvalMetric
+)
+_registry.register("deepeval", "goal_accuracy", GoalAccuracyDeepEvalMetric)
+_registry.register("deepeval", "tool_use", ToolUseDeepEvalMetric)
+_registry.register("deepeval", "topic_adherence", TopicAdherenceDeepEvalMetric)
+_registry.register("deepeval", "turn_faithfulness", TurnFaithfulnessDeepEvalMetric)
+_registry.register(
+    "deepeval", "turn_contextual_precision", TurnContextualPrecisionDeepEvalMetric
+)
+_registry.register("deepeval", "turn_contextual_recall", TurnContextualRecallDeepEvalMetric)
+_registry.register(
+    "deepeval", "turn_contextual_relevancy", TurnContextualRelevancyDeepEvalMetric
+)
 
 __all__ = [
     "FaithfulnessDeepEvalMetric",
@@ -54,4 +84,15 @@ __all__ = [
     "PatternMatchDeepEvalMetric",
     "JsonCorrectnessDeepEvalMetric",
     "ConversationalGEvalDeepEvalMetric",
+    "TurnRelevancyDeepEvalMetric",
+    "RoleAdherenceDeepEvalMetric",
+    "KnowledgeRetentionDeepEvalMetric",
+    "ConversationCompletenessDeepEvalMetric",
+    "GoalAccuracyDeepEvalMetric",
+    "ToolUseDeepEvalMetric",
+    "TopicAdherenceDeepEvalMetric",
+    "TurnFaithfulnessDeepEvalMetric",
+    "TurnContextualPrecisionDeepEvalMetric",
+    "TurnContextualRecallDeepEvalMetric",
+    "TurnContextualRelevancyDeepEvalMetric",
 ]
