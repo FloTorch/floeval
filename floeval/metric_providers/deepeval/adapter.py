@@ -164,9 +164,15 @@ __VALID_TEST_CASE_SCHEMAS__ = {name: spec.schema for name, spec in _LLM_TEST_CAS
 class DeepEvalLLMAdapter(DeepEvalBaseLLM):
     """OpenAI-compatible chat model exposed as DeepEval's base LLM."""
 
-    def __init__(self, model_name: str, config: LLMProviderConfig):
+    def __init__(
+        self,
+        model_name: str,
+        config: LLMProviderConfig,
+        extra_headers: dict[str, Any] | None = None,
+    ):
         self._model_name = model_name
         self.config = config
+        self._extra_headers: dict[str, Any] = dict(extra_headers or {})
         self._llm_instance = None
         _llm_instance = self.init_model()
         self._llm_instance = _llm_instance
@@ -198,6 +204,9 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
             if base_url:
                 # Normalize llm URL to OpenAI-compatible format (same as RAGAS)
                 kwargs["base_url"] = _normalize_openai_base_url(base_url)
+
+        if self._extra_headers:
+            kwargs["default_headers"] = self._extra_headers
 
         self._llm_instance = ChatOpenAI(**kwargs)
         return self._llm_instance

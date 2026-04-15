@@ -48,6 +48,7 @@ class RAGASMetric(BaseMetric):
         super().__init__(name=name)
         self.provider = "ragas"
         self.llm_config = llm_config
+        self._extra_headers: Dict[str, str] = dict(kwargs.get("extra_headers") or {})
 
         if threshold is not None:
             self.threshold = threshold
@@ -59,8 +60,9 @@ class RAGASMetric(BaseMetric):
                 params.get("threshold") if isinstance(params, dict) else None
             )
 
-        # Use provided adapter or create new one
-        self.adapter = adapter or RAGASAdapter(config=llm_config)
+        self.adapter = adapter or RAGASAdapter(
+            config=llm_config, extra_headers=self._extra_headers or None
+        )
 
         # NOTE: RAGAS exports metric instances; deepcopy to avoid shared-state mutations
         self.ragas_metric = copy.deepcopy(ragas_metric_instance)

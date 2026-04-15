@@ -1,9 +1,7 @@
-"""Utility functions for FloTorch ADK operations."""
+"""ADK helpers: OpenAI-shaped messages, tool parsing, session → trace messages."""
 
-from __future__ import annotations
-
-import inspect
 import json
+import inspect
 import logging
 from typing import Any, Dict, List
 
@@ -11,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def normalize_mcp_schema(schema: Dict[str, Any]) -> None:
-    """Normalize MCP JSON schema in-place for GenAI compatibility."""
+    """Fix None values in required/properties so GenAI validation doesn't choke."""
     if isinstance(schema, dict) and schema.get("type") == "object":
         if schema.get("properties") is None:
             schema["properties"] = {}
@@ -19,335 +17,234 @@ def normalize_mcp_schema(schema: Dict[str, Any]) -> None:
             schema["required"] = []
 
 
-def tools_to_openai_format(tools: Any) -> List[Dict[str, Any]]:
-    """Convert tools to OpenAI format for LLM requests."""
-    result: List[Dict[str, Any]] = []
+def tools_to_openai_format(tools):
+    """Convert ADK tools to the OpenAI tools array format."""
+    result = []
     for tool in tools:
         try:
-            name = getattr(
-                tool,
-                "name",
-                getattr(getattr(tool, "func", tool), "__name__", str(tool)),
-            )
-            description = getattr(
-                tool,
-                "description",
-                getattr(getattr(tool, "func", tool), "__doc__", "") or getattr(tool, "__doc__", ""),
-            )
-            parameters: Dict[str, Any] = {
-                "type": "object",
-                "properties": {},
-                "required": [],
-            }
+            name = getattr(tool, 'name', getattr(tool, 'func', tool).__name__ if hasattr(getattr(tool, 'func', tool), '__name__') else str(tool))
+            description = getattr(tool, 'description', getattr(getattr(tool, 'func', tool), '__doc__', '') or getattr(tool, '__doc__', ''))
 
-            if hasattr(tool, "_get_declaration"):
+            parameters = {"type": "object", "properties": {}, "required": []}
+
+            if hasattr(tool, '_get_declaration'):
                 try:
                     decl = tool._get_declaration()
-                    if (
-                        decl
-                        and hasattr(decl, "parameters_json_schema")
-                        and decl.parameters_json_schema
-                    ):
-                        parameters = (
-                            decl.parameters_json_schema.copy()
-                            if isinstance(decl.parameters_json_schema, dict)
-                            else {}
-                        )
+                    if decl and hasattr(decl, 'parameters_json_schema') and decl.parameters_json_schema:
+                        parameters = decl.parameters_json_schema.copy() if isinstance(decl.parameters_json_schema, dict) else {}
                         normalize_mcp_schema(parameters)
-                    elif decl and decl.parameters and hasattr(decl.parameters, "properties"):
+                    elif decl and decl.parameters and hasattr(decl.parameters, 'properties'):
                         properties = {}
                         for prop_name, prop_schema in decl.parameters.properties.items():
-                            prop_type = getattr(prop_schema, "type", None)
-                            if prop_type and hasattr(prop_type, "value"):
-                                if prop_type.value == "INTEGER":
-                                    properties[prop_name] = {"type": "integer"}
-                                elif prop_type.value == "NUMBER":
-                                    properties[prop_name] = {"type": "number"}
-                                elif prop_type.value == "BOOLEAN":
-                                    properties[prop_name] = {"type": "boolean"}
-                                elif prop_type.value == "ARRAY":
-                                    properties[prop_name] = {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                    }
-                                else:
-                                    properties[prop_name] = {"type": "string"}
-                            else:
-                                properties[prop_name] = {"type": "string"}
-                        parameters["properties"] = properties
-                        parameters["required"] = getattr(decl.parameters, "required", [])
+                            prop_type = getattr(prop_schema, 'type', None)
+                            if prop_type and hasattr(prop_type, 'value'):
+                                if prop_type.value == 'INTEGER': properties[prop_name] = {"type": "integer"}
+                                elif prop_type.value == 'NUMBER': properties[prop_name] = {"type": "number"}
+                                elif prop_type.value == 'BOOLEAN': properties[prop_name] = {"type": "boolean"}
+                                elif prop_type.value == 'ARRAY': properties[prop_name] = {"type": "array", "items": {"type": "string"}}
+                                else: properties[prop_name] = {"type": "string"}
+                            else: properties[prop_name] = {"type": "string"}
+                        parameters["properties"], parameters["required"] = properties, getattr(decl.parameters, 'required', [])
                         normalize_mcp_schema(parameters)
-                except Exception:
-                    pass
-            elif hasattr(tool, "input_schema"):
+                except: pass
+            elif hasattr(tool, 'input_schema'):
                 schema = tool.input_schema
-                if hasattr(schema, "properties"):
-                    parameters["properties"] = {n: {"type": "string"} for n in schema.properties}
-                    parameters["required"] = getattr(schema, "required", [])
+                if hasattr(schema, 'properties'):
+                    parameters["properties"] = {name: {"type": "string"} for name in schema.properties}
+                    parameters["required"] = getattr(schema, 'required', [])
                     normalize_mcp_schema(parameters)
                 elif isinstance(schema, dict):
                     parameters = schema.copy()
                     normalize_mcp_schema(parameters)
-            elif hasattr(tool, "func") or hasattr(tool, "__call__"):
-                sig = inspect.signature(getattr(tool, "func", tool))
-                parameters["properties"] = {n: {"type": "string"} for n in sig.parameters}
+            elif hasattr(tool, 'func') or hasattr(tool, '__call__'):
+                sig = inspect.signature(getattr(tool, 'func', tool))
+                parameters["properties"] = {name: {"type": "string"} for name in sig.parameters}
                 parameters["required"] = list(sig.parameters.keys())
                 normalize_mcp_schema(parameters)
 
-            result.append(
-                {
-                    "type": "function",
-                    "function": {
-                        "name": name,
-                        "description": description,
-                        "parameters": parameters,
-                    },
-                }
-            )
+            result.append({"type": "function", "function": {"name": name, "description": description, "parameters": parameters}})
         except Exception as e:
             logger.warning("Failed to convert tool to OpenAI format: %s", e)
+            continue
     return result
 
 
-def parse_function_response(response_content: Any) -> str:
-    """Parse function response content to extract text."""
+def parse_function_response(response_content):
+    """Extract text from tool output (joins multiple MCP content items)."""
     try:
-        if hasattr(response_content, "result") and hasattr(response_content.result, "content"):
+        if hasattr(response_content, 'result') and hasattr(response_content.result, 'content'):
             content_list = response_content.result.content
-            return (
-                content_list[0].text
-                if content_list and hasattr(content_list[0], "text")
-                else str(response_content.result)
-            )
-        if hasattr(response_content, "content"):
+            if content_list:
+                texts = [item.text for item in content_list if hasattr(item, 'text') and item.text]
+                return "\n".join(texts) if texts else str(response_content.result)
+            return str(response_content.result)
+        elif hasattr(response_content, 'content'):
             content_list = response_content.content
-            return (
-                content_list[0].text
-                if content_list and hasattr(content_list[0], "text")
-                else str(response_content)
-            )
-        if isinstance(response_content, dict):
-            if "content" in response_content and isinstance(response_content["content"], list):
-                content_list = response_content["content"]
-                return (
-                    content_list[0]["text"]
-                    if content_list
-                    and isinstance(content_list[0], dict)
-                    and "text" in content_list[0]
-                    else str(response_content)
-                )
-            return (
-                json.dumps(response_content)
-                if isinstance(response_content, dict)
-                else str(response_content)
-            )
-        return str(response_content)
-    except Exception:
+            if content_list and hasattr(content_list[0], 'text'):
+                texts = [item.text for item in content_list if hasattr(item, 'text') and item.text]
+                return "\n".join(texts) if texts else str(response_content)
+            return str(response_content)
+        elif isinstance(response_content, dict):
+            if 'content' in response_content and isinstance(response_content['content'], list):
+                content_list = response_content['content']
+                texts = [
+                    item['text'] for item in content_list
+                    if isinstance(item, dict) and 'text' in item and item['text']
+                ]
+                return "\n".join(texts) if texts else str(response_content)
+            else:
+                return json.dumps(response_content) if isinstance(response_content, dict) else str(response_content)
+        else:
+            return str(response_content)
+    except:
         return str(response_content)
 
 
-def parse_llm_response_with_tools(response_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Parse LLM response that may contain tool calls; return ADK-compatible parts."""
+def parse_llm_response_with_tools(response_data):
+    """Parse the raw LLM response JSON into a list of ADK-compatible part dicts."""
     try:
-        if "choices" not in response_data or not response_data["choices"]:
-            return []
-        choice = response_data["choices"][0]
-        parts: List[Dict[str, Any]] = []
+        if 'choices' in response_data and response_data['choices']:
+            choice = response_data['choices'][0]
+            parts = []
 
-        if "message" in choice:
-            msg = choice["message"]
-            if "tool_calls" in msg and msg["tool_calls"]:
-                tool_call = msg["tool_calls"][0]
-                try:
-                    args_raw = tool_call["function"].get("arguments", "{}")
-                    fn_args = json.loads(args_raw) if isinstance(args_raw, str) else args_raw
-                    parts.append(
-                        {
-                            "type": "function_call",
-                            "name": tool_call["function"]["name"],
-                            "args": fn_args,
-                            "id": tool_call.get("id", f"call_{tool_call['function']['name']}"),
-                        }
-                    )
-                except Exception as e:
-                    logger.warning("Failed to parse tool call arguments: %s", e)
-                    parts.append({"type": "text", "content": "Let me help you with that query."})
-            elif "function_call" in msg:
-                fn_call = msg["function_call"]
-                try:
-                    args_raw = fn_call.get("arguments", "{}")
-                    fn_args = json.loads(args_raw) if isinstance(args_raw, str) else args_raw
-                    parts.append(
-                        {
+            if "message" in choice:
+                msg = choice["message"]
+                if "tool_calls" in msg and msg["tool_calls"]:
+                    for tool_call in msg["tool_calls"]:
+                        try:
+                            fn_args = json.loads(tool_call["function"].get("arguments", "{}")) if isinstance(tool_call["function"].get("arguments", "{}"), str) else tool_call["function"].get("arguments", {})
+                            parts.append({
+                                "type": "function_call",
+                                "name": tool_call["function"]["name"],
+                                "args": fn_args,
+                                "id": tool_call.get("id", f"call_{tool_call['function']['name']}")
+                            })
+                        except Exception as e:
+                            logger.warning("Failed to parse tool call arguments: %s", e)
+                            parts.append({"type": "text", "content": "Let me help you with that query."})
+                            break
+                elif "function_call" in msg:
+                    fn_call = msg["function_call"]
+                    try:
+                        fn_args = json.loads(fn_call.get("arguments", "{}")) if isinstance(fn_call.get("arguments", "{}"), str) else fn_call.get("arguments", {})
+                        parts.append({
                             "type": "function_call",
                             "name": fn_call["name"],
                             "args": fn_args,
-                            "id": f"call_{fn_call['name']}",
-                        }
-                    )
-                except Exception as e:
-                    logger.warning("Failed to parse function call arguments: %s", e)
-                    parts.append({"type": "text", "content": "Let me help you with that query."})
-            elif "content" in msg and msg["content"]:
-                parts.append({"type": "text", "content": msg["content"]})
-        elif "text" in choice:
-            parts.append({"type": "text", "content": choice["text"]})
+                            "id": f"call_{fn_call['name']}"
+                        })
+                    except Exception as e:
+                        logger.warning("Failed to parse function call arguments: %s", e)
+                        parts.append({"type": "text", "content": "Let me help you with that query."})
+                elif "content" in msg and msg["content"]:
+                    parts.append({"type": "text", "content": msg["content"]})
+            elif "text" in choice:
+                parts.append({"type": "text", "content": choice["text"]})
 
-        return parts
+            return parts
+        return []
     except Exception as e:
         logger.error("parse_llm_response_with_tools failed: %s", e)
         return []
 
 
-def _event_role_to_message_role(author: str) -> str:
-    """Map ADK event author to message role for AgentTrace.
-
-    ADK uses author='user' for user, author=agent_name for model (e.g. 'eval_agent').
-    AgentTrace expects 'user'|'assistant'|'tool'; model text must map to 'assistant'.
-    """
-    if not author or author == "user":
-        return "user"
-    return "assistant"
-
-
-def process_session_events(session_events: Any) -> List[Dict[str, Any]]:
-    """Process ADK session events and convert to message format."""
-    messages: List[Dict[str, Any]] = []
-    try:
-        if not session_events:
-            return messages
-        recent = session_events[-50:] if len(session_events) > 50 else session_events
-        for event in recent:
-            if not event.content or not event.content.parts:
-                continue
-            author = getattr(event, "author", "user") or "user"
-            role = _event_role_to_message_role(author)
-
-            for part in event.content.parts:
-                if hasattr(part, "text") and part.text:
+def process_session_events(session_events):
+    """Session events → flat messages (for AgentTrace after a run)."""
+    messages = []
+    if not session_events:
+        return messages
+    for event in session_events:
+        if not (event.content and event.content.parts):
+            continue
+        for part in event.content.parts:
+            try:
+                if hasattr(part, 'text') and part.text:
+                    role = "user" if event.author == "user" else "assistant"
                     messages.append({"role": role, "content": part.text})
-                elif hasattr(part, "function_call") and part.function_call:
-                    fc = part.function_call
-                    args = getattr(fc, "args", {})
-                    args_str = (
-                        json.dumps(args)
-                        if isinstance(args, dict)
-                        else (args if isinstance(args, str) else "{}")
-                    )
-                    messages.append(
-                        {
-                            "role": "assistant",
-                            "content": "",
-                            "tool_calls": [
-                                {
-                                    "id": getattr(fc, "id", ""),
-                                    "type": "function",
-                                    "function": {
-                                        "name": getattr(fc, "name", ""),
-                                        "arguments": args_str,
-                                    },
-                                }
-                            ],
-                        }
-                    )
-                elif hasattr(part, "tool_calls") and part.tool_calls:
-                    for tc in part.tool_calls:
-                        fn = getattr(tc, "function", None) or tc
-                        name = getattr(fn, "name", "")
-                        args = getattr(fn, "args", {})
-                        args_str = (
-                            json.dumps(args)
-                            if isinstance(args, dict)
-                            else (args if isinstance(args, str) else "{}")
-                        )
-                        messages.append(
-                            {
-                                "role": "assistant",
-                                "content": "",
-                                "tool_calls": [
-                                    {
-                                        "id": getattr(tc, "id", ""),
-                                        "type": "function",
-                                        "function": {"name": name, "arguments": args_str},
-                                    }
-                                ],
+                    continue
+                if hasattr(part, 'function_call') and part.function_call:
+                    raw_args = part.function_call.args
+                    if isinstance(raw_args, dict):
+                        args_json = json.dumps(raw_args)
+                    else:
+                        try:
+                            args_json = json.dumps(dict(raw_args))
+                        except Exception:
+                            args_json = str(raw_args or "{}")
+                    messages.append({
+                        "role": "assistant",
+                        "content": "",
+                        "tool_calls": [{
+                            "id": part.function_call.id,
+                            "type": "function",
+                            "function": {
+                                "name": part.function_call.name,
+                                "arguments": args_json
                             }
-                        )
-                elif hasattr(part, "function_response") and part.function_response:
-                    fr = part.function_response
-                    resp = getattr(fr, "response", None)
-                    content = json.dumps(resp) if isinstance(resp, dict) else str(resp)
-                    messages.append(
-                        {
-                            "role": "tool",
-                            "content": content,
-                            "tool_call_id": getattr(fr, "id", ""),
-                        }
-                    )
-    except Exception:
-        pass
+                        }]
+                    })
+                    continue
+                if hasattr(part, 'function_response') and part.function_response:
+                    resp = part.function_response.response
+                    try:
+                        content_text = json.dumps(resp)
+                    except Exception:
+                        content_text = str(resp)
+                    messages.append({
+                        "role": "tool",
+                        "content": content_text,
+                        "tool_call_id": part.function_response.id,
+                        "tool_name": part.function_response.name or "",
+                    })
+            except Exception as e:
+                print(f"[floeval-debug] process_session_events part parse failed: {e}", flush=True)
+                try:
+                    import traceback
+                    traceback.print_exc()
+                except Exception:
+                    pass
     return messages
 
 
-def process_content_parts(content: Any) -> List[Dict[str, Any]]:
-    """Process content parts and convert to message format."""
-    messages: List[Dict[str, Any]] = []
+def process_content_parts(content):
+    """One ADK Content → OpenAI-style message dicts (model role → assistant)."""
+    messages = []
     try:
         if hasattr(content, "role") and hasattr(content, "parts"):
             for part in content.parts:
                 if hasattr(part, "text") and part.text:
-                    messages.append({"role": content.role, "content": part.text})
+                    role = "assistant" if content.role == "model" else content.role
+                    messages.append({"role": role, "content": part.text})
                 elif hasattr(part, "function_call") and part.function_call:
-                    messages.append(
-                        {
-                            "role": "assistant",
-                            "content": "",
-                            "tool_calls": [
-                                {
-                                    "id": part.function_call.id,
-                                    "type": "function",
-                                    "function": {
-                                        "name": part.function_call.name,
-                                        "arguments": json.dumps(part.function_call.args),
-                                    },
-                                }
-                            ],
-                        }
-                    )
+                    messages.append({
+                        "role": "assistant", "content": "", "tool_calls": [{
+                            "id": part.function_call.id, "type": "function",
+                            "function": {"name": part.function_call.name, "arguments": json.dumps(part.function_call.args or {})}
+                        }]
+                    })
                 elif hasattr(part, "function_response") and part.function_response:
                     response_text = parse_function_response(part.function_response.response)
-                    messages.append(
-                        {
-                            "role": "tool",
-                            "content": response_text,
-                            "tool_call_id": part.function_response.id,
-                        }
-                    )
-    except Exception:
-        pass
+                    messages.append({"role": "tool", "content": response_text, "tool_call_id": part.function_response.id})
+    except: pass
     return messages
 
 
-def build_messages_from_request(llm_request: Any) -> List[Dict[str, Any]]:
-    """Build messages from LLM request including system instruction, session events, and content."""
-    messages: List[Dict[str, Any]] = []
+def build_messages_from_request(llm_request):
+    """Messages for this LLM call: prefer llm_request.contents; else session events."""
+    messages = []
 
     if hasattr(llm_request, "config") and getattr(llm_request.config, "system_instruction", None):
-        messages.append(
-            {
-                "role": "system",
-                "content": llm_request.config.system_instruction,
-            }
-        )
+        messages.append({"role": "system", "content": llm_request.config.system_instruction})
 
-    try:
-        ctx = getattr(llm_request, "_invocation_context", None)
-        if ctx and (session := getattr(ctx, "session", None)) and session.events:
-            messages.extend(process_session_events(session.events))
-    except Exception:
-        pass
+    contents = getattr(llm_request, "contents", [])
 
-    for content in getattr(llm_request, "contents", []):
-        messages.extend(process_content_parts(content))
+    if contents:
+        for content in contents:
+            messages.extend(process_content_parts(content))
+    else:
+        try:
+            if (ctx := getattr(llm_request, '_invocation_context', None)) and (session := ctx.session) and session.events:
+                messages.extend(process_session_events(session.events))
+        except: pass
 
     return messages
