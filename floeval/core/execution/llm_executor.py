@@ -32,12 +32,19 @@ class OpenAIProvider(BaseLLMProvider):
     - Separate client instances — no shared state between sync and async paths
     """
 
-    def __init__(self, config: LLMProviderConfig | None = None, **kwargs):
+    def __init__(
+        self,
+        config: LLMProviderConfig | None = None,
+        extra_headers: dict[str, str] | None = None,
+        **kwargs,
+    ):
         """Initialize with LLM config.
 
         Args:
             config: LLMProviderConfig or OpenAIProviderConfig instance.
                 If None, creates OpenAIProviderConfig from kwargs.
+            extra_headers: Optional headers forwarded on every API request
+                (e.g. gateway run-context headers for log correlation).
         """
         if config is None:
             config = OpenAIProviderConfig(**kwargs)
@@ -45,6 +52,7 @@ class OpenAIProvider(BaseLLMProvider):
         self._base_url = _normalize_openai_base_url(config.base_url)
         self._chat_model = config.chat_model
         self._system_prompt = config.system_prompt
+        self._extra_headers: dict[str, str] = dict(extra_headers or {})
 
         # Lazy-initialized, separate clients — no shared state
         self._sync_client: openai.OpenAI | None = None
@@ -57,6 +65,7 @@ class OpenAIProvider(BaseLLMProvider):
             self._sync_client = openai.OpenAI(
                 base_url=self._base_url,
                 api_key=self.config.api_key,
+                default_headers=self._extra_headers or None,
             )
         return self._sync_client
 
@@ -67,6 +76,7 @@ class OpenAIProvider(BaseLLMProvider):
             self._async_client = openai.AsyncOpenAI(
                 base_url=self._base_url,
                 api_key=self.config.api_key,
+                default_headers=self._extra_headers or None,
             )
         return self._async_client
 
