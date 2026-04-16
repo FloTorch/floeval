@@ -30,10 +30,7 @@ def _parse_json_response(response: str) -> dict:
     match = re.search(r"\{.*\}", response, re.DOTALL)
     if not match:
         return {}
-    try:
-        return json.loads(match.group())
-    except json.JSONDecodeError:
-        return {}
+    return json.loads(match.group())
 
 
 class WorkflowCompletionRateMetric(BaseMetric):
@@ -165,8 +162,12 @@ Respond ONLY with JSON:
                         "score": score,
                         "issues": data.get("issues", ""),
                     })
-            except Exception as e:
-                logger.warning("Handoff %d evaluation failed: %s", i, e)
+            except json.JSONDecodeError:
+                logger.exception(
+                    "Failed to parse LLM response for handoff metric at index %d.", i
+                )
+            except Exception:
+                logger.exception("Handoff %d evaluation failed.", i)
 
         if not scores:
             return MetricResult(
@@ -276,6 +277,12 @@ Respond ONLY with JSON:
                     "provider": "builtin",
                     "metric_name": "cross_agent_consistency",
                 },
+            )
+        except json.JSONDecodeError:
+            logger.exception("Failed to parse LLM response for cross_agent_consistency.")
+            return MetricResult(
+                score=None,
+                metadata={"error": "Malformed JSON in LLM response", "provider": "builtin"},
             )
         except Exception as e:
             logger.error("CrossAgentConsistencyMetric failed: %s", e, exc_info=True)

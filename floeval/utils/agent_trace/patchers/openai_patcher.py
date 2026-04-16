@@ -3,6 +3,8 @@
 import json
 import logging
 
+from openai.types import CompletionUsage
+
 from floeval.config.schemas.io.agent_dataset import ToolCall
 from floeval.utils.agent_trace.trace_context import get_current_trace
 
@@ -60,12 +62,12 @@ def _capture_response(response) -> None:
             content=content if isinstance(content, str) else str(content),
             tool_calls=tool_calls if tool_calls else None,
         )
-        usage = getattr(response, "usage", None)
-        if usage is not None:
+        completion_usage = getattr(response, "usage", None)
+        if isinstance(completion_usage, CompletionUsage):
             trace.add_token_usage(
-                total_tokens=getattr(usage, "total_tokens", 0) or 0,
-                prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
-                completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
+                total_tokens=completion_usage.total_tokens,
+                prompt_tokens=completion_usage.prompt_tokens,
+                completion_tokens=completion_usage.completion_tokens,
             )
     except Exception as e:
         logger.debug("OpenAI patcher capture failed: %s", e)

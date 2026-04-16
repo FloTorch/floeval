@@ -1,6 +1,7 @@
 import argparse
 import json
 from collections import defaultdict
+from functools import partial
 from pathlib import Path
 from uuid import uuid4
 
@@ -8,7 +9,8 @@ from floeval.api.agent_evaluation import AgentEvaluation, AgentEvaluationResult
 from floeval.api.dataset import DatasetLoader
 from floeval.api.evaluation import Evaluation, EvaluationResult
 from floeval.api.workflow_evaluation import WorkflowEvaluation
-from floeval.cli import CLIEvaluationConfig, ConfigError
+from floeval.cli import CLIEvaluationConfig, ConfigError, MissingDependencyError
+from floeval.cli.export import save_json_output
 from floeval.cli.utils import CLIConfigLoader, check_if_file_exists
 from floeval.config.schemas.io.agent_dataset import AgentDataset
 from floeval.config.schemas.io.llm import LLMProviderConfig, OpenAIProviderConfig
@@ -25,12 +27,6 @@ def _resolve_dataset_path(dataset_arg: str) -> Path:
         return check_if_file_exists(dataset_arg)
     except FileNotFoundError as e:
         raise FileNotFoundError(f"Dataset file not found: {e}") from e
-
-
-def _save_json_output(payload: dict, output_path: Path) -> None:
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=4, default=str)
-    print(f"Results saved to {output_path}")
 
 
 def _is_partial_dataset(file_path: Path) -> bool:
@@ -89,7 +85,7 @@ def output_results(results: EvaluationResult, output_path: Path | None):
     """
     if output_path:
         try:
-            _save_json_output(results.model_dump(), output_path)
+            save_json_output(results.model_dump(), output_path)
         except Exception as e:
             print(f"Error saving results to {output_path}: {e}")
     else:
@@ -137,22 +133,11 @@ def output_agent_results(results: AgentEvaluationResult, output_path: Path | Non
     """Save or print agent evaluation results."""
     if output_path:
         try:
-            _save_json_output(results.model_dump(), output_path)
+            save_json_output(results.model_dump(), output_path)
         except Exception as e:
             print(f"Error saving results to {output_path}: {e}")
     else:
         _pretty_print_agent_results(results)
-
-
-def output_workflow_results(results: dict, output_path: Path | None):
-    """Save or print workflow CLI evaluation results."""
-    if output_path:
-        try:
-            _save_json_output(results, output_path)
-        except Exception as e:
-            print(f"Error saving results to {output_path}: {e}")
-    else:
-        print(json.dumps(results, indent=2, default=str))
 
 
 def _run_workflow_evaluate(
@@ -167,7 +152,7 @@ def _run_workflow_evaluate(
         from floeval.flotorch.dag import DAG
         from floeval.flotorch.workflow_executor import WorkflowExecutor
     except ImportError as e:
-        raise ConfigError(
+        raise MissingDependencyError(
             f"FloTorch integration required for workflow CLI mode. Import failed: {e}"
         ) from e
 
@@ -222,9 +207,10 @@ def _run_workflow_evaluate(
             user_id=f"cli-user-{idx}",
         )
         execution = run_coroutine_sync(
-            lambda s=sample: executor.execute_and_build(
-                wf_input=s.user_input,
-                reference_outcome=s.reference_outcome,
+            partial(
+                executor.execute_and_build,
+                wf_input=sample.user_input,
+                reference_outcome=sample.reference_outcome,
             )
         )
         wf_result = WorkflowEvaluation(
@@ -250,14 +236,18 @@ def _run_workflow_evaluate(
         for key in aggregate_totals
         if aggregate_counts[key] > 0
     }
-    output_workflow_results(
-        {
-            "sample_count": len(per_sample_results),
-            "sample_results": per_sample_results,
-            "summary": summary,
-        },
-        output_file,
-    )
+    payload = {
+        "sample_count": len(per_sample_results),
+        "sample_results": per_sample_results,
+        "summary": summary,
+    }
+    if output_file:
+        try:
+            save_json_output(payload, output_file)
+        except Exception as e:
+            print(f"Error saving results to {output_file}: {e}")
+    else:
+        print(json.dumps(payload, indent=2, default=str))
 
 
 def _run_agent_evaluate(args: argparse.Namespace):

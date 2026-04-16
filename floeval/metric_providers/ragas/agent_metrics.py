@@ -10,7 +10,7 @@ Follows the same pattern as RAGASAnswerRelevancy/RAGASFaithfulness:
 import logging
 from typing import Any
 
-from ragas.messages import HumanMessage as RAGASHumanMessage
+from ragas.messages import AIMessage as RAGASAIMessage
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.config.schemas.io.agent_dataset import AgentSample, _to_display_str
@@ -42,7 +42,9 @@ class RAGASAgentGoalAccuracy(BaseMetric):
         )
         from ragas.metrics.collections import AgentGoalAccuracyWithReference
 
-        self._metric = AgentGoalAccuracyWithReference(llm=self.adapter.agent_llm)
+        # Use the standard RAGAS LLM wrapper for compatibility with
+        # AgentGoalAccuracyWithReference across ragas versions.
+        self._metric = AgentGoalAccuracyWithReference(llm=self.adapter.llm)
 
     def evaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
         try:
@@ -52,13 +54,11 @@ class RAGASAgentGoalAccuracy(BaseMetric):
                     score=None,
                     metadata={"error": "No messages in trace", "provider": "ragas"},
                 )
-            # RAGAS infer step can summarize too vaguely (e.g. "The AI provides an answer"
-            # without the actual value), causing wrong comparisons. Append explicit final
-            # response so end_state includes it.
+            # Ensure final response content is explicitly present in the conversation.
             final = sample.trace.final_response
             if final is not None and str(final).strip():
                 messages = list(messages) + [
-                    RAGASHumanMessage(
+                    RAGASAIMessage(
                         content=f"[Agent's final response to user: {final}]"
                     )
                 ]
@@ -92,7 +92,7 @@ class RAGASAgentGoalAccuracy(BaseMetric):
             final = sample.trace.final_response
             if final is not None and str(final).strip():
                 messages = list(messages) + [
-                    RAGASHumanMessage(content=f"[Agent's final response to user: {final}]")
+                    RAGASAIMessage(content=f"[Agent's final response to user: {final}]")
                 ]
             reference = _to_display_str(sample.reference_outcome)
             result = await self._metric.ascore(user_input=messages, reference=reference)
@@ -129,7 +129,7 @@ class RAGASToolCallAccuracy(BaseMetric):
         self._metric = ToolCallAccuracy()
 
     def evaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
-        if not sample.reference_tool_calls:
+        if sample.reference_tool_calls is None:
             return MetricResult(
                 score=None,
                 metadata={"error": "reference_tool_calls required", "provider": "ragas"},
@@ -165,7 +165,7 @@ class RAGASToolCallAccuracy(BaseMetric):
 
     async def aevaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
         """Evaluate tool call accuracy asynchronously."""
-        if not sample.reference_tool_calls:
+        if sample.reference_tool_calls is None:
             return MetricResult(
                 score=None,
                 metadata={"error": "reference_tool_calls required", "provider": "ragas"},
@@ -222,22 +222,32 @@ class RAGASTopicAdherence(BaseMetric):
         self._available = False
         self._metric = None
         try:
-            from ragas.metrics.collections import TopicAdherencScore  # type: ignore[import]
+            from ragas.metrics.collections import TopicAdherenceScore  # type: ignore[import]
 
-            self._metric = TopicAdherencScore(llm=self.adapter.agent_llm)
+            self._metric = TopicAdherenceScore(llm=self.adapter.llm)
             self._available = True
         except (ImportError, AttributeError):
-            logger.warning(
-                "ragas:topic_adherence not available in the installed ragas version. "
-                "The metric will return score=None."
-            )
+            try:
+                # Backward-compatible fallback for older misspelled symbol.
+                from ragas.metrics.collections import TopicAdherencScore  # type: ignore[import]
+
+                self._metric = TopicAdherencScore(llm=self.adapter.llm)
+            except (ImportError, AttributeError):
+                logger.warning(
+                    "ragas:topic_adherence not available in the installed ragas version. "
+                    "The metric will return score=None."
+                )
+                self._metric = None
+                self._available = False
+                return
+            self._available = True
 
     def evaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
         if not self._available or self._metric is None:
             return MetricResult(
                 score=None,
                 metadata={
-                    "error": "TopicAdherencScore not available in installed ragas version",
+                    "error": "TopicAdherenceScore not available in installed ragas version",
                     "provider": "ragas",
                 },
             )
@@ -265,7 +275,7 @@ class RAGASTopicAdherence(BaseMetric):
             return MetricResult(
                 score=None,
                 metadata={
-                    "error": "TopicAdherencScore not available in installed ragas version",
+                    "error": "TopicAdherenceScore not available in installed ragas version",
                     "provider": "ragas",
                 },
             )

@@ -47,6 +47,7 @@ def main():
         action="store_true",
         help="Run agent evaluation (Mode 1 or 4)",
     )
+    # ----- subcommand for dataset generation from partial dataset -----
     generate = sub_parsers.add_parser(
         "generate", help="Generate complete dataset from partial dataset"
     )

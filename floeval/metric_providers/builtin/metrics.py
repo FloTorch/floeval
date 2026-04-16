@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import logging
 
+from sentence_transformers import SentenceTransformer, util
+
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.registry import MetricRegistry
 
@@ -82,16 +84,8 @@ class SemanticSim(BaseMetric):
     def _load_model(self) -> None:
         if self._model is not None:
             return
-        try:
-            from sentence_transformers import SentenceTransformer, util  # type: ignore[import]
-
-            self._model = SentenceTransformer(self.model_name)
-            self._util = util
-        except ImportError as exc:
-            raise ImportError(
-                "builtin:semantic_sim requires sentence-transformers. "
-                "Install with: pip install sentence-transformers"
-            ) from exc
+        self._model = SentenceTransformer(self.model_name)
+        self._util = util
 
     def evaluate(self, sample, **kwargs) -> MetricResult:
         response = getattr(sample, "llm_response", None)

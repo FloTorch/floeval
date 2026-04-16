@@ -20,6 +20,7 @@ from floeval.config.schemas.deepeval import (
     PatternMatchTestCase,
     ToxicityTestCase,
 )
+from floeval.config.schemas.io.agent_dataset import AgentSample
 from floeval.config.schemas.io.llm import LLMProviderConfig, _normalize_openai_base_url
 
 __VALID_TEST_CASE_SCHEMAS__ = {
@@ -281,7 +282,7 @@ class DeepEvalAdapter:
                 f"Unsupported metric for test case transformation: {metric_name}"
             )
 
-    def transform_agent_sample(self, sample: "AgentSample") -> LLMTestCase:
+    def transform_agent_sample(self, sample: AgentSample) -> LLMTestCase:
         """Transform an AgentSample to a DeepEval LLMTestCase for agent metrics.
 
         Mapping:

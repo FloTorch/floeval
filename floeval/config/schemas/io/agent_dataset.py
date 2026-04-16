@@ -292,6 +292,7 @@ class WorkflowExecution(BaseModel):
         description="node_id → {status, text, agent_name, tool_calls, turn_count}",
     )
     reference_outcome: AgentInputOutput | None = None
+    reference_tool_calls: list[ToolCall] | None = None
     session_id: str | None = None
     dag_graph_id: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -332,5 +333,6 @@ class WorkflowExecution(BaseModel):
             user_input=self.user_input,
             trace=trace,
             reference_outcome=self.reference_outcome,
+            reference_tool_calls=self.reference_tool_calls,
             metadata={"agent_name": trace.agent_name, "workflow_session": self.session_id},
         )

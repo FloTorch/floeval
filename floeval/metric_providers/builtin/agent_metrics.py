@@ -310,7 +310,7 @@ Respond ONLY with JSON:
         **kwargs,
     ):
         warnings.warn(
-            "builtin:goal_achievement is deprecated. Use builtin:task_completion for better reliability.",
+            "builtin:goal_achievement will be deprecated. Use builtin:task_completion for better reliability.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -445,10 +445,6 @@ Respond ONLY with JSON:
                 metadata={"error": str(e), "provider": "builtin"},
             )
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Registry — same pattern as existing ragas/__init__.py and deepeval/__init__.py
-# ─────────────────────────────────────────────────────────────────────────────
 
 MetricRegistry.register("builtin", "task_completion", TaskCompletionMetric)
 MetricRegistry.register("builtin", "trajectory_faithfulness", TrajectoryFaithfulnessMetric)
