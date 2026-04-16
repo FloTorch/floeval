@@ -1,8 +1,9 @@
-"""Minimal FloTorch LLM for OpenAI-compatible chat completions (no tracing)."""
+"""HTTP client for OpenAI-style chat/completions (used by FlotorchADKLLM)."""
 
 from __future__ import annotations
 
 import logging
+import traceback
 from typing import Any, Dict, List, Optional
 
 from floeval.flotorch.sdk.utils.http_utils import async_http_post
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class FlotorchLLM:
-    """OpenAI-compatible HTTP chat completion client for agent evaluation."""
+    """POST JSON to base_url/chat_endpoint."""
 
     def __init__(
         self,
@@ -19,18 +20,22 @@ class FlotorchLLM:
         api_key: str,
         base_url: str,
         chat_endpoint: str = "chat/completions",
+        default_headers: Optional[Dict[str, str]] = None,
     ):
         self.model_id = model_id
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.chat_endpoint = chat_endpoint.lstrip("/")
         self._url = f"{self.base_url}/{self.chat_endpoint}"
+        self.default_headers = dict(default_headers or {})
 
     def _headers(self) -> Dict[str, str]:
-        return {
+        headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+        headers.update(self.default_headers)
+        return headers
 
     async def ainvoke(
         self,
@@ -41,22 +46,37 @@ class FlotorchLLM:
         **kwargs: Any,
     ) -> _LLMResponse:
         """Async chat completion request."""
+
+        json_payload_kwargs = dict(kwargs)
+        json_payload_kwargs.pop("return_headers", None)
+        request_extra_headers = json_payload_kwargs.pop("extra_headers", None)
+        headers = self._headers()
+        if isinstance(request_extra_headers, dict):
+            headers.update({str(k): str(v) for k, v in request_extra_headers.items()})
+
         payload: Dict[str, Any] = {
             "model": self.model_id,
             "messages": messages,
-            **(extra_body or {}),
+            "extra_body": extra_body if extra_body is not None else {},
         }
         if tools:
             payload["tools"] = tools
         if response_format:
             payload["response_format"] = response_format
-        payload.update(kwargs)
+        try:
+            result = await async_http_post(
+                url=self._url,
+                headers=headers,
+                json=payload,
+                timeout=120.0,
+            )
+        except Exception:
+            print(
+                f"[floeval-debug] FlotorchLLM.ainvoke failed model={self.model_id} url={self._url}",
+                flush=True,
+            )
+            raise
 
-        result = await async_http_post(
-            url=self._url,
-            headers=self._headers(),
-            json=payload,
-        )
         return _LLMResponse(result)
 
 

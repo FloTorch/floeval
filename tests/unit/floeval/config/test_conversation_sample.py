@@ -6,7 +6,10 @@ import pytest
 
 from floeval.api.dataset import conversational_dataset_from_dict
 from floeval.config.schemas.io.conversation import ConversationTurn, ToolCallPayload
-from floeval.config.schemas.io.conversational_dataset import ConversationalSample
+from floeval.config.schemas.io.conversational_dataset import (
+    ConversationalDataset,
+    ConversationalSample,
+)
 
 
 def test_conversation_turn_model() -> None:
@@ -48,7 +51,7 @@ def test_conversational_sample_accepts_expected_outcome_alias() -> None:
 
 def test_conversational_dataset_from_dict_roundtrip() -> None:
     data = {
-        "conversational_samples": [
+        "samples": [
             {
                 "turns": [
                     {"role": "user", "content": "Q?"},
@@ -60,11 +63,29 @@ def test_conversational_dataset_from_dict_roundtrip() -> None:
         ]
     }
     ds = conversational_dataset_from_dict(data, partial_dataset=False)
-    assert len(ds.conversational_samples) == 1
-    sp = ds.conversational_samples[0]
+    assert len(ds.samples) == 1
+    sp = ds.samples[0]
     assert isinstance(sp, ConversationalSample)
     assert sp.scenario == "Support"
     assert sp.conversation_context == ["policy: be nice"]
+
+
+def test_conversational_dataset_model_dump_uses_samples_key() -> None:
+    dataset = ConversationalDataset(
+        samples=[
+            ConversationalSample.model_validate(
+                {
+                    "turns": [
+                        {"role": "user", "content": "Q?"},
+                        {"role": "assistant", "content": "A."},
+                    ]
+                }
+            )
+        ]
+    )
+    payload = dataset.model_dump()
+    assert "samples" in payload
+    assert len(payload["samples"]) == 1
 
 
 def test_tool_call_payload_aliases_are_unified_to_args() -> None:

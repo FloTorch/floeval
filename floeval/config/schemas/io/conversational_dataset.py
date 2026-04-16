@@ -121,22 +121,22 @@ class ConversationalSample(BaseModel):
 class ConversationalDataset(BaseModel):
     """Typed container for conversational evaluation rows."""
 
-    conversational_samples: list[ConversationalSample] = Field(
+    samples: list[ConversationalSample] = Field(
         ..., min_length=1, description="Non-empty list of conversational samples"
     )
 
     def __len__(self) -> int:
         """Return the number of conversational samples."""
-        return len(self.conversational_samples)
+        return len(self.samples)
 
 
 class PartialConversationalDataset(BaseModel):
     """Partial conversational dataset (no auto-generation in Floeval yet)."""
 
-    conversational_samples: list[PartialConversationalSample] = Field(
+    samples: list[PartialConversationalSample] = Field(
         ..., min_length=1
     )
 
     def __len__(self) -> int:
         """Return the number of partial conversational samples."""
-        return len(self.conversational_samples)
+        return len(self.samples)

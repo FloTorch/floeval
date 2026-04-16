@@ -15,11 +15,16 @@ MemoryMetadata = Dict[str, Any]
 JSONType = Union[Dict[str, Any], List[Any]]
 
 
-def _build_headers(api_key: str) -> Dict[str, str]:
-    return {
+def _build_headers(
+    api_key: str, extra_headers: Optional[Dict[str, str]] = None
+) -> Dict[str, str]:
+    headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
+    if extra_headers:
+        headers.update({str(k): str(v) for k, v in extra_headers.items()})
+    return headers
 
 
 def _build_gateway_memory_url(base_url: str, provider_name: str) -> str:
@@ -63,10 +68,11 @@ def add_memory(
     metadata: Optional[MemoryMetadata] = None,
     timestamp: Optional[str] = None,
     providerParams: Optional[Dict[str, Any]] = None,
+    extra_headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Create a new memory entry."""
     url = _build_gateway_memory_url(base_url, provider_name) + "/memories"
-    headers = _build_headers(api_key)
+    headers = _build_headers(api_key, extra_headers)
     payload = {
         "messages": messages,
         "userId": userId,
@@ -86,10 +92,11 @@ def get_memory(
     provider_name: str,
     api_key: str,
     memory_id: str,
+    extra_headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Retrieve a memory by ID."""
     url = _build_gateway_memory_url(base_url, provider_name) + f"/memories/{memory_id}"
-    headers = _build_headers(api_key)
+    headers = _build_headers(api_key, extra_headers)
     return http_get(url, headers=headers)
 
 
@@ -100,10 +107,11 @@ def update_memory(
     memory_id: str,
     content: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
+    extra_headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Update an existing memory."""
     url = _build_gateway_memory_url(base_url, provider_name) + f"/memories/{memory_id}"
-    headers = _build_headers(api_key)
+    headers = _build_headers(api_key, extra_headers)
     payload = {"content": content, "metadata": metadata}
     clean_payload = {k: v for k, v in payload.items() if v is not None}
     return http_put(url, headers=headers, json=clean_payload)
@@ -114,10 +122,11 @@ def delete_memory(
     provider_name: str,
     api_key: str,
     memory_id: str,
+    extra_headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Delete a memory by ID."""
     url = _build_gateway_memory_url(base_url, provider_name) + f"/memories/{memory_id}"
-    headers = _build_headers(api_key)
+    headers = _build_headers(api_key, extra_headers)
     return http_delete(url, headers=headers)
 
 
@@ -138,10 +147,11 @@ def search_memories(
     page: Optional[int] = 1,
     limit: Optional[int] = 20,
     query: Optional[str] = None,
+    extra_headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Search memories using filters and criteria."""
     url = _build_gateway_memory_url(base_url, provider_name) + "/memories/search"
-    headers = _build_headers(api_key)
+    headers = _build_headers(api_key, extra_headers)
     query_value = "*" if not (query and isinstance(query, str) and query.strip()) else query
     payload = {
         "userId": userId,
@@ -171,9 +181,10 @@ def search_vectorstore(
     ranker: str = "auto",
     score_threshold: float = 0.2,
     rewrite_query: bool = True,
+    extra_headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Search vector store."""
-    headers = _build_headers(api_key)
+    headers = _build_headers(api_key, extra_headers)
     payload = {
         "query": query,
         "max_num_results": max_number_of_result,
@@ -196,10 +207,11 @@ async def async_add_memory(
     metadata: Optional[MemoryMetadata] = None,
     timestamp: Optional[str] = None,
     providerParams: Optional[Dict[str, Any]] = None,
+    extra_headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Async create a new memory entry."""
     url = _build_gateway_memory_url(base_url, provider_name) + "/memories"
-    headers = _build_headers(api_key)
+    headers = _build_headers(api_key, extra_headers)
     payload = {
         "messages": messages,
         "userId": userId,
@@ -231,10 +243,11 @@ async def async_search_memories(
     page: Optional[int] = 1,
     limit: Optional[int] = 20,
     query: Optional[str] = None,
+    extra_headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Async search memories."""
     url = _build_gateway_memory_url(base_url, provider_name) + "/memories/search"
-    headers = _build_headers(api_key)
+    headers = _build_headers(api_key, extra_headers)
     query_value = "*" if not (query and isinstance(query, str) and query.strip()) else query
     payload = {
         "userId": userId,
@@ -264,9 +277,10 @@ async def async_search_vectorstore(
     ranker: Optional[str] = "auto",
     score_threshold: Optional[float] = 0.2,
     rewrite_query: Optional[bool] = True,
+    extra_headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Async search vector store."""
-    headers = _build_headers(api_key)
+    headers = _build_headers(api_key, extra_headers)
     payload = {
         "query": query,
         "max_num_results": max_number_of_result,

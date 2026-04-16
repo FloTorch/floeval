@@ -11,7 +11,7 @@ from floeval.api.metrics.base import BaseMetric, MetricResult
 
 def test_conversational_dataset_rejects_single_turn_ragas_metric() -> None:
     data = {
-        "conversational_samples": [
+        "samples": [
             {
                 "turns": [
                     {"role": "user", "content": "a"},

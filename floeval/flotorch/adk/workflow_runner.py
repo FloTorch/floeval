@@ -30,11 +30,13 @@ class WorkflowRunner:
         dag_config: dict[str, Any],
         llm_config: OpenAIProviderConfig,
         app_name: str = "floeval-workflow",
+        run_headers: dict[str, str] | None = None,
     ):
         """Initialize with DAG config (nodes, edges). Builds fresh DAG per sample with unique session."""
         self.dag_config = dag_config
         self.llm_config = llm_config
         self.app_name = app_name
+        self.run_headers = dict(run_headers or {})
 
     def _build_dag_for_sample(self) -> DAG:
         """Build DAG with unique invocationId per workflow run (one session per sample)."""
@@ -75,6 +77,7 @@ class WorkflowRunner:
                     llm_config=self.llm_config,
                     app_name=self.app_name,
                     user_id=f"eval-user-{idx}",
+                    run_headers=self.run_headers,
                 )
 
                 result = await executor.execute(wf_input)

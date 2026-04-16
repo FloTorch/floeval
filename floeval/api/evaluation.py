@@ -1,6 +1,5 @@
 """Evaluation orchestrator."""
 
-import inspect
 import logging
 import os
 import time
@@ -36,6 +35,7 @@ from floeval.metric_providers.ragas.adapter import RAGASAdapter
 from floeval.metric_providers.ragas.custom_adapter import RAGASCustomMetricAdapter
 from floeval.utils.job_status import log_job_status, log_job_status_error
 from floeval.utils.loaders import load_prompts_file
+from floeval.utils.metric_constructor_kwargs import filter_kwargs_for_metric_factory
 from floeval.utils.ragas_results import extract_ragas_score
 
 logger = logging.getLogger(__name__)
@@ -70,10 +70,7 @@ class Evaluation:
 
     def __init__(
         self,
-        dataset: Dataset
-        | PartialDataset
-        | ConversationalDataset
-        | PartialConversationalDataset,
+        dataset: Dataset | PartialDataset | ConversationalDataset | PartialConversationalDataset,
         metrics: list[MetricSpec],
         default_provider: str | None = None,
         llm_config: Any | None = None,
@@ -81,6 +78,7 @@ class Evaluation:
         dataset_generator_model: str | None = None,
         prompts_file: str | None = None,
         ragas_max_workers: int | None = None,
+        run_headers: dict[str, Any] | None = None,
     ):
         self.dataset_generator_model = dataset_generator_model
         self.default_provider = default_provider
@@ -91,12 +89,21 @@ class Evaluation:
         ) = dataset
         self.metric_params = dict(metric_params or {})
         self._ragas_max_workers = ragas_max_workers
+        self._run_headers: dict[str, Any] = dict(run_headers or {})
         self._registry = MetricRegistry()
 
         # Cache adapters per provider
         self._provider_adapters: dict[str, Any] = {
             "ragas": {"adapter": None},
         }
+
+        if isinstance(self.dataset, PartialDataset) and (
+            self.llm_config is None or not self.dataset_generator_model
+        ):
+            raise ValueError(
+                "llm_config must be provided to Evaluation() when using a "
+                "PartialDataset. dataset_generator_model is also required."
+            )
 
         self.metrics = self._resolve_metrics(metrics)
 
@@ -114,12 +121,11 @@ class Evaluation:
             else dict(self.llm_config)
         )
         if config_dict.get("base_url"):
-            config_dict["base_url"] = _normalize_openai_base_url(
-                config_dict["base_url"]
-            )
+            config_dict["base_url"] = _normalize_openai_base_url(config_dict["base_url"])
 
         llm_provider = OpenAIProvider(
             config_name=f"{self.dataset_generator_model}_generation",
+            extra_headers=self._run_headers or None,
             **(config_dict | {"chat_model": self.dataset_generator_model}),
         )
 
@@ -167,7 +173,9 @@ class Evaluation:
     def _get_ragas_adapter(self, llm_config: Any | None) -> RAGASAdapter:
         """Return cached RAGAS adapter, creating it if needed."""
         if self._provider_adapters["ragas"]["adapter"] is None:
-            self._provider_adapters["ragas"]["adapter"] = RAGASAdapter(config=llm_config)
+            self._provider_adapters["ragas"]["adapter"] = RAGASAdapter(
+                config=llm_config, extra_headers=self._run_headers or None
+            )
         return cast(RAGASAdapter, self._provider_adapters["ragas"]["adapter"])
 
     def _require_row_dataset(self) -> Dataset | ConversationalDataset:
@@ -183,11 +191,9 @@ class Evaluation:
         d = self._require_row_dataset()
         if isinstance(d, Dataset):
             return d.samples
-        return d.conversational_samples
+        return d.samples
 
-    def _validate_metric_dataset_compatibility(
-        self, grouped: dict[str, list[BaseMetric]]
-    ) -> None:
+    def _validate_metric_dataset_compatibility(self, grouped: dict[str, list[BaseMetric]]) -> None:
         conv = isinstance(self.dataset, ConversationalDataset)
         if conv:
             for m in grouped["deepeval"]:
@@ -254,26 +260,15 @@ class Evaluation:
             merged["adapter"] = self._get_ragas_adapter(llm_config)
         elif provider == "deepeval" and "llm_config" not in merged and self.llm_config:
             merged["llm_config"] = self.llm_config
+        if self._run_headers and "extra_headers" not in merged:
+            merged["extra_headers"] = self._run_headers
 
         metric_factory = self._registry.get_class(provider, metric_id)
         if metric_factory is None:
             available = self._registry.list_metrics(provider)
             raise KeyError(f"Unknown metric: {provider}:{metric_id}. Available: {available}")
 
-        # Filter params by constructor signature when possible
-        try:
-            if callable(metric_factory) and not isinstance(metric_factory, type):
-                sig = inspect.signature(metric_factory)
-            else:
-                sig = inspect.signature(metric_factory.__init__)
-            accepted = set(sig.parameters) - {"self"}
-            has_var_kw = any(
-                p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
-            )
-            if not has_var_kw:
-                merged = {k: v for k, v in merged.items() if k in accepted}
-        except (TypeError, ValueError, AttributeError):
-            pass
+        merged = filter_kwargs_for_metric_factory(merged, metric_factory)
 
         return cast(BaseMetric, self._registry.create(provider, metric_id, **merged))
 
@@ -290,6 +285,8 @@ class Evaluation:
                     and spec.llm_config is None
                 ):
                     spec.llm_config = self.llm_config
+                if self._run_headers and hasattr(spec, "extra_headers"):
+                    spec.extra_headers = self._run_headers
                 resolved.append(spec)
                 continue
 
@@ -308,6 +305,8 @@ class Evaluation:
                     )
 
                 metric = self._create_metric_instance(provider, metric_id, params)
+                if self._run_headers and hasattr(metric, "extra_headers"):
+                    metric.extra_headers = self._run_headers
                 resolved.append(metric)
                 continue
 
@@ -322,6 +321,8 @@ class Evaluation:
                     )
 
                 metric = self._create_metric_instance(provider, metric_id, params={})
+                if self._run_headers and hasattr(metric, "extra_headers"):
+                    metric.extra_headers = self._run_headers
                 resolved.append(metric)
                 continue
 
@@ -377,9 +378,7 @@ class Evaluation:
                         "metadata": result.metadata,
                     }
                 except Exception as e:
-                    logger.error(
-                        f"Metric {key} failed for sample: {e}", exc_info=True
-                    )
+                    logger.error(f"Metric {key} failed for sample: {e}", exc_info=True)
                     metric_results[key] = {
                         "score": None,
                         "passed": False,
@@ -430,7 +429,7 @@ class Evaluation:
 
         if isinstance(dataset, ConversationalDataset):
             ragas_dataset = adapter.transform_conversational_dataset(dataset)
-            n_samples = len(dataset.conversational_samples)
+            n_samples = len(dataset.samples)
         else:
             ragas_dataset = adapter.transform_dataset(dataset)
             n_samples = len(dataset.samples)
@@ -504,14 +503,10 @@ class Evaluation:
                         "passed": score >= threshold if score is not None else False,
                         "reason": None,
                         "provider": provider,
-                        "metadata": {
-                            "threshold": threshold, "execution_provider": "ragas"
-                        },
+                        "metadata": {"threshold": threshold, "execution_provider": "ragas"},
                     }
                 except Exception as e:
-                    logger.error(
-                        f"Failed to extract RAGAS result for {key}: {e}", exc_info=True
-                    )
+                    logger.error(f"Failed to extract RAGAS result for {key}: {e}", exc_info=True)
                     metric_results[key] = {
                         "score": None,
                         "passed": False,
@@ -598,7 +593,7 @@ class Evaluation:
             if conv_metrics:
                 chunks.append(
                     run_deepeval_conversational_batch(
-                        conversational_rows=row_ds.conversational_samples,
+                        conversational_rows=row_ds.samples,
                         floeval_metrics=conv_metrics,
                         llm_config=self.llm_config,
                         emit_progress=_emit_progress,
@@ -661,7 +656,7 @@ class Evaluation:
 
         if isinstance(dataset, ConversationalDataset):
             ragas_dataset = adapter.transform_conversational_dataset(dataset)
-            n_s = len(dataset.conversational_samples)
+            n_s = len(dataset.samples)
         else:
             ragas_dataset = adapter.transform_dataset(dataset)
             n_s = len(dataset.samples)
@@ -671,6 +666,7 @@ class Evaluation:
             s = os.environ.get("FLOEVAL_RAGAS_MAX_WORKERS") or os.environ.get(
                 "WORKER_RAGAS_MAX_WORKERS", "32"
             )
+            s = s or "32"
             try:
                 rw = max(1, int(s))
             except ValueError:
@@ -705,11 +701,15 @@ class Evaluation:
             elapsed = time.monotonic() - t_ragas
             logger.error(
                 "RAGAS async evaluation failed after %.1fs: %s",
-                elapsed, e, exc_info=True,
+                elapsed,
+                e,
+                exc_info=True,
             )
             log_job_status_error(
                 "RAGAS aevaluate() FAILED after %.1fs: [%s] %s",
-                elapsed, type(e).__name__, str(e)[:600],
+                elapsed,
+                type(e).__name__,
+                str(e)[:600],
                 extra={
                     "phase": "ragas_eval_failed",
                     "elapsed_s": round(elapsed, 1),
@@ -728,7 +728,9 @@ class Evaluation:
         }
         _emit_progress(
             "RAGAS async aevaluate() done in %.1fs metrics=%d samples=%d",
-            ragas_elapsed, len(ragas_metrics), n_s,
+            ragas_elapsed,
+            len(ragas_metrics),
+            n_s,
             extra=_ragas_done_extra,
         )
 
@@ -754,9 +756,13 @@ class Evaluation:
                 key = f"{provider}:{metric_name}"
                 try:
                     score = extract_ragas_score(
-                        ragas_results, i, available_columns,
-                        ragas_metric_instance, metric_name,
-                        len(ragas_metrics), idx,
+                        ragas_results,
+                        i,
+                        available_columns,
+                        ragas_metric_instance,
+                        metric_name,
+                        len(ragas_metrics),
+                        idx,
                     )
                     threshold = getattr(floeval_metric, "threshold", 0.5)
                     metric_results[key] = {
@@ -767,9 +773,7 @@ class Evaluation:
                         "metadata": {"threshold": threshold, "execution_provider": "ragas"},
                     }
                 except Exception as e:
-                    logger.error(
-                        "Failed to extract RAGAS result for %s: %s", key, e, exc_info=True
-                    )
+                    logger.error("Failed to extract RAGAS result for %s: %s", key, e, exc_info=True)
                     metric_results[key] = {
                         "score": None,
                         "passed": False,
@@ -849,11 +853,7 @@ class Evaluation:
                 k: {
                     "avg": round(sum(v) / len(v), 4),
                     "pass_rate": round(
-                        sum(
-                            1
-                            for r in results
-                            if (r.get("metrics") or {}).get(k, {}).get("passed")
-                        )
+                        sum(1 for r in results if (r.get("metrics") or {}).get(k, {}).get("passed"))
                         / len(results),
                         4,
                     ),

@@ -66,11 +66,11 @@ class ConversationalJSONLLoader(BaseDatasetLoader):
             return [json.loads(line) for line in f]
 
     @classmethod
-    def to_conversational_samples(cls, file_path: str) -> list[ConversationalSample]:
+    def to_samples(cls, file_path: str) -> list[ConversationalSample]:
         return [ConversationalSample(**d) for d in cls._load_rows(file_path)]
 
     @classmethod
-    def to_partial_conversational_samples(cls, file_path: str) -> list[PartialConversationalSample]:
+    def to_partial_samples(cls, file_path: str) -> list[PartialConversationalSample]:
         return [PartialConversationalSample(**d) for d in cls._load_rows(file_path)]
 
 
@@ -79,22 +79,17 @@ class ConversationalJSONLoader(BaseDatasetLoader):
     def _load_rows(file_path: str) -> list[dict]:
         with open(file_path, "r", encoding="utf-8") as f:
             payload = json.load(f)
-        rows = payload.get("conversational_samples")
+        rows = payload.get("samples")
         if not isinstance(rows, list):
-            rows = payload.get("samples")
-        if not isinstance(rows, list):
-            raise ValueError(
-                "JSON must contain 'conversational_samples' array "
-                "(or 'samples' as an alias)."
-            )
+            raise ValueError("JSON must contain 'samples' array.")
         return rows
 
     @classmethod
-    def to_conversational_samples(cls, file_path: str) -> list[ConversationalSample]:
+    def to_samples(cls, file_path: str) -> list[ConversationalSample]:
         return [ConversationalSample(**d) for d in cls._load_rows(file_path)]
 
     @classmethod
-    def to_partial_conversational_samples(cls, file_path: str) -> list[PartialConversationalSample]:
+    def to_partial_samples(cls, file_path: str) -> list[PartialConversationalSample]:
         return [PartialConversationalSample(**d) for d in cls._load_rows(file_path)]
 
 
