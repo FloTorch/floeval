@@ -30,17 +30,17 @@ def conversational_dataset_from_dict(
     data: dict[str, Any],
     partial_dataset: bool,
 ) -> ConversationalDataset | PartialConversationalDataset:
-    """Build conversational dataset from dict with top-level ``conversational_samples``."""
-    raw = data.get("conversational_samples")
+    """Build conversational dataset from dict with top-level ``samples``."""
+    raw = data.get("samples")
     if not isinstance(raw, list) or not raw:
         raise ValueError(
-            "Conversational dataset dict must contain a non-empty 'conversational_samples' array."
+            "Conversational dataset dict must contain a non-empty 'samples' array."
         )
     if partial_dataset:
         partial_conv_samples = [PartialConversationalSample(**s) for s in raw]
-        return PartialConversationalDataset(conversational_samples=partial_conv_samples)
+        return PartialConversationalDataset(samples=partial_conv_samples)
     conv_samples = [ConversationalSample(**s) for s in raw]
-    return ConversationalDataset(conversational_samples=conv_samples)
+    return ConversationalDataset(samples=conv_samples)
 
 
 def conversational_dataset_from_json(
@@ -57,16 +57,16 @@ def conversational_dataset_from_file(
     ds_path: str | Path,
     partial_dataset: bool,
 ) -> ConversationalDataset | PartialConversationalDataset:
-    """Load conversational dataset from file (JSON uses ``conversational_samples`` key)."""
+    """Load conversational dataset from file (JSON uses ``samples`` key)."""
     ds_path = Path(ds_path)
     if not ds_path.is_file():
         raise FileNotFoundError(f"Dataset file not found: {ds_path}")
     loader_cls: type[BaseDatasetLoader] = get_conversational_loader_for_file(str(ds_path))
     if partial_dataset:
-        samples = loader_cls.to_partial_conversational_samples(str(ds_path))
-        return PartialConversationalDataset(conversational_samples=samples)
-    samples = loader_cls.to_conversational_samples(str(ds_path))
-    return ConversationalDataset(conversational_samples=samples)
+        samples = loader_cls.to_partial_samples(str(ds_path))
+        return PartialConversationalDataset(samples=samples)
+    samples = loader_cls.to_samples(str(ds_path))
+    return ConversationalDataset(samples=samples)
 
 
 def dataset_from_dict(data: dict[str, Any], partial_dataset: bool) -> Dataset | PartialDataset:
@@ -193,5 +193,5 @@ class DatasetLoader:
     def conversational_from_file(
         ds_path: str | Path, partial_dataset: bool = False
     ) -> ConversationalDataset | PartialConversationalDataset:
-        """Load conversational dataset JSON / JSONL via ``conversational_samples`` rows."""
+        """Load conversational dataset JSON / JSONL via ``samples`` rows."""
         return conversational_dataset_from_file(ds_path, partial_dataset=partial_dataset)

@@ -191,7 +191,7 @@ class Evaluation:
         d = self._require_row_dataset()
         if isinstance(d, Dataset):
             return d.samples
-        return d.conversational_samples
+        return d.samples
 
     def _validate_metric_dataset_compatibility(self, grouped: dict[str, list[BaseMetric]]) -> None:
         conv = isinstance(self.dataset, ConversationalDataset)
@@ -429,7 +429,7 @@ class Evaluation:
 
         if isinstance(dataset, ConversationalDataset):
             ragas_dataset = adapter.transform_conversational_dataset(dataset)
-            n_samples = len(dataset.conversational_samples)
+            n_samples = len(dataset.samples)
         else:
             ragas_dataset = adapter.transform_dataset(dataset)
             n_samples = len(dataset.samples)
@@ -593,7 +593,7 @@ class Evaluation:
             if conv_metrics:
                 chunks.append(
                     run_deepeval_conversational_batch(
-                        conversational_rows=row_ds.conversational_samples,
+                        conversational_rows=row_ds.samples,
                         floeval_metrics=conv_metrics,
                         llm_config=self.llm_config,
                         emit_progress=_emit_progress,
@@ -656,7 +656,7 @@ class Evaluation:
 
         if isinstance(dataset, ConversationalDataset):
             ragas_dataset = adapter.transform_conversational_dataset(dataset)
-            n_s = len(dataset.conversational_samples)
+            n_s = len(dataset.samples)
         else:
             ragas_dataset = adapter.transform_dataset(dataset)
             n_s = len(dataset.samples)
@@ -666,6 +666,7 @@ class Evaluation:
             s = os.environ.get("FLOEVAL_RAGAS_MAX_WORKERS") or os.environ.get(
                 "WORKER_RAGAS_MAX_WORKERS", "32"
             )
+            s = s or "32"
             try:
                 rw = max(1, int(s))
             except ValueError:

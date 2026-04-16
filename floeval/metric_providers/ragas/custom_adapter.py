@@ -191,6 +191,6 @@ class RAGASCustomMetricAdapter:
     ) -> EvaluationDataset:
         """Transform ``ConversationalDataset`` to RAGAS rows (``MultiTurnSample``)."""
         ragas_samples: list[MultiTurnSample] = []
-        for sample in dataset.conversational_samples:
+        for sample in dataset.samples:
             ragas_samples.append(conversational_sample_to_ragas_multiturn(sample))
         return EvaluationDataset(samples=ragas_samples)
