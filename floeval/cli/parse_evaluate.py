@@ -15,6 +15,24 @@ from floeval.config.schemas.io.llm import LLMProviderConfig, OpenAIProviderConfi
 from floeval.utils.asyncio_compat import run_coroutine_sync
 
 
+def _ensure_output_parent(output_file: Path | None) -> None:
+    if output_file and not output_file.parent.exists():
+        raise FileNotFoundError(f"Output directory not found: {output_file.parent}")
+
+
+def _resolve_dataset_path(dataset_arg: str) -> Path:
+    try:
+        return check_if_file_exists(dataset_arg)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"Dataset file not found: {e}") from e
+
+
+def _save_json_output(payload: dict, output_path: Path) -> None:
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=4, default=str)
+    print(f"Results saved to {output_path}")
+
+
 def _is_partial_dataset(file_path: Path) -> bool:
     """Detect if the dataset file has samples missing llm_response (partial dataset)."""
     ext = file_path.suffix[1:].lower()
@@ -71,9 +89,7 @@ def output_results(results: EvaluationResult, output_path: Path | None):
     """
     if output_path:
         try:
-            with open(output_path, "w") as f:
-                json.dump(results.model_dump(), f, indent=4, default=str)
-            print(f"Results successfully saved to {output_path}")
+            _save_json_output(results.model_dump(), output_path)
         except Exception as e:
             print(f"Error saving results to {output_path}: {e}")
     else:
@@ -121,9 +137,7 @@ def output_agent_results(results: AgentEvaluationResult, output_path: Path | Non
     """Save or print agent evaluation results."""
     if output_path:
         try:
-            with open(output_path, "w") as f:
-                json.dump(results.model_dump(), f, indent=4, default=str)
-            print(f"Results successfully saved to {output_path}")
+            _save_json_output(results.model_dump(), output_path)
         except Exception as e:
             print(f"Error saving results to {output_path}: {e}")
     else:
@@ -134,9 +148,7 @@ def output_workflow_results(results: dict, output_path: Path | None):
     """Save or print workflow CLI evaluation results."""
     if output_path:
         try:
-            with open(output_path, "w", encoding="utf-8") as f:
-                json.dump(results, f, indent=4, default=str)
-            print(f"Results successfully saved to {output_path}")
+            _save_json_output(results, output_path)
         except Exception as e:
             print(f"Error saving results to {output_path}: {e}")
     else:
@@ -253,18 +265,8 @@ def _run_agent_evaluate(args: argparse.Namespace):
     config_file = args.config
     output_file = Path(args.output) if args.output else None
 
-    if output_file and not output_file.parent.exists():
-        raise FileNotFoundError(
-            f"Output directory does not exist: {output_file.parent}; "
-            "please provide a valid output path with --output"
-        )
-
-    try:
-        dataset_path = check_if_file_exists(args.dataset)
-    except FileNotFoundError as e:
-        raise FileNotFoundError(
-            f"Dataset file error: {e}; please provide a valid dataset file path with --dataset"
-        ) from e
+    _ensure_output_parent(output_file)
+    dataset_path = _resolve_dataset_path(args.dataset)
 
     config_loader = CLIConfigLoader(model_class=CLIEvaluationConfig)
     evaluation_config = config_loader.load(config_file)
@@ -287,8 +289,7 @@ def _run_agent_evaluate(args: argparse.Namespace):
     metrics = eval_config.get("metrics")
     if not metrics:
         raise ConfigError(
-            "metrics are required for agent evaluation. "
-            "Add 'metrics' to evaluation_config in your config file (e.g. metrics: [goal_achievement])."
+            "Missing 'metrics' in evaluation_config for agent evaluation."
         )
     metrics = list(metrics)
 
@@ -345,19 +346,9 @@ def parse_args(args: argparse.Namespace):
     config_file = args.config
     output_file = Path(args.output) if args.output else None
 
-    if output_file and not output_file.parent.exists():
-        raise FileNotFoundError(
-            f"Output directory does not exist: {output_file.parent}; please provide a valid output path with --output"
-        )
+    _ensure_output_parent(output_file)
+    dataset_file = _resolve_dataset_path(args.dataset)
 
-    try:
-        dataset_file = check_if_file_exists(args.dataset)
-    except FileNotFoundError as e:
-        raise FileNotFoundError(
-            f"Dataset file error: {e}; please provide a valid dataset file path with --dataset"
-        ) from e
-
-    # ----- Load evaluation configuration (YAML or JSON) -----
     config_loader = CLIConfigLoader(model_class=CLIEvaluationConfig)
     evaluation_config = config_loader.load(config_file)
     llm_config = evaluation_config.llm_config
@@ -378,11 +369,9 @@ def parse_args(args: argparse.Namespace):
         embedding_endpoint=llm_config.get("embedding_endpoint", "embeddings"),
     )
 
-    # Auto-detect partial dataset (samples missing llm_response)
     partial_dataset = _is_partial_dataset(Path(dataset_file))
     dataset = DatasetLoader.from_file(dataset_file, partial_dataset=partial_dataset)
 
-    # dataset_generator_model required when using partial dataset (LLM generates responses)
     dataset_generator_model = None
     if partial_dataset:
         dg_config = evaluation_config.dataset_generation_config

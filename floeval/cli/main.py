@@ -20,7 +20,6 @@ def main():
     sub_parsers = parser.add_subparsers(
         description="Run evaluations with floeval", dest="command"
     )
-    # ---- subcommand for running evaluations ----
     evaluate = sub_parsers.add_parser("evaluate", help="Run evaluations with floeval")
     evaluate.add_argument(
         "-c",
@@ -48,7 +47,6 @@ def main():
         action="store_true",
         help="Run agent evaluation (Mode 1 or 4)",
     )
-    # ----- subcommand for dataset generation from partial dataset -----
     generate = sub_parsers.add_parser(
         "generate", help="Generate complete dataset from partial dataset"
     )
@@ -74,7 +72,6 @@ def main():
         required=True,
     )
 
-    # ------- set default function to handle commands -------
     evaluate.set_defaults(func=handle_command)
     generate.set_defaults(func=handle_command)
 
