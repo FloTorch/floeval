@@ -8,7 +8,7 @@ import logging
 import time
 from typing import Any
 
-from floeval.config.schemas.io.agent_dataset import AIMessage, AgentTrace
+from floeval.config.schemas.io.agent_dataset import AgentTrace, WorkflowExecution
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
 from floeval.flotorch.dag import (
     DAG,
@@ -182,6 +182,12 @@ class WorkflowExecutor:
             final_text = ""
             start_session_token_tracking()
             node_start_time = time.time()
+            session_before = await session_service.get_session(
+                app_name=self.app_name,
+                user_id=self.user_id,
+                session_id=session_id,
+            )
+            event_count_before = len(session_before.events) if session_before and session_before.events else 0
             async for _ in runner.run_async(
                 user_id=self.user_id,
                 session_id=session_id,
@@ -210,7 +216,8 @@ class WorkflowExecutor:
                 await memory_service.add_session_to_memory(session)
 
             if session and session.events:
-                messages = process_session_events(session.events)
+                new_events = session.events[event_count_before:]
+                messages = process_session_events(new_events)
                 trace = AgentTrace.from_messages(messages)
                 for m in reversed(messages):
                     if m.get("role") == "assistant" and m.get("content"):
@@ -220,10 +227,8 @@ class WorkflowExecutor:
                     final_text = trace.final_response
 
                 # Only use ADK usage_metadata if FlotorchADKLLM contextvar didn't populate tokens.
-                # Note: session is shared across nodes so we cannot sum all events here
-                # (they include prior agents' events). The contextvar approach is per-invocation safe.
                 if total_tokens == 0:
-                    for event in session.events:
+                    for event in new_events:
                         usage = getattr(event, "usage_metadata", None)
                         if usage is not None:
                             total_tokens += getattr(usage, "total_token_count", 0) or 0
@@ -360,38 +365,21 @@ class WorkflowExecutor:
                             ready.append(succ)
 
         final_output = ""
-        for node in reversed(self.dag.nodes):
-            if node.type == NodeType.AGENT:
-                res = results.get(node.id, {})
-                if res.get("status") == "SUCCESS":
-                    final_output = res.get("text", "")
-                    break
+        for nid in reversed(completion_order):
+            res = results.get(nid, {})
+            if res.get("status") == "SUCCESS":
+                final_output = res.get("text", "")
+                break
 
         agent_summaries: list[dict[str, Any]] = []
-        for i, nid in enumerate(completion_order):
+        for i, (nid, trace) in enumerate(zip(completion_order, agent_traces)):
             res = results.get(nid, {})
-            trace = agent_traces[i] if i < len(agent_traces) else None
             node = node_map.get(nid)
             agent_name = res.get("agent_name") or (node.callable_name if node else nid)
             inp = prompts.get(nid, "")
             out = res.get("text", "")
-            if trace is None:
-                tool_calls: list[dict[str, Any]] = []
-                turn_count = 0
-            elif i == 0:
-                tool_calls = [{"name": tc.name, "args": tc.args} for tc in trace.tool_calls_made]
-                turn_count = trace.turn_count
-            else:
-                prev_trace = agent_traces[i - 1]
-                prev_len = len(prev_trace.messages)
-                curr_msgs = trace.messages[prev_len:]
-                tool_calls = [
-                    {"name": tc.name, "args": tc.args}
-                    for m in curr_msgs
-                    if isinstance(m, AIMessage)
-                    for tc in m.tool_calls
-                ]
-                turn_count = sum(1 for m in curr_msgs if isinstance(m, AIMessage))
+            tool_calls = [{"name": tc.name, "args": tc.args} for tc in trace.tool_calls_made]
+            turn_count = trace.turn_count
             agent_summaries.append({
                 "agent_name": agent_name,
                 "node_id": nid,
@@ -414,7 +402,8 @@ class WorkflowExecutor:
         self,
         wf_input: dict[str, Any] | str,
         reference_outcome: Any | None = None,
-    ) -> "WorkflowExecution":
+        reference_tool_calls: list[Any] | None = None,
+    ) -> WorkflowExecution:
         """Execute workflow DAG and return a WorkflowExecution for WorkflowEvaluation.
 
         This is the preferred method when integrating with WorkflowEvaluation.
@@ -427,8 +416,6 @@ class WorkflowExecutor:
         Returns:
             WorkflowExecution: Structured result ready for WorkflowEvaluation.
         """
-        from floeval.config.schemas.io.agent_dataset import WorkflowExecution
-
         raw = await self.execute(wf_input)
 
         agent_traces = raw.get("agent_traces", [])
@@ -454,6 +441,7 @@ class WorkflowExecutor:
             agent_names=agent_names,
             node_results=raw.get("results", {}),
             reference_outcome=reference_outcome,
+            reference_tool_calls=reference_tool_calls,
             session_id=raw.get("session_id"),
             dag_graph_id=self.dag.graph_id,
             metadata={"agent_summaries": agent_summaries},

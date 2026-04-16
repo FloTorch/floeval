@@ -4,12 +4,6 @@ import contextvars
 import time
 from typing import TypedDict
 
-
-class _TokenCounts(TypedDict):
-    total: int
-    prompt: int
-    completion: int
-
 from floeval.config.schemas.io.agent_dataset import (
     AgentMessage,
     AgentTrace,
@@ -18,6 +12,12 @@ from floeval.config.schemas.io.agent_dataset import (
     ToolCall,
     ToolMessage,
 )
+
+
+class _TokenCounts(TypedDict):
+    total: int
+    prompt: int
+    completion: int
 
 _current_trace: contextvars.ContextVar["TraceContext | None"] = contextvars.ContextVar(
     "floeval_trace", default=None

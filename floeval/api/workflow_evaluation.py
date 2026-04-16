@@ -17,7 +17,6 @@ This is intentional to stay consistent with the newer convention.
 from __future__ import annotations
 
 import asyncio
-import inspect
 import logging
 from typing import Any, Mapping
 
@@ -28,6 +27,7 @@ from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.api.metrics.registry import MetricRegistry
 from floeval.config.schemas.io.agent_dataset import (
     AgentSample,
+    HumanMessage,
     WorkflowExecution,
     _to_display_str,
 )
@@ -164,20 +164,15 @@ class WorkflowEvaluation:
             available = self._registry.list_metrics(provider)
             raise KeyError(f"Unknown metric: {provider}:{metric_id}. Available: {available}")
 
-        # Inject llm_config and llm_provider based on constructor signature
-        try:
-            sig = inspect.signature(factory.__init__ if isinstance(factory, type) else factory)
-            if self.llm_config is not None:
-                if "llm_config" in sig.parameters and "llm_config" not in merged:
-                    merged["llm_config"] = self.llm_config
-                if "llm_provider" in sig.parameters and "llm_provider" not in merged:
-                    merged["llm_provider"] = OpenAIProvider(
-                        config_name=f"{provider}:{metric_id}",
-                        extra_headers=self.run_headers or None,
-                        **self.llm_config.model_dump(),
-                    )
-        except (TypeError, ValueError, AttributeError):
-            pass
+        if self.llm_config is not None:
+            if "llm_config" not in merged:
+                merged["llm_config"] = self.llm_config
+            if "llm_provider" not in merged:
+                merged["llm_provider"] = OpenAIProvider(
+                    config_name=f"{provider}:{metric_id}",
+                    extra_headers=self.run_headers or None,
+                    **self.llm_config.model_dump(),
+                )
 
         if self.run_headers and "extra_headers" not in merged:
             merged["extra_headers"] = self.run_headers
@@ -201,11 +196,9 @@ class WorkflowEvaluation:
         Falling back to execution.user_input only when the trace has no
         HumanMessage (e.g. a pure tool-calling node with no human turn).
         """
-        from floeval.config.schemas.io.agent_dataset import HumanMessage as _HumanMessage
-
         agent_user_input: str = _to_display_str(self.execution.user_input)
         for msg in trace.messages:
-            if isinstance(msg, _HumanMessage) and msg.content:
+            if isinstance(msg, HumanMessage) and msg.content:
                 agent_user_input = msg.content
                 break
 
@@ -213,6 +206,7 @@ class WorkflowEvaluation:
             user_input=agent_user_input,
             trace=trace,
             reference_outcome=self.execution.reference_outcome,
+            reference_tool_calls=self.execution.reference_tool_calls,
             metadata={
                 "agent_name": agent_name,
                 "workflow_goal": _to_display_str(self.execution.user_input),
@@ -234,13 +228,7 @@ class WorkflowEvaluation:
             provider = getattr(metric, "provider", "unknown")
             key = f"{provider}:{metric.name}"
             try:
-                if asyncio.iscoroutinefunction(getattr(metric, "aevaluate", None)):
-                    result: MetricResult = await metric.aevaluate(sample)
-                else:
-                    loop = asyncio.get_running_loop()
-                    result = await loop.run_in_executor(
-                        None, lambda m=metric: m.evaluate(sample)
-                    )
+                result: MetricResult = await metric.aevaluate(sample)
             except Exception as e:
                 logger.error(
                     "Metric %s failed for agent %s: %s", key, agent_name, e, exc_info=True
@@ -261,13 +249,7 @@ class WorkflowEvaluation:
             provider = getattr(metric, "provider", "unknown")
             key = f"{provider}:{metric.name}"
             try:
-                if asyncio.iscoroutinefunction(getattr(metric, "aevaluate", None)):
-                    result: MetricResult = await metric.aevaluate(self.execution)
-                else:
-                    loop = asyncio.get_running_loop()
-                    result = await loop.run_in_executor(
-                        None, lambda m=metric: m.evaluate(self.execution)
-                    )
+                result: MetricResult = await metric.aevaluate(self.execution)
             except Exception as e:
                 logger.error("Workflow metric %s failed: %s", key, e, exc_info=True)
                 result = MetricResult(

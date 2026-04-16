@@ -13,13 +13,17 @@ from deepeval.metrics import (
     ContextualRelevancyMetric,
     ExactMatchMetric,
     FaithfulnessMetric,
+    GEval,
     HallucinationMetric,
     JsonCorrectnessMetric,
     PatternMatchMetric,
+    ToolCorrectnessMetric,
     ToxicityMetric,
 )
+from deepeval.test_case import LLMTestCaseParams, ToolCall as DeepEvalToolCall
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
+from floeval.config.schemas.io.agent_dataset import AgentSample
 from floeval.config.schemas.io.dataset import Sample
 from floeval.config.schemas.io.llm import LLMProviderConfig
 from floeval.metric_providers.deepeval.adapter import (
@@ -467,19 +471,7 @@ class TaskCompletionGEvalMetric(DeepEvalMetric):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, name="task_completion_geval", **kwargs)
 
-    def evaluate(self, sample: "AgentSample", **kwargs) -> MetricResult:  # type: ignore[override]
-        try:
-            from deepeval.metrics import GEval
-            from deepeval.test_case import LLMTestCaseParams
-        except ImportError:
-            return MetricResult(
-                score=None,
-                metadata={
-                    "error": "deepeval GEval not available in installed version",
-                    "provider": "deepeval",
-                },
-            )
-
+    def evaluate(self, sample: AgentSample, **kwargs) -> MetricResult:
         if self._llm_adapter is None:
             raise ValueError(
                 "LLM adapter not initialized. Provide llm_config when initializing Evaluation."
@@ -534,8 +526,8 @@ class ToolCorrectnessDeepEvalMetric(DeepEvalMetric):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, name="tool_correctness", **kwargs)
 
-    def evaluate(self, sample: "AgentSample", **kwargs) -> MetricResult:  # type: ignore[override]
-        if not sample.reference_tool_calls:
+    def evaluate(self, sample: AgentSample, **kwargs) -> MetricResult:
+        if sample.reference_tool_calls is None:
             return MetricResult(
                 score=None,
                 metadata={
@@ -543,44 +535,14 @@ class ToolCorrectnessDeepEvalMetric(DeepEvalMetric):
                     "provider": "deepeval",
                 },
             )
-
-        try:
-            from deepeval.metrics import ToolCorrectnessMetric  # type: ignore[import]
-        except ImportError:
-            return MetricResult(
-                score=None,
-                metadata={
-                    "error": (
-                        "deepeval ToolCorrectnessMetric not available. "
-                        "Upgrade deepeval>=3.0 to use this metric."
-                    ),
-                    "provider": "deepeval",
-                },
-            )
-
-        # Build DeepEval tool call objects — guard against missing ToolCall class
-        try:
-            from deepeval.test_case import ToolCall as DeepEvalToolCall  # type: ignore[import]
-
-            expected_tools = [
-                DeepEvalToolCall(name=tc.name, input_parameters=tc.args or {})
-                for tc in sample.reference_tool_calls
-            ]
-            actual_tools = [
-                DeepEvalToolCall(name=tc.name, input_parameters=tc.args or {})
-                for tc in (sample.trace.tool_calls_made if sample.trace else [])
-            ]
-        except (ImportError, AttributeError):
-            return MetricResult(
-                score=None,
-                metadata={
-                    "error": (
-                        "deepeval.test_case.ToolCall not available. "
-                        "Upgrade deepeval>=3.0 to use this metric."
-                    ),
-                    "provider": "deepeval",
-                },
-            )
+        expected_tools = [
+            DeepEvalToolCall(name=tc.name, input_parameters=tc.args or {})
+            for tc in sample.reference_tool_calls
+        ]
+        actual_tools = [
+            DeepEvalToolCall(name=tc.name, input_parameters=tc.args or {})
+            for tc in (sample.trace.tool_calls_made if sample.trace else [])
+        ]
 
         try:
             metric_instance = ToolCorrectnessMetric(**self._metric_params)

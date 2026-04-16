@@ -93,9 +93,9 @@ class FlotorchADKLLM(BaseLlm):
             # Capture token usage into contextvar accumulator (read by FloTorchRunner)
             meta = response.metadata
             record_llm_token_usage(
-                total=int(meta.get("totalTokens") or 0),
-                prompt=int(meta.get("inputTokens") or 0),
-                completion=int(meta.get("outputTokens") or 0),
+                total=int(meta.get("totalTokens", 0) or 0),
+                prompt=int(meta.get("inputTokens", 0) or 0),
+                completion=int(meta.get("outputTokens", 0) or 0),
             )
 
             try:

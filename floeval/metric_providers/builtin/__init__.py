@@ -4,8 +4,8 @@ Importing this module registers all builtin metrics with the global MetricRegist
 """
 
 from floeval.metric_providers.builtin.agent_metrics import (
-    GoalAchievementMetric,       # deprecated — use task_completion
-    ResponseCoherenceMetric,     # deprecated — use trajectory_faithfulness
+    GoalAchievementMetric,
+    ResponseCoherenceMetric,
     TaskCompletionMetric,
     TrajectoryFaithfulnessMetric,
 )

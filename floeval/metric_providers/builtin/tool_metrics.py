@@ -130,7 +130,7 @@ class ToolSelectionAccuracyMetric(BaseMetric):
                 score=None,
                 metadata={"error": "trace required", "provider": "builtin"},
             )
-        if not sample.reference_tool_calls:
+        if sample.reference_tool_calls is None:
             return MetricResult(
                 score=None,
                 metadata={
@@ -191,7 +191,7 @@ class ToolArgumentCorrectnessMetric(BaseMetric):
                 score=None,
                 metadata={"error": "trace required", "provider": "builtin"},
             )
-        if not sample.reference_tool_calls:
+        if sample.reference_tool_calls is None:
             return MetricResult(
                 score=None,
                 metadata={"reason": "reference_tool_calls required", "provider": "builtin"},

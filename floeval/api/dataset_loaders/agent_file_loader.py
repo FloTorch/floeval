@@ -98,7 +98,7 @@ class AgentDatasetLoader:
     def _parse_reference_tool_calls(data: dict) -> list[ToolCall] | None:
         """Parse reference tool calls from data dict."""
         raw = data.get("reference_tool_calls")
-        if not raw:
+        if raw is None:
             return None
         return [ToolCall(**tc) for tc in raw]
 
@@ -218,6 +218,7 @@ class AgentDatasetLoader:
             agent_names=data.get("agent_names", []),
             node_results=data.get("node_results", {}),
             reference_outcome=data.get("reference_outcome"),
+            reference_tool_calls=AgentDatasetLoader._parse_reference_tool_calls(data),
             session_id=data.get("session_id"),
             dag_graph_id=data.get("dag_graph_id"),
             metadata=data.get("metadata", {}),
