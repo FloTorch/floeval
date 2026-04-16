@@ -83,5 +83,5 @@ def test_conversational_from_file_accepts_samples_wrapper(tmp_path) -> None:
     )
     ds = DatasetLoader.conversational_from_file(path, partial_dataset=False)
     assert isinstance(ds, ConversationalDataset)
-    assert len(ds.conversational_samples) == 1
-    assert ds.conversational_samples[0].turns[0].role == "user"
+    assert len(ds.samples) == 1
+    assert ds.samples[0].turns[0].role == "user"
