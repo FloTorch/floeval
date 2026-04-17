@@ -11,6 +11,7 @@ import logging
 from typing import Any
 
 from ragas.messages import AIMessage as RAGASAIMessage
+from ragas.metrics.collections import TopicAdherence
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.config.schemas.io.agent_dataset import AgentSample, _to_display_str
@@ -196,14 +197,12 @@ class RAGASToolCallAccuracy(BaseMetric):
 
 
 class RAGASTopicAdherence(BaseMetric):
-    """RAGAS TopicAdherenceScore — evaluates whether agent stays on assigned topic.
+    """RAGAS TopicAdherence — evaluates whether agent stays on assigned topic.
 
     Evaluates topic adherence across a multi-turn conversation / trace.
     Registered as: ragas:topic_adherence
 
     Requires: trace with multiple turns.
-    Falls back gracefully if TopicAdherencScore is not available in the
-    installed ragas version (returns score=None with a descriptive error).
     """
 
     def __init__(
@@ -219,38 +218,9 @@ class RAGASTopicAdherence(BaseMetric):
         self.adapter = adapter or RAGASAdapter(
             config=llm_config, extra_headers=self._extra_headers or None
         )
-        self._available = False
-        self._metric = None
-        try:
-            from ragas.metrics.collections import TopicAdherenceScore  # type: ignore[import]
-
-            self._metric = TopicAdherenceScore(llm=self.adapter.llm)
-            self._available = True
-        except (ImportError, AttributeError):
-            try:
-                # Backward-compatible fallback for older misspelled symbol.
-                from ragas.metrics.collections import TopicAdherencScore  # type: ignore[import]
-
-                self._metric = TopicAdherencScore(llm=self.adapter.llm)
-            except (ImportError, AttributeError):
-                logger.warning(
-                    "ragas:topic_adherence not available in the installed ragas version. "
-                    "The metric will return score=None."
-                )
-                self._metric = None
-                self._available = False
-                return
-            self._available = True
+        self._metric = TopicAdherence(llm=self.adapter.llm)
 
     def evaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
-        if not self._available or self._metric is None:
-            return MetricResult(
-                score=None,
-                metadata={
-                    "error": "TopicAdherenceScore not available in installed ragas version",
-                    "provider": "ragas",
-                },
-            )
         try:
             messages = transform_agent_sample_to_ragas_messages(sample)
             if not messages:
@@ -271,14 +241,6 @@ class RAGASTopicAdherence(BaseMetric):
             )
 
     async def aevaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
-        if not self._available or self._metric is None:
-            return MetricResult(
-                score=None,
-                metadata={
-                    "error": "TopicAdherenceScore not available in installed ragas version",
-                    "provider": "ragas",
-                },
-            )
         try:
             messages = transform_agent_sample_to_ragas_messages(sample)
             if not messages:
