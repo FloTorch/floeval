@@ -1,9 +1,9 @@
 """Conversational (multi-turn) DeepEval metrics."""
 
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, cast
 
 from deepeval.evaluate import evaluate
-from deepeval.metrics import ConversationalGEval
+from deepeval.metrics import BaseConversationalMetric, ConversationalGEval
 
 from floeval.api.metrics.base import MetricResult
 from floeval.config.schemas.io.agent_dataset import AgentSample
@@ -79,7 +79,10 @@ class ConversationalGEvalDeepEvalMetric(DeepEvalMetric):
         """Score a single sample via DeepEval (standalone execution path)."""
         inst = self.create_deepeval_metric_instance()
         tc = conversational_row_to_deepeval(sample)
-        agg = evaluate(metrics=[inst], test_cases=[tc])
+        # ``evaluate`` types ``metrics`` as homogeneous ``list[BaseConversationalMetric]``;
+        # ``list[ConversationalGEval]`` is not a subtype (``list`` is invariant).
+        metrics = cast(list[BaseConversationalMetric], [inst])
+        agg = evaluate(metrics=metrics, test_cases=[tc])
         if not agg.test_results:
             return MetricResult(
                 score=None,

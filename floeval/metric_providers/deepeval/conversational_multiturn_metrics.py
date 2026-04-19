@@ -1,9 +1,10 @@
 """DeepEval multi-turn conversational metric implementations."""
 
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, cast
 
 from deepeval.evaluate import evaluate
 from deepeval.metrics import (
+    BaseConversationalMetric,
     ConversationCompletenessMetric,
     GoalAccuracyMetric,
     KnowledgeRetentionMetric,
@@ -61,7 +62,9 @@ class _ConversationalDeepEvalMetric(DeepEvalMetric):
         """Score a single conversational sample using DeepEval evaluate()."""
         inst = self.create_deepeval_metric_instance()
         tc = conversational_row_to_deepeval(sample)
-        agg = evaluate(metrics=[inst], test_cases=[tc])
+        # ``list`` is invariant: concrete metric types need an explicit cast for ``evaluate``.
+        metrics = cast(list[BaseConversationalMetric], [inst])
+        agg = evaluate(metrics=metrics, test_cases=[tc])
         if not agg.test_results:
             return MetricResult(
                 score=None,

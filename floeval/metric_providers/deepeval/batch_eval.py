@@ -3,7 +3,7 @@
 import logging
 import time
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, Protocol, cast
 
 from deepeval.evaluate import AsyncConfig, DisplayConfig, ErrorConfig, evaluate as deepeval_evaluate
 from deepeval.test_case import ToolCall as DeepEvalToolCall
@@ -25,6 +25,12 @@ from floeval.utils.job_status import log_job_status, log_job_status_error
 logger = logging.getLogger(__name__)
 
 ProgressFn = Callable[..., None]
+
+
+class _SupportsConversationalDeepevalBatch(Protocol):
+    """DeepEval metrics that build a batched conversational metric instance."""
+
+    def create_deepeval_metric_instance(self) -> Any: ...
 
 
 def _collect_relevant_topics(rows: Sequence[ConversationalSample | AgentSample]) -> list[str]:
@@ -78,6 +84,33 @@ def _hydrate_conversational_metric_params(
     floeval_metrics: list[BaseMetric],
     rows: Sequence[ConversationalSample | AgentSample],
 ) -> None:
+    """Fill metric constructor kwargs from the dataset before batched DeepEval ``evaluate()``.
+
+    In the conversational batch path, Floeval builds **one** DeepEval metric instance per
+    Floeval metric and runs it across **all** rows. Some DeepEval conversational metrics
+    expect certain lists on the **metric object** (constructor kwargs), while Floeval's
+    dataset schema stores the corresponding ground truth on **each row**:
+
+    - ``topic_adherence`` — DeepEval wants ``relevant_topics``; rows may carry
+      ``reference_topics`` (see ``ConversationalSample`` / ``AgentSample``).
+    - ``tool_use`` — DeepEval wants ``available_tools``; rows may carry
+      ``reference_tool_calls``.
+
+    This function **mutates** each metric's ``_metric_params`` in place when that key is
+    missing or empty, by aggregating values from ``rows`` (deduped union). If the user
+    already set ``relevant_topics`` / ``available_tools`` in YAML or metric params, those
+    values are left unchanged.
+
+    It does **not** replace row-level fields that map onto ``ConversationalTestCase`` (e.g.
+    ``scenario``, ``reference_outcome``, transcript turns); those are handled when building
+    test cases, not here.
+
+    Args:
+        floeval_metrics: Floeval metrics about to be passed to
+            ``create_deepeval_metric_instance()`` for a single batched run.
+        rows: All conversational or agent-trace rows in that batch.
+
+    """
     for metric in floeval_metrics:
         params = getattr(metric, "_metric_params", None)
         if not isinstance(params, dict):
@@ -110,18 +143,13 @@ def partition_deepeval_metrics(
 def _instantiate_deepeval_for_batch(
     adapter: DeepEvalCustomMetricAdapter,
     floeval_metric: BaseMetric,
-) -> Any:
+):
     """Build one DeepEval metric instance for a batched ``evaluate()`` call."""
     kind: str = getattr(floeval_metric, "deepeval_test_case_kind", "llm")
     if kind == "conversational":
-        factory = getattr(floeval_metric, "create_deepeval_metric_instance", None)
-        if not callable(factory):
-            msg = (
-                f"Metric {floeval_metric.name!r} is conversational but does not implement "
-                "create_deepeval_metric_instance()."
-            )
-            raise TypeError(msg)
-        return factory()
+        return cast(
+            _SupportsConversationalDeepevalBatch, floeval_metric
+        ).create_deepeval_metric_instance()
     deepeval_class = adapter.transform_metric(floeval_metric)
     return deepeval_class()
 
