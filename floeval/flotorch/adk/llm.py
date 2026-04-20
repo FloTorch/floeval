@@ -18,7 +18,6 @@ from floeval.flotorch.adk.utils.adk_utils import (
     tools_to_openai_format,
 )
 from floeval.flotorch.sdk.llm import FlotorchLLM
-from floeval.utils.agent_trace.trace_context import record_llm_token_usage
 
 logger = logging.getLogger(__name__)
 
@@ -88,14 +87,6 @@ class FlotorchADKLLM(BaseLlm):
                 tools=tools,
                 response_format=response_format,
                 extra_body={},
-            )
-
-            # Capture token usage into contextvar accumulator (read by FloTorchRunner)
-            meta = response.metadata
-            record_llm_token_usage(
-                total=int(meta.get("totalTokens", 0) or 0),
-                prompt=int(meta.get("inputTokens", 0) or 0),
-                completion=int(meta.get("outputTokens", 0) or 0),
             )
 
             try:
