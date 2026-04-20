@@ -17,6 +17,8 @@ from floeval.metric_providers.deepeval.metrics import (
     HallucinationDeepEvalMetric,
     JsonCorrectnessDeepEvalMetric,
     PatternMatchDeepEvalMetric,
+    TaskCompletionGEvalMetric,
+    ToolCorrectnessDeepEvalMetric,
     ToxicityDeepEvalMetric,
 )
 
@@ -37,6 +39,8 @@ _registry.register("deepeval", "toxicity", ToxicityDeepEvalMetric)
 _registry.register("deepeval", "exact_match", ExactMatchDeepEvalMetric)
 _registry.register("deepeval", "pattern_match", PatternMatchDeepEvalMetric)
 _registry.register("deepeval", "json_correctness", JsonCorrectnessDeepEvalMetric)
+_registry.register("deepeval", "task_completion_geval", TaskCompletionGEvalMetric)
+_registry.register("deepeval", "tool_correctness", ToolCorrectnessDeepEvalMetric)
 
 __all__ = [
     "FaithfulnessDeepEvalMetric",
@@ -49,4 +53,6 @@ __all__ = [
     "ExactMatchDeepEvalMetric",
     "PatternMatchDeepEvalMetric",
     "JsonCorrectnessDeepEvalMetric",
+    "TaskCompletionGEvalMetric",
+    "ToolCorrectnessDeepEvalMetric",
 ]
