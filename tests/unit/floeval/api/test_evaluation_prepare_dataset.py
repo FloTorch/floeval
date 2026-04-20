@@ -35,6 +35,7 @@ def test_partial_dataset_populates_via_mock() -> None:
             llm_config=llm,
             dataset_generator_model="gpt-4o-mini",
         )
+        ev._ensure_dataset_sync()
 
     mock_pop.assert_called_once()
     assert ev.dataset is filled

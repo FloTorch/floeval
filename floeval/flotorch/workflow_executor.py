@@ -51,6 +51,7 @@ class WorkflowExecutor:
         llm_config: OpenAIProviderConfig,
         app_name: str = "floeval-workflow",
         user_id: str = "workflow-user",
+        run_headers: dict[str, str] | None = None,
     ):
         self.dag = dag
         self.llm_config = llm_config
@@ -58,6 +59,7 @@ class WorkflowExecutor:
         self.user_id = user_id
         self.base_url = llm_config.base_url
         self.api_key = llm_config.api_key
+        self.run_headers = dict(run_headers or {})
 
     async def execute(self, wf_input: dict[str, Any] | str) -> dict[str, Any]:
         """Execute DAG for single input, return aggregated traces.
@@ -132,6 +134,7 @@ class WorkflowExecutor:
                         name=memory_ref["callable_name"],
                         api_key=self.api_key,
                         base_url=self.base_url,
+                        default_headers=self.run_headers,
                     )
                 else:
                     vs_ref = resources_dict.get("vector_storage")
@@ -140,6 +143,7 @@ class WorkflowExecutor:
                             api_key=self.api_key,
                             base_url=self.base_url,
                             vectorstore_id=vs_ref["callable_name"],
+                            default_headers=self.run_headers,
                         )
 
             flt_agent = FlotorchADKAgent(
@@ -147,6 +151,7 @@ class WorkflowExecutor:
                 base_url=self.base_url,
                 api_key=self.api_key,
                 enable_memory=True if memory_service else False,
+                default_headers=self.run_headers,
             )
             agent = flt_agent.get_agent()
 

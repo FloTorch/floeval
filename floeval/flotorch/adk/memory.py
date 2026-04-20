@@ -27,6 +27,7 @@ class FlotorchADKVectorMemoryService(BaseMemoryService):
         api_key: str,
         base_url: str,
         vectorstore_id: Optional[str] = None,
+        default_headers: Optional[Dict[str, str]] = None,
     ):
         self.vectorstore_id = vectorstore_id
         self.vector_store: Optional[FlotorchVectorStore] = None
@@ -35,6 +36,7 @@ class FlotorchADKVectorMemoryService(BaseMemoryService):
                 base_url=base_url,
                 api_key=api_key,
                 vectorstore_id=vectorstore_id,
+                default_headers=default_headers,
             )
 
     @override
@@ -94,6 +96,7 @@ class FlotorchMemoryService(BaseMemoryService):
         name: str,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
+        default_headers: Optional[Dict[str, str]] = None,
     ):
         self._name = name
         self._base_url = base_url or os.getenv("FLOTORCH_BASE_URL")
@@ -106,6 +109,7 @@ class FlotorchMemoryService(BaseMemoryService):
             api_key=self._api_key,
             base_url=self._base_url,
             provider_name=self._name,
+            default_headers=default_headers,
         )
 
     def _map_role_to_flotorch(self, role: str) -> str:

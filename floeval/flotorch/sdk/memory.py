@@ -18,10 +18,12 @@ class FlotorchMemory:
         api_key: str,
         base_url: str,
         provider_name: str,
+        default_headers: Optional[Dict[str, str]] = None,
     ):
         self.api_key = api_key
         self.base_url = base_url
         self.provider_name = provider_name
+        self.default_headers = dict(default_headers or {})
 
     def add(
         self,
@@ -47,6 +49,7 @@ class FlotorchMemory:
             metadata=metadata,
             timestamp=timestamp,
             providerParams=providerParams,
+            extra_headers=self.default_headers,
         )
 
     def search(
@@ -75,6 +78,7 @@ class FlotorchMemory:
             page=page,
             limit=limit,
             query=query,
+            extra_headers=self.default_headers,
         )
 
 
@@ -86,6 +90,7 @@ class FlotorchVectorStore:
         base_url: str,
         api_key: str,
         vectorstore_id: str,
+        default_headers: Optional[Dict[str, str]] = None,
     ):
         if not api_key or not api_key.strip():
             raise ValueError("API key cannot be empty.")
@@ -94,6 +99,7 @@ class FlotorchVectorStore:
         self.base_url = base_url
         self.api_key = api_key
         self.vectorstore_id = vectorstore_id
+        self.default_headers = dict(default_headers or {})
 
     def search(
         self,
@@ -118,4 +124,5 @@ class FlotorchVectorStore:
             kwargs["score_threshold"] = score_threshold
         if rewrite_query is not None:
             kwargs["rewrite_query"] = rewrite_query
+        kwargs["extra_headers"] = self.default_headers
         return memory_utils.search_vectorstore(**kwargs)

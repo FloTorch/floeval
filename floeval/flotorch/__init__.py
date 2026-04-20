@@ -23,6 +23,7 @@ try:
         base_url: str | None = None,
         api_key: str | None = None,
         llm_config: Any | None = None,
+        run_headers: dict[str, str] | None = None,
     ) -> FloTorchRunner:
         """Build FloTorchRunner; gateway URL/key from args, llm_config, or FLOTORCH_* env."""
         if base_url is None and llm_config is not None:
@@ -38,7 +39,12 @@ try:
                 "FloTorch gateway base_url and api_key required. "
                 "Pass llm_config, or set FLOTORCH_BASE_URL and FLOTORCH_API_KEY."
             )
-        adk = FlotorchADKAgent(agent_name=agent_name, base_url=base_url, api_key=api_key)
+        adk = FlotorchADKAgent(
+            agent_name=agent_name,
+            base_url=base_url,
+            api_key=api_key,
+            default_headers=run_headers,
+        )
         return FloTorchRunner(adk.get_agent())
 
     __all__ = [

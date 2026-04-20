@@ -20,18 +20,22 @@ class FlotorchLLM:
         api_key: str,
         base_url: str,
         chat_endpoint: str = "chat/completions",
+        default_headers: Optional[Dict[str, str]] = None,
     ):
         self.model_id = model_id
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.chat_endpoint = chat_endpoint.lstrip("/")
         self._url = f"{self.base_url}/{self.chat_endpoint}"
+        self.default_headers = dict(default_headers or {})
 
     def _headers(self) -> Dict[str, str]:
-        return {
+        headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+        headers.update(self.default_headers)
+        return headers
 
     async def ainvoke(
         self,
@@ -41,9 +45,14 @@ class FlotorchLLM:
         extra_body: Optional[Dict] = None,
         **kwargs: Any,
     ) -> _LLMResponse:
-        """Chat completion (async)."""
-        kw = dict(kwargs)
-        kw.pop("return_headers", None)
+        """Async chat completion request."""
+
+        json_payload_kwargs = dict(kwargs)
+        json_payload_kwargs.pop("return_headers", None)
+        request_extra_headers = json_payload_kwargs.pop("extra_headers", None)
+        headers = self._headers()
+        if isinstance(request_extra_headers, dict):
+            headers.update({str(k): str(v) for k, v in request_extra_headers.items()})
 
         payload: Dict[str, Any] = {
             "model": self.model_id,
@@ -54,12 +63,10 @@ class FlotorchLLM:
             payload["tools"] = tools
         if response_format:
             payload["response_format"] = response_format
-        payload.update(kw)
-
         try:
             result = await async_http_post(
                 url=self._url,
-                headers=self._headers(),
+                headers=headers,
                 json=payload,
                 timeout=120.0,
             )
@@ -68,8 +75,8 @@ class FlotorchLLM:
                 f"[floeval-debug] FlotorchLLM.ainvoke failed model={self.model_id} url={self._url}",
                 flush=True,
             )
-            traceback.print_exc()
             raise
+
         return _LLMResponse(result)
 
 
