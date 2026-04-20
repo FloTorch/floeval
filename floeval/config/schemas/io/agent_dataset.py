@@ -68,7 +68,33 @@ class AgentTrace(BaseModel):
     final_response: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+    # Performance metadata — all optional, populated by trace capture infrastructure
+    start_time: float | None = Field(default=None, description="Unix timestamp, execution start")
+    end_time: float | None = Field(default=None, description="Unix timestamp, execution end")
+    total_tokens: int | None = Field(default=None, description="Total tokens (prompt + completion)")
+    prompt_tokens: int | None = Field(default=None, description="Prompt tokens")
+    completion_tokens: int | None = Field(default=None, description="Completion tokens")
+    error_info: dict[str, Any] | None = Field(default=None, description="Error details if failed")
+    agent_name: str | None = Field(default=None, description="Name of the agent that produced this trace")
+
     model_config = {"frozen": True}
+
+    @property
+    def latency_seconds(self) -> float | None:
+        """Wall-clock execution time in seconds. Requires start_time and end_time."""
+        if self.start_time is not None and self.end_time is not None:
+            return round(self.end_time - self.start_time, 3)
+        return None
+
+    @property
+    def tool_error_count(self) -> int:
+        """Number of tool messages that appear to contain errors (heuristic)."""
+        _error_signals = {"error", "exception", "failed", "traceback", "404", "500", "503", "timeout"}
+        return sum(
+            1 for msg in self.messages
+            if isinstance(msg, ToolMessage)
+            and any(sig in (msg.content or "").lower() for sig in _error_signals)
+        )
 
     @classmethod
     def from_simple_response(
@@ -239,3 +265,74 @@ class AgentDataset(BaseModel):
         )
 
         return AgentDatasetLoader.from_file(path)
+
+
+class WorkflowExecution(BaseModel):
+    """Complete record of a multi-agent workflow run.
+
+    Produced by WorkflowExecutor.execute_and_build().
+    Consumed by WorkflowEvaluation.
+
+    Contains the full workflow result: per-agent traces, node statuses,
+    final output, and optional reference for comparison.
+    """
+
+    user_input: AgentInputOutput
+    final_output: str = ""
+    agent_traces: list[AgentTrace] = Field(
+        default_factory=list,
+        description="One trace per agent, in execution order.",
+    )
+    agent_names: list[str] = Field(
+        default_factory=list,
+        description="Agent names aligned with agent_traces list.",
+    )
+    node_results: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="node_id → {status, text, agent_name, tool_calls, turn_count}",
+    )
+    reference_outcome: AgentInputOutput | None = None
+    reference_tool_calls: list[ToolCall] | None = None
+    session_id: str | None = None
+    dag_graph_id: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @property
+    def completed_agents(self) -> int:
+        """Number of AGENT nodes (not START/END) that completed with SUCCESS status."""
+        return sum(
+            1 for r in self.node_results.values()
+            if r.get("agent_name") and r.get("status") == "SUCCESS"
+        )
+
+    @property
+    def total_agents(self) -> int:
+        """Total number of AGENT nodes (not START/END) in the workflow."""
+        agent_node_count = sum(1 for r in self.node_results.values() if r.get("agent_name"))
+        return agent_node_count if agent_node_count > 0 else len(self.agent_traces)
+
+    @property
+    def workflow_completion_rate(self) -> float:
+        """Fraction of agents that completed successfully. 0.0 if no agents."""
+        if self.total_agents == 0:
+            return 0.0
+        return self.completed_agents / self.total_agents
+
+    def get_handoff_pairs(self) -> list[tuple[AgentTrace, AgentTrace]]:
+        """Consecutive (upstream, downstream) trace pairs for handoff evaluation."""
+        if len(self.agent_traces) < 2:
+            return []
+        return [
+            (self.agent_traces[i], self.agent_traces[i + 1])
+            for i in range(len(self.agent_traces) - 1)
+        ]
+
+    def build_agent_sample(self, trace: AgentTrace) -> AgentSample:
+        """Build an AgentSample from a single agent's trace for per-agent metric execution."""
+        return AgentSample(
+            user_input=self.user_input,
+            trace=trace,
+            reference_outcome=self.reference_outcome,
+            reference_tool_calls=self.reference_tool_calls,
+            metadata={"agent_name": trace.agent_name, "workflow_session": self.session_id},
+        )
