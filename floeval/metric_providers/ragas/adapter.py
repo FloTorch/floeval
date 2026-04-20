@@ -1,4 +1,12 @@
-"""RAGAS adapter and conversion helpers."""
+"""
+RAGAS adapter for custom LLM integration.
+
+Key points:
+- Uses unified LLMProviderConfig for consistency across providers.
+- Provides RAGASAdapter class similar to DeepEvalAdapter for consistency.
+- Agent metrics (agent_goal_accuracy) use LangChain-based structured LLM by default,
+  which works with any OpenAI-compatible API (no response_format required).
+"""
 
 import json
 import re
@@ -26,7 +34,13 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class LangChainStructuredLLM(InstructorBaseRagasLLM):
-    """ChatOpenAI wrapper that validates JSON output into Pydantic models."""
+    """LangChain-based LLM implementing InstructorBaseRagasLLM interface.
+
+    Uses ChatOpenAI with plain completion (no response_format). RAGAS prompts
+    already ask for JSON output; we parse the response and validate into the
+    Pydantic model. Works with any OpenAI-compatible API that does not support
+    response_format.
+    """
 
     def __init__(
         self,
@@ -46,7 +60,7 @@ class LangChainStructuredLLM(InstructorBaseRagasLLM):
         self._llm = ChatOpenAI(**llm_args)
 
     def generate(self, prompt: str, response_model: Type[T]) -> T:
-        """Synchronous adapter over `agenerate`."""
+        """Sync generate - runs async in loop."""
         return run_coroutine_sync(lambda: self.agenerate(prompt, response_model))
 
     async def agenerate(self, prompt: str, response_model: Type[T]) -> T:
@@ -82,7 +96,14 @@ def create_ragas_llm(
     config: LLMProviderConfig | None = None,
     extra_headers: Dict[str, str] | None = None,
 ) -> LangchainLLMWrapper:
-    """Build the default RAGAS LLM wrapper from provider config."""
+    """Create RAGAS LLM wrapper configured with custom llm configuration.
+
+    Args:
+        config: LLMProviderConfig configuration (optional, uses env defaults if None)
+
+    Returns:
+        LangchainLLMWrapper instance configured with custom llm configuration
+    """
     llm_args: Dict[str, Any] = {}
     if config and config.base_url:
         llm_args["openai_api_base"] = _normalize_openai_base_url(config.base_url)
@@ -100,7 +121,14 @@ def create_ragas_embeddings(
     config: LLMProviderConfig | None = None,
     extra_headers: Dict[str, str] | None = None,
 ) -> LangchainEmbeddingsWrapper:
-    """Build the default RAGAS embeddings wrapper from provider config."""
+    """Create RAGAS embeddings wrapper configured with custom llm configuration.
+
+    Args:
+        config: LLMProviderConfig configuration (optional, uses env defaults if None)
+
+    Returns:
+        LangchainEmbeddingsWrapper instance configured with custom llm configuration
+    """
     embedding_args: Dict[str, Any] = {
         "check_embedding_ctx_length": False,
     }
@@ -120,7 +148,12 @@ def create_ragas_instructor_llm(
     config: LLMProviderConfig | None = None,
     extra_headers: Dict[str, str] | None = None,
 ):
-    """Build the structured LLM used by agent-focused RAGAS metrics."""
+    """Create LLM for RAGAS agent metrics (agent_goal_accuracy).
+
+    Uses LangChain ChatOpenAI + JSON parsing (no response_format), so it works
+    with any OpenAI-compatible API. Pass the same llm_config
+    as the rest of evaluation - no separate RAGAS config needed.
+    """
     return LangChainStructuredLLM(config, extra_headers=extra_headers)
 
 
@@ -146,14 +179,24 @@ def transform_agent_sample_to_ragas_messages(
 
 
 class RAGASAdapter:
-    """Adapter between FloEval sample types and RAGAS objects."""
+    """Adapter for RAGAS client integration.
+
+    Adapts input and output formats as needed by RAGAS library.
+    Similar to DeepEvalAdapter for consistency across providers.
+    """
 
     def __init__(
         self,
         config: LLMProviderConfig | None = None,
         extra_headers: Dict[str, str] | None = None,
     ):
-        """Initialize adapter with optional provider config and request headers."""
+        """Initialize RAGAS adapter with llm configuration.
+
+        Args:
+            config: Optional LLMProviderConfig configuration. If None, uses environment defaults.
+            extra_headers: Optional headers forwarded on every LLM/embedding API request
+                (e.g. gateway run-context headers for log correlation).
+        """
         self.config = config
         self._extra_headers: Dict[str, str] = dict(extra_headers or {})
         self._llm: LangchainLLMWrapper | None = None
@@ -178,7 +221,9 @@ class RAGASAdapter:
 
     @property
     def agent_llm(self):
-        """Structured LLM used by agent metrics."""
+        """LLM for agent metrics (agent_goal_accuracy, tool_call_accuracy).
+        Uses LangChain + JSON parse; works with any OpenAI-compatible API.
+        """
         if self._agent_llm is None:
             self._agent_llm = create_ragas_instructor_llm(
                 self.config, extra_headers=self._extra_headers or None
@@ -186,18 +231,36 @@ class RAGASAdapter:
         return self._agent_llm
 
     def transform_sample(self, sample: Sample | dict[str, str | Sequence[Any]]) -> SingleTurnSample:
-        """Convert a FloEval sample into `SingleTurnSample`."""
+        """
+        Convert Floeval Sample to RAGAS SingleTurnSample format.
+
+        Supports both Pydantic Sample models and dict-like objects.
+
+        Args:
+            sample: Floeval Sample object with inputs and ground_truth
+
+        Returns:
+            SingleTurnSample for RAGAS evaluation
+
+        Raises:
+            ValueError: If sample doesn't have required fields
+        """
+        # Handle Pydantic models
         if isinstance(sample, Sample):
             sample_data = sample.model_dump()
+        # Handle dict-like objects
         elif isinstance(sample, dict):
             sample_data = sample
         else:
             raise ValueError(f"Unsupported sample type: {type(sample)}. Expected Sample or dict.")
 
+        # Extract fields with defaults
         user_input = sample_data.get("user_input", "")
         contexts = sample_data.get("contexts") or []
         llm_response = sample_data.get("llm_response", "")
         ground_truth = sample_data.get("ground_truth", "")
+
+        # TODO: Use model attributes instead of hardcoded keys?
 
         return SingleTurnSample(
             user_input=user_input,

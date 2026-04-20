@@ -16,7 +16,6 @@ from floeval.api.metrics.registry import MetricRegistry
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
 from floeval.metric_providers.ragas.agent_metrics import (
     RAGASAgentGoalAccuracy,
-    RAGASTopicAdherence,
     RAGASToolCallAccuracy,
 )
 from floeval.metric_providers.ragas.metrics import (
@@ -41,7 +40,6 @@ _registry.register("ragas", "context_entity_recall", RAGASContextEntityRecall)
 _registry.register("ragas", "noise_sensitivity", RAGASNoiseSensitivity)
 _registry.register("ragas", "agent_goal_accuracy", RAGASAgentGoalAccuracy)
 _registry.register("ragas", "tool_call_accuracy", RAGASToolCallAccuracy)
-_registry.register("ragas", "topic_adherence", RAGASTopicAdherence)
 
 __all__ = [
     "RAGASAnswerRelevancy",
@@ -52,6 +50,5 @@ __all__ = [
     "RAGASNoiseSensitivity",
     "RAGASAgentGoalAccuracy",
     "RAGASToolCallAccuracy",
-    "RAGASTopicAdherence",
     "RAGASAdapter",
 ]

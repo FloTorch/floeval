@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import traceback
 import re
 import time
 from typing import Any, Dict, List, Optional, Union, cast
@@ -157,7 +158,8 @@ class FlotorchADKAgent:
         try:
             return http_get(url, headers=headers, timeout=30.0)
         except Exception:
-            logger.exception("Failed to fetch agent config from %s", url)
+            print(f"[floeval-debug] FlotorchADKAgent fetch config failed url={url}", flush=True)
+            traceback.print_exc()
             raise
 
     def _build_tools(self, config: Dict[str, Any]) -> List[Any]:
@@ -217,6 +219,8 @@ class FlotorchADKAgent:
                     toolset = MCPToolset(connection_params=conn_params)
                     tools.append(toolset)
             except Exception as exc:
+                print("[floeval-debug] MCP toolset build exception:", flush=True)
+                traceback.print_exc()
                 logger.warning(
                     "Failed to build MCP toolset name=%s proxy=%s: %s — skipping",
                     tool_cfg.get("name"),
