@@ -38,7 +38,9 @@ class ConversationalGEvalDeepEvalMetric(DeepEvalMetric):
                 metric_params[key] = kwargs[key]
         return metric_params
 
-    def create_deepeval_metric_instance(self) -> ConversationalGEval:
+    def create_deepeval_metric_instance(
+        self, sample: ConversationalSample | AgentSample | None = None, **kwargs: Any
+    ) -> ConversationalGEval:
         """Return a DeepEval metric instance for batched ``evaluate()`` runs."""
         if self._llm_adapter is None:
             raise ValueError(
@@ -77,7 +79,7 @@ class ConversationalGEvalDeepEvalMetric(DeepEvalMetric):
         self, sample: ConversationalSample | AgentSample, **kwargs: Any
     ) -> MetricResult:
         """Score a single sample via DeepEval (standalone execution path)."""
-        inst = self.create_deepeval_metric_instance()
+        inst = self.create_deepeval_metric_instance(sample)
         tc = conversational_row_to_deepeval(sample)
         # ``evaluate`` types ``metrics`` as homogeneous ``list[BaseConversationalMetric]``;
         # ``list[ConversationalGEval]`` is not a subtype (``list`` is invariant).

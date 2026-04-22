@@ -3,7 +3,7 @@
 import logging
 import time
 from collections.abc import Callable, Sequence
-from typing import Any, Protocol, cast
+from typing import Any
 
 from deepeval.evaluate import AsyncConfig, DisplayConfig, ErrorConfig, evaluate as deepeval_evaluate
 from pydantic import BaseModel
@@ -17,21 +17,11 @@ from floeval.metric_providers.deepeval.conversational_requirements import (
     validate_conversational_metric_requirements,
 )
 from floeval.metric_providers.deepeval.custom_adapter import DeepEvalCustomMetricAdapter
-from floeval.metric_providers.deepeval.multiturn_adapter import (
-    agent_sample_to_conversational_test_case,
-    conversational_sample_to_deepeval,
-)
 from floeval.utils.job_status import log_job_status, log_job_status_error
 
 logger = logging.getLogger(__name__)
 
 ProgressFn = Callable[..., None]
-
-
-class _SupportsConversationalDeepevalBatch(Protocol):
-    """DeepEval metrics that build a batched conversational metric instance."""
-
-    def create_deepeval_metric_instance(self) -> Any: ...
 
 
 def _default_progress(msg: str, *args: Any, extra: dict[str, Any]) -> None:
@@ -60,9 +50,10 @@ def _instantiate_deepeval_for_batch(
     """Build one DeepEval metric instance for a batched ``evaluate()`` call."""
     kind: str = getattr(floeval_metric, "deepeval_test_case_kind", "llm")
     if kind == "conversational":
-        return cast(
-            _SupportsConversationalDeepevalBatch, floeval_metric
-        ).create_deepeval_metric_instance()
+        raise ValueError(
+            "Conversational metrics are evaluated per sample; "
+            "batched no-arg instantiation is not supported."
+        )
     deepeval_class = adapter.transform_metric(floeval_metric)
     return deepeval_class()
 
@@ -102,9 +93,7 @@ def _map_evaluate_result_to_sample_results(
         metric_results: dict[str, Any] = {}
 
         test_result = (
-            result.test_results[i]
-            if result.test_results and i < len(result.test_results)
-            else None
+            result.test_results[i] if result.test_results and i < len(result.test_results) else None
         )
 
         for j, (metric_instance, floeval_metric) in enumerate(
@@ -242,6 +231,64 @@ def _evaluate_deepeval_batch(
     )
 
 
+def _evaluate_conversational_metrics_per_sample(
+    *,
+    rows: Sequence[ConversationalSample | AgentSample],
+    floeval_metrics: list[BaseMetric],
+) -> list[dict[str, Any]]:
+    """Evaluate conversational DeepEval metrics per row and return Floeval-shaped results."""
+    sample_results: list[dict[str, Any]] = []
+
+    for sample in rows:
+        metric_results: dict[str, Any] = {}
+        for metric in floeval_metrics:
+            provider = "deepeval"
+            metric_name = metric.name
+            key = f"{provider}:{metric_name}"
+            threshold = getattr(metric, "threshold", None)
+            try:
+                result = metric.evaluate(sample)
+                metadata = dict(result.metadata or {})
+                passed = metadata.get("passed")
+                if passed is None:
+                    if result.score is None:
+                        passed = False
+                    elif threshold is not None:
+                        passed = result.score >= threshold
+                    else:
+                        passed = True
+
+                metric_results[key] = {
+                    "score": result.score,
+                    "passed": bool(passed),
+                    "reason": metadata.get("reason") or metadata.get("error"),
+                    "provider": provider,
+                    "metadata": metadata
+                    | {
+                        "threshold": threshold,
+                        "execution_provider": "deepeval",
+                    },
+                }
+            except Exception as e:
+                logger.error(
+                    "DeepEval conversational metric %s failed: %s",
+                    key,
+                    e,
+                    exc_info=True,
+                )
+                metric_results[key] = {
+                    "score": None,
+                    "passed": False,
+                    "reason": str(e),
+                    "provider": provider,
+                    "metadata": {"error": str(e), "metric_name": metric_name},
+                }
+
+        sample_results.append(sample.model_dump() | {"metrics": metric_results})
+
+    return sample_results
+
+
 def run_deepeval_llm_batch(
     *,
     dataset: Dataset,
@@ -280,25 +327,36 @@ def run_deepeval_conversational_batch(
 ) -> list[dict[str, Any]]:
     """Run conversational DeepEval metrics on ``ConversationalTestCase`` rows."""
     progress = emit_progress or _default_progress
-    adapter = DeepEvalCustomMetricAdapter(llm_config)
     validate_conversational_metric_requirements(floeval_metrics, conversational_rows)
-
-    deepeval_metric_instances, floeval_metrics_ordered = _metrics_instances_for_batch(
-        adapter, floeval_metrics
+    progress(
+        "DeepEval conversational per-sample evaluate() starting: metrics=%d samples=%d",
+        len(floeval_metrics),
+        len(conversational_rows),
+        extra={
+            "phase": "floeval_deepeval_conversational_per_sample",
+            "metric_count": len(floeval_metrics),
+            "sample_count": len(conversational_rows),
+        },
     )
-    if not deepeval_metric_instances:
-        return []
-
-    all_test_cases = [conversational_sample_to_deepeval(s) for s in conversational_rows]
-    return _evaluate_deepeval_batch(
-        all_test_cases=all_test_cases,
-        deepeval_metric_instances=deepeval_metric_instances,
-        floeval_metrics_ordered=floeval_metrics_ordered,
-        row_models=conversational_rows,
-        emit_progress=progress,
-        phase_batched="floeval_deepeval_conversational_batched",
-        phase_done="floeval_deepeval_conversational_batched_done",
+    started = time.monotonic()
+    sample_results = _evaluate_conversational_metrics_per_sample(
+        rows=conversational_rows,
+        floeval_metrics=floeval_metrics,
     )
+    elapsed = time.monotonic() - started
+    progress(
+        "DeepEval conversational per-sample evaluate() done in %.1fs metrics=%d samples=%d",
+        elapsed,
+        len(floeval_metrics),
+        len(conversational_rows),
+        extra={
+            "phase": "floeval_deepeval_conversational_per_sample_done",
+            "elapsed_s": round(elapsed, 1),
+            "metric_count": len(floeval_metrics),
+            "sample_count": len(conversational_rows),
+        },
+    )
+    return sample_results
 
 
 def run_deepeval_conversational_batch_for_agent_samples(
@@ -310,25 +368,38 @@ def run_deepeval_conversational_batch_for_agent_samples(
 ) -> list[dict[str, Any]]:
     """Conversational DeepEval batch where rows are ``AgentSample`` (trace-backed)."""
     progress = emit_progress or _default_progress
-    adapter = DeepEvalCustomMetricAdapter(llm_config)
-    
+
     # NOTE: AgentSample does not expose reference_topics yet. Keep strict conversational
     # validation only on ConversationalSample rows until schema parity lands.
     # validate_conversational_metric_requirements(floeval_metrics, agent_rows)
-
-    deepeval_metric_instances, floeval_metrics_ordered = _metrics_instances_for_batch(
-        adapter, floeval_metrics
+    progress(
+        "DeepEval conversational (agent rows) per-sample evaluate() starting: "
+        "metrics=%d samples=%d",
+        len(floeval_metrics),
+        len(agent_rows),
+        extra={
+            "phase": "floeval_deepeval_conversational_agent_per_sample",
+            "metric_count": len(floeval_metrics),
+            "sample_count": len(agent_rows),
+        },
     )
-    if not deepeval_metric_instances:
-        return []
-
-    all_test_cases = [agent_sample_to_conversational_test_case(s) for s in agent_rows]
-    return _evaluate_deepeval_batch(
-        all_test_cases=all_test_cases,
-        deepeval_metric_instances=deepeval_metric_instances,
-        floeval_metrics_ordered=floeval_metrics_ordered,
-        row_models=agent_rows,
-        emit_progress=progress,
-        phase_batched="floeval_deepeval_conversational_agent_batched",
-        phase_done="floeval_deepeval_conversational_agent_batched_done",
+    started = time.monotonic()
+    sample_results = _evaluate_conversational_metrics_per_sample(
+        rows=agent_rows,
+        floeval_metrics=floeval_metrics,
     )
+    elapsed = time.monotonic() - started
+    progress(
+        "DeepEval conversational (agent rows) per-sample evaluate() done in %.1fs "
+        "metrics=%d samples=%d",
+        elapsed,
+        len(floeval_metrics),
+        len(agent_rows),
+        extra={
+            "phase": "floeval_deepeval_conversational_agent_per_sample_done",
+            "elapsed_s": round(elapsed, 1),
+            "metric_count": len(floeval_metrics),
+            "sample_count": len(agent_rows),
+        },
+    )
+    return sample_results
