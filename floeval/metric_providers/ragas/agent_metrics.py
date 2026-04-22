@@ -45,7 +45,7 @@ class RAGASAgentGoalAccuracy(BaseMetric):
 
         # Use the standard RAGAS LLM wrapper for compatibility with
         # AgentGoalAccuracyWithReference across ragas versions.
-        self._metric = AgentGoalAccuracyWithReference(llm=self.adapter.llm)
+        self._metric = AgentGoalAccuracyWithReference(llm=self.adapter.agent_llm)
 
     def evaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
         try:
@@ -218,7 +218,7 @@ class RAGASTopicAdherence(BaseMetric):
         self.adapter = adapter or RAGASAdapter(
             config=llm_config, extra_headers=self._extra_headers or None
         )
-        self._metric = TopicAdherence(llm=self.adapter.llm)
+        self._metric = TopicAdherence(llm=self.adapter.agent_llm)
 
     def evaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
         try:
