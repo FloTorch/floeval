@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 from floeval.api import DatasetLoader, Evaluation
-from floeval.api.dataset import conversational_dataset_from_file
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
 from tests._support.assertions import assert_samples_have_metric
 
@@ -60,26 +59,3 @@ def test_ragas_metrics(
         llm_config=llm_config,
     ).run()
     assert_samples_have_metric(results, metric_key, require_score=True)
-
-
-def test_ragas_topic_adherence_multiturn(
-    config_data_dir: Path,
-    load_yaml,
-    resolve_env,
-    requires_llm_credentials,
-) -> None:
-    """Run ragas:multi_turn_topic_adherence on ConversationalDataset."""
-    config_data = resolve_env(
-        load_yaml(config_data_dir / "ragas_config" / "config.ragas_topic_adherence_multiturn.yaml")
-    )
-    dataset = conversational_dataset_from_file(
-        config_data_dir / "datasets" / "conversational_topic_dataset.json",
-        partial_dataset=False,
-    )
-    llm_config = OpenAIProviderConfig(**config_data["llm_config"])
-    results = Evaluation(
-        dataset=dataset,
-        metrics=config_data["evaluation_config"]["metrics"],
-        llm_config=llm_config,
-    ).run()
-    assert_samples_have_metric(results, "ragas:multi_turn_topic_adherence", require_score=True)

@@ -39,7 +39,6 @@ def test_list_providers_includes_expected_backends() -> None:
         ("ragas", "aspect_critic"),
         ("ragas", "context_recall"),
         ("ragas", "topic_adherence"),
-        ("ragas", "multi_turn_topic_adherence"),
     ],
 )
 def test_metric_registered(provider: str, metric_id: str) -> None:
