@@ -1,14 +1,32 @@
 import argparse
 import json
+from collections import defaultdict
+from functools import partial
 from pathlib import Path
+from uuid import uuid4
 
 from floeval.api.agent_evaluation import AgentEvaluation, AgentEvaluationResult
 from floeval.api.dataset import DatasetLoader
 from floeval.api.evaluation import Evaluation, EvaluationResult
-from floeval.cli import CLIEvaluationConfig, ConfigError
+from floeval.api.workflow_evaluation import WorkflowEvaluation
+from floeval.cli import CLIEvaluationConfig, ConfigError, MissingDependencyError
+from floeval.cli.export import save_json_output
 from floeval.cli.utils import CLIConfigLoader, check_if_file_exists
 from floeval.config.schemas.io.agent_dataset import AgentDataset
 from floeval.config.schemas.io.llm import LLMProviderConfig, OpenAIProviderConfig
+from floeval.utils.asyncio_compat import run_coroutine_sync
+
+
+def _ensure_output_parent(output_file: Path | None) -> None:
+    if output_file and not output_file.parent.exists():
+        raise FileNotFoundError(f"Output directory not found: {output_file.parent}")
+
+
+def _resolve_dataset_path(dataset_arg: str) -> Path:
+    try:
+        return check_if_file_exists(dataset_arg)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"Dataset file not found: {e}") from e
 
 
 def _is_partial_dataset(file_path: Path) -> bool:
@@ -67,9 +85,7 @@ def output_results(results: EvaluationResult, output_path: Path | None):
     """
     if output_path:
         try:
-            with open(output_path, "w") as f:
-                json.dump(results.model_dump(), f, indent=4, default=str)
-            print(f"Results successfully saved to {output_path}")
+            save_json_output(results.model_dump(), output_path)
         except Exception as e:
             print(f"Error saving results to {output_path}: {e}")
     else:
@@ -117,13 +133,121 @@ def output_agent_results(results: AgentEvaluationResult, output_path: Path | Non
     """Save or print agent evaluation results."""
     if output_path:
         try:
-            with open(output_path, "w") as f:
-                json.dump(results.model_dump(), f, indent=4, default=str)
-            print(f"Results successfully saved to {output_path}")
+            save_json_output(results.model_dump(), output_path)
         except Exception as e:
             print(f"Error saving results to {output_path}: {e}")
     else:
         _pretty_print_agent_results(results)
+
+
+def _run_workflow_evaluate(
+    dataset: AgentDataset,
+    llm_config: OpenAIProviderConfig,
+    eval_config: dict,
+    workflow_config: dict,
+    output_file: Path | None,
+):
+    """Run workflow evaluation via WorkflowExecutor + WorkflowEvaluation."""
+    try:
+        from floeval.flotorch.dag import DAG
+        from floeval.flotorch.workflow_executor import WorkflowExecutor
+    except ImportError as e:
+        raise MissingDependencyError(
+            f"FloTorch integration required for workflow CLI mode. Import failed: {e}"
+        ) from e
+
+    dag_config = workflow_config.get("config") if isinstance(workflow_config, dict) else None
+    if not dag_config:
+        raise ConfigError(
+            "agent_workflow_config.config is required for workflow evaluation."
+        )
+
+    # Accept both old builder key `agentName` and runtime key `callable_name`.
+    # DAG.from_builder_json expects `callableName`.
+    normalized_dag_config = dict(dag_config)
+    normalized_nodes: list[dict] = []
+    for node in normalized_dag_config.get("nodes", []):
+        if not isinstance(node, dict):
+            normalized_nodes.append(node)
+            continue
+        node_copy = dict(node)
+        if "callableName" not in node_copy:
+            if "agentName" in node_copy:
+                node_copy["callableName"] = node_copy["agentName"]
+            elif "callable_name" in node_copy:
+                node_copy["callableName"] = node_copy["callable_name"]
+        normalized_nodes.append(node_copy)
+    normalized_dag_config["nodes"] = normalized_nodes
+
+    if not dataset.all_partial:
+        raise ConfigError(
+            "Workflow CLI evaluation currently expects a partial agent dataset "
+            "(samples with user_input/reference_outcome)."
+        )
+
+    metrics = list(eval_config.get("metrics") or [])
+    if not metrics:
+        raise ConfigError(
+            "metrics are required for workflow evaluation. "
+            "Add 'metrics' to evaluation_config."
+        )
+
+    per_sample_results: list[dict] = []
+    aggregate_totals: dict[str, float] = defaultdict(float)
+    aggregate_counts: dict[str, int] = defaultdict(int)
+
+    for idx, sample in enumerate(dataset.all_partial):
+        dag = DAG.from_builder_json(
+            {"config": normalized_dag_config, "invocationId": f"cli-wf-{uuid4()}"}
+        )
+        executor = WorkflowExecutor(
+            dag=dag,
+            llm_config=llm_config,
+            app_name="floeval-workflow-cli",
+            user_id=f"cli-user-{idx}",
+        )
+        execution = run_coroutine_sync(
+            partial(
+                executor.execute_and_build,
+                wf_input=sample.user_input,
+                reference_outcome=sample.reference_outcome,
+            )
+        )
+        wf_result = WorkflowEvaluation(
+            execution=execution,
+            metrics=metrics,
+            llm_config=llm_config,
+            metric_params=eval_config.get("metric_params", {}),
+        ).run()
+        result_payload = wf_result.model_dump()
+        per_sample_results.append(
+            {
+                "sample_index": idx,
+                "user_input": sample.user_input,
+                "result": result_payload,
+            }
+        )
+        for key, value in wf_result.aggregate_scores.items():
+            aggregate_totals[key] += float(value)
+            aggregate_counts[key] += 1
+
+    summary = {
+        key: round(aggregate_totals[key] / aggregate_counts[key], 4)
+        for key in aggregate_totals
+        if aggregate_counts[key] > 0
+    }
+    payload = {
+        "sample_count": len(per_sample_results),
+        "sample_results": per_sample_results,
+        "summary": summary,
+    }
+    if output_file:
+        try:
+            save_json_output(payload, output_file)
+        except Exception as e:
+            print(f"Error saving results to {output_file}: {e}")
+    else:
+        print(json.dumps(payload, indent=2, default=str))
 
 
 def _run_agent_evaluate(args: argparse.Namespace):
@@ -131,18 +255,8 @@ def _run_agent_evaluate(args: argparse.Namespace):
     config_file = args.config
     output_file = Path(args.output) if args.output else None
 
-    if output_file and not output_file.parent.exists():
-        raise FileNotFoundError(
-            f"Output directory does not exist: {output_file.parent}; "
-            "please provide a valid output path with --output"
-        )
-
-    try:
-        dataset_path = check_if_file_exists(args.dataset)
-    except FileNotFoundError as e:
-        raise FileNotFoundError(
-            f"Dataset file error: {e}; please provide a valid dataset file path with --dataset"
-        ) from e
+    _ensure_output_parent(output_file)
+    dataset_path = _resolve_dataset_path(args.dataset)
 
     config_loader = CLIConfigLoader(model_class=CLIEvaluationConfig)
     evaluation_config = config_loader.load(config_file)
@@ -165,17 +279,27 @@ def _run_agent_evaluate(args: argparse.Namespace):
     metrics = eval_config.get("metrics")
     if not metrics:
         raise ConfigError(
-            "metrics are required for agent evaluation. "
-            "Add 'metrics' to evaluation_config in your config file (e.g. metrics: [goal_achievement])."
+            "Missing 'metrics' in evaluation_config for agent evaluation."
         )
     metrics = list(metrics)
 
     dataset = AgentDataset.from_file(dataset_path)
 
-    if dataset.is_partial and not agent_name:
+    workflow_config = getattr(evaluation_config, "agent_workflow_config", None)
+
+    if dataset.is_partial and not agent_name and not workflow_config:
         raise ConfigError(
-            "Partial dataset requires agent_name for Mode 4. "
-            "Add 'agent_name' to evaluation_config in your config file."
+            "Partial dataset requires either agent_name (single-agent) or "
+            "agent_workflow_config (workflow). Add one to your config."
+        )
+
+    if workflow_config:
+        return _run_workflow_evaluate(
+            dataset=dataset,
+            llm_config=llm_config,
+            eval_config=eval_config,
+            workflow_config=workflow_config,
+            output_file=output_file,
         )
 
     agent_runner = None
@@ -212,19 +336,9 @@ def parse_args(args: argparse.Namespace):
     config_file = args.config
     output_file = Path(args.output) if args.output else None
 
-    if output_file and not output_file.parent.exists():
-        raise FileNotFoundError(
-            f"Output directory does not exist: {output_file.parent}; please provide a valid output path with --output"
-        )
+    _ensure_output_parent(output_file)
+    dataset_file = _resolve_dataset_path(args.dataset)
 
-    try:
-        dataset_file = check_if_file_exists(args.dataset)
-    except FileNotFoundError as e:
-        raise FileNotFoundError(
-            f"Dataset file error: {e}; please provide a valid dataset file path with --dataset"
-        ) from e
-
-    # ----- Load evaluation configuration (YAML or JSON) -----
     config_loader = CLIConfigLoader(model_class=CLIEvaluationConfig)
     evaluation_config = config_loader.load(config_file)
     llm_config = evaluation_config.llm_config
@@ -245,11 +359,9 @@ def parse_args(args: argparse.Namespace):
         embedding_endpoint=llm_config.get("embedding_endpoint", "embeddings"),
     )
 
-    # Auto-detect partial dataset (samples missing llm_response)
     partial_dataset = _is_partial_dataset(Path(dataset_file))
     dataset = DatasetLoader.from_file(dataset_file, partial_dataset=partial_dataset)
 
-    # dataset_generator_model required when using partial dataset (LLM generates responses)
     dataset_generator_model = None
     if partial_dataset:
         dg_config = evaluation_config.dataset_generation_config

@@ -43,7 +43,7 @@ def test_single_turn_dataset_rejects_multi_turn_ragas() -> None:
     with pytest.raises(ValueError, match="multi-turn RAGAS"):
         Evaluation(
             dataset=ds,
-            metrics=[RAGASMultiTurnTopicAdherenceStub()],
+            metrics=[RAGASTopicAdherenceStub()],
         ).run()
 
 
@@ -60,7 +60,7 @@ class RAGASAnswerRelevancyStub(BaseMetric):
         raise NotImplementedError
 
 
-class RAGASMultiTurnTopicAdherenceStub(BaseMetric):
+class RAGASTopicAdherenceStub(BaseMetric):
     def __init__(self) -> None:
         super().__init__(name="topic_adherence")
         self.provider = "ragas"

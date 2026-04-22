@@ -1,7 +1,6 @@
 """Agent evaluation orchestrator."""
 
 import asyncio
-import inspect
 import json
 import logging
 from typing import Any, Awaitable, Callable, Mapping
@@ -134,31 +133,14 @@ class AgentEvaluation:
     def _inject_context_params(
         self, provider: str, metric_id: str, merged: dict[str, Any]
     ) -> dict[str, Any]:
-        """Inject context-derived params based on metric constructor signature.
-
-        Uses introspection to avoid hardcoding metric names. Injects:
-        - llm_config: when metric accepts it and not in merged
-        - llm_provider: when metric accepts it, not in merged, and we have llm_config
-        """
-        metric_factory = self._registry.get_class(provider, metric_id)
-        if metric_factory is None:
-            return merged
-
-        try:
-            if callable(metric_factory) and not isinstance(metric_factory, type):
-                sig = inspect.signature(metric_factory)
-            else:
-                sig = inspect.signature(metric_factory.__init__)
-        except (TypeError, ValueError, AttributeError):
-            return merged
-
+        """Inject context-derived params used by LLM-backed metrics."""
         if self.llm_config is None:
             return merged
 
-        if "llm_config" in sig.parameters and "llm_config" not in merged:
+        if "llm_config" not in merged:
             merged["llm_config"] = self.llm_config
 
-        if "llm_provider" in sig.parameters and "llm_provider" not in merged:
+        if "llm_provider" not in merged:
             merged["llm_provider"] = OpenAIProvider(
                 config_name=f"{provider}:{metric_id}",
                 extra_headers=self.run_headers or None,

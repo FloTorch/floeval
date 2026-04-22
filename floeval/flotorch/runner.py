@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 import traceback
 import uuid
 from typing import TYPE_CHECKING
@@ -14,6 +15,10 @@ from floeval.config.schemas.io.agent_dataset import (
     _to_display_str,
 )
 from floeval.flotorch.adk.utils.adk_utils import process_session_events
+from floeval.utils.agent_trace.trace_context import (
+    collect_session_token_usage,
+    start_session_token_tracking,
+)
 from floeval.utils.asyncio_compat import run_coroutine_sync
 
 if TYPE_CHECKING:
@@ -90,8 +95,10 @@ class FloTorchRunner:
         session_id = session.id
 
         content = _make_user_content(user_input)
-        print(f"[floeval-debug] FloTorchRunner.arun start session={session_id}", flush=True)
+        logger.debug("FloTorchRunner.arun start session=%s", session_id)
 
+        start_session_token_tracking()
+        start_time = time.time()
         try:
             async for _ in self._runner.run_async(
                 user_id=self.USER_ID,
@@ -100,9 +107,9 @@ class FloTorchRunner:
             ):
                 pass
         except Exception:
-            print("[floeval-debug] FloTorchRunner.run_async raised:", flush=True)
             traceback.print_exc()
             raise
+        end_time = time.time()
 
         session = await self._session_service.get_session(
             app_name=self.APP_NAME,
@@ -110,15 +117,39 @@ class FloTorchRunner:
             session_id=session_id,
         )
         if session is None or not session.events:
-            print(f"[floeval-debug] FloTorchRunner.arun no session events session={session_id}", flush=True)
+            logger.debug("FloTorchRunner.arun no session events session=%s", session_id)
             return AgentTrace.from_simple_response(user_input, "")
 
         messages = process_session_events(session.events)
-        print(
-            f"[floeval-debug] FloTorchRunner.arun done events={len(session.events)} trace_msgs={len(messages)}",
-            flush=True,
+        logger.debug(
+            "FloTorchRunner.arun done events=%d trace_msgs=%d",
+            len(session.events), len(messages),
         )
-        return AgentTrace.from_messages(messages)
+        trace = AgentTrace.from_messages(messages)
+
+        # Prefer tokens captured directly from LLM responses (FlotorchADKLLM path).
+        # Fall back to ADK event usage_metadata if the contextvar wasn't populated.
+        token_usage = collect_session_token_usage()
+        if token_usage and token_usage["total"] > 0:
+            total_tokens = token_usage["total"]
+            prompt_tokens = token_usage["prompt"]
+            completion_tokens = token_usage["completion"]
+        else:
+            total_tokens = prompt_tokens = completion_tokens = 0
+            for event in session.events:
+                usage = getattr(event, "usage_metadata", None)
+                if usage is not None:
+                    total_tokens += getattr(usage, "total_token_count", 0) or 0
+                    prompt_tokens += getattr(usage, "prompt_token_count", 0) or 0
+                    completion_tokens += getattr(usage, "candidates_token_count", 0) or 0
+
+        return trace.model_copy(update={
+            "start_time": start_time,
+            "end_time": end_time,
+            "total_tokens": total_tokens or None,
+            "prompt_tokens": prompt_tokens or None,
+            "completion_tokens": completion_tokens or None,
+        })
 
     def run_on_dataset(self, partial_samples: list[PartialAgentSample]) -> list[AgentSample]:
         """Run agent on each partial sample and return full samples (sync)."""

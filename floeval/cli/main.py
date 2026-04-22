@@ -20,7 +20,6 @@ def main():
     sub_parsers = parser.add_subparsers(
         description="Run evaluations with floeval", dest="command"
     )
-    # ---- subcommand for running evaluations ----
     evaluate = sub_parsers.add_parser("evaluate", help="Run evaluations with floeval")
     evaluate.add_argument(
         "-c",
@@ -74,7 +73,6 @@ def main():
         required=True,
     )
 
-    # ------- set default function to handle commands -------
     evaluate.set_defaults(func=handle_command)
     generate.set_defaults(func=handle_command)
 

@@ -20,6 +20,8 @@ from floeval.metric_providers.deepeval.metrics import (
     HallucinationDeepEvalMetric,
     JsonCorrectnessDeepEvalMetric,
     PatternMatchDeepEvalMetric,
+    TaskCompletionGEvalMetric,
+    ToolCorrectnessDeepEvalMetric,
     ToxicityDeepEvalMetric,
 )
 
@@ -28,19 +30,17 @@ from floeval.metric_providers.deepeval.metrics import (
 _registry = MetricRegistry()
 _registry.register("deepeval", "faithfulness", FaithfulnessDeepEvalMetric)
 _registry.register("deepeval", "answer_relevancy", AnswerRelevancyDeepEvalMetric)
-_registry.register(
-    "deepeval", "contextual_precision", ContextualPrecisionDeepEvalMetric
-)
+_registry.register("deepeval", "contextual_precision", ContextualPrecisionDeepEvalMetric)
 _registry.register("deepeval", "contextual_recall", ContextualRecallDeepEvalMetric)
-_registry.register(
-    "deepeval", "contextual_relevancy", ContextualRelevancyDeepEvalMetric
-)
+_registry.register("deepeval", "contextual_relevancy", ContextualRelevancyDeepEvalMetric)
 _registry.register("deepeval", "hallucination", HallucinationDeepEvalMetric)
 _registry.register("deepeval", "toxicity", ToxicityDeepEvalMetric)
 _registry.register("deepeval", "exact_match", ExactMatchDeepEvalMetric)
 _registry.register("deepeval", "pattern_match", PatternMatchDeepEvalMetric)
 _registry.register("deepeval", "json_correctness", JsonCorrectnessDeepEvalMetric)
 _registry.register("deepeval", "conversational_g_eval", ConversationalGEvalDeepEvalMetric)
+_registry.register("deepeval", "task_completion_geval", TaskCompletionGEvalMetric)
+_registry.register("deepeval", "tool_correctness", ToolCorrectnessDeepEvalMetric)
 
 __all__ = [
     "FaithfulnessDeepEvalMetric",
@@ -54,4 +54,6 @@ __all__ = [
     "PatternMatchDeepEvalMetric",
     "JsonCorrectnessDeepEvalMetric",
     "ConversationalGEvalDeepEvalMetric",
+    "TaskCompletionGEvalMetric",
+    "ToolCorrectnessDeepEvalMetric",
 ]
