@@ -68,7 +68,7 @@ def test_ragas_topic_adherence_multiturn(
     resolve_env,
     requires_llm_credentials,
 ) -> None:
-    """Run multi-turn topic_adherence on ConversationalDataset."""
+    """Run ragas:multi_turn_topic_adherence on ConversationalDataset."""
     config_data = resolve_env(
         load_yaml(config_data_dir / "ragas_config" / "config.ragas_topic_adherence_multiturn.yaml")
     )
@@ -82,4 +82,4 @@ def test_ragas_topic_adherence_multiturn(
         metrics=config_data["evaluation_config"]["metrics"],
         llm_config=llm_config,
     ).run()
-    assert_samples_have_metric(results, "ragas:topic_adherence", require_score=True)
+    assert_samples_have_metric(results, "ragas:multi_turn_topic_adherence", require_score=True)

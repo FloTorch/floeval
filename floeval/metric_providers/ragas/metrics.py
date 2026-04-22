@@ -9,9 +9,9 @@ import logging
 from typing import Any, ClassVar, Dict, Literal, Optional
 
 from ragas.metrics._aspect_critic import AspectCritic
-from ragas.metrics._topic_adherence import TopicAdherenceScore
 from ragas.metrics.collections import (
     NoiseSensitivity,
+    TopicAdherence,
     answer_relevancy,
     context_entity_recall,
     context_precision,
@@ -57,9 +57,7 @@ class RAGASMetric(BaseMetric):
             self.threshold = kwargs.get("threshold")
         else:
             params = kwargs.get("params", {})
-            self.threshold = (
-                params.get("threshold") if isinstance(params, dict) else None
-            )
+            self.threshold = params.get("threshold") if isinstance(params, dict) else None
 
         self.adapter = adapter or RAGASAdapter(
             config=llm_config, extra_headers=self._extra_headers or None
@@ -83,9 +81,7 @@ class RAGASMetric(BaseMetric):
             logger.error(f"Failed to initialize RAGAS LLM/embeddings: {e}")
             raise
 
-    def _build_metadata(
-        self, score_float: float, error: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def _build_metadata(self, score_float: float, error: Optional[str] = None) -> Dict[str, Any]:
         """Build metadata dict with consistent structure."""
         metadata = {
             "provider": self.provider,
@@ -152,9 +148,7 @@ class RAGASAnswerRelevancy(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = run_coroutine_sync(
-                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
-            )
+            score = run_coroutine_sync(lambda: self.ragas_metric.single_turn_ascore(ragas_sample))
             score_float = float(score)
             return MetricResult(
                 score=score_float,
@@ -178,9 +172,7 @@ class RAGASAnswerRelevancy(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:  # noqa: BLE001
-            logger.error(
-                "Error computing answer relevancy (async): %s", e, exc_info=True
-            )
+            logger.error("Error computing answer relevancy (async): %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -234,9 +226,7 @@ class RAGASFaithfulness(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = run_coroutine_sync(
-                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
-            )
+            score = run_coroutine_sync(lambda: self.ragas_metric.single_turn_ascore(ragas_sample))
             score_float = float(score)
 
             return MetricResult(
@@ -313,9 +303,7 @@ class RAGASContextPrecision(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = run_coroutine_sync(
-                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
-            )
+            score = run_coroutine_sync(lambda: self.ragas_metric.single_turn_ascore(ragas_sample))
             score_float = float(score)
 
             return MetricResult(
@@ -392,9 +380,7 @@ class RAGASContextRecall(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = run_coroutine_sync(
-                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
-            )
+            score = run_coroutine_sync(lambda: self.ragas_metric.single_turn_ascore(ragas_sample))
             score_float = float(score)
 
             return MetricResult(
@@ -471,9 +457,7 @@ class RAGASContextEntityRecall(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = run_coroutine_sync(
-                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
-            )
+            score = run_coroutine_sync(lambda: self.ragas_metric.single_turn_ascore(ragas_sample))
             score_float = float(score)
 
             return MetricResult(
@@ -550,9 +534,7 @@ class RAGASNoiseSensitivity(RAGASMetric):
         """
         try:
             ragas_sample = self.adapter.transform_sample(sample)
-            score = run_coroutine_sync(
-                lambda: self.ragas_metric.single_turn_ascore(ragas_sample)
-            )
+            score = run_coroutine_sync(lambda: self.ragas_metric.single_turn_ascore(ragas_sample))
             score_float = float(score)
 
             return MetricResult(
@@ -666,7 +648,7 @@ class RAGASAspectCritic(RAGASMetric):
 
 
 class RAGASMultiTurnTopicAdherence(BaseMetric):
-    """RAGAS multi-turn topic adherence (``MultiTurnSample`` + ``reference_topics``)."""
+    """RAGAS multi-turn topic adherence for conversational samples."""
 
     execute_via: ClassVar[str] = "ragas"
     ragas_sample_kind: ClassVar[str] = "multi_turn"
@@ -686,13 +668,12 @@ class RAGASMultiTurnTopicAdherence(BaseMetric):
         self.threshold = threshold if threshold is not None else 0.5
         self.llm_config = llm_config
         self.adapter = adapter or RAGASAdapter(config=llm_config)
-        self._ragas = TopicAdherenceScore(mode=mode)
-        self._ragas.llm = self.adapter.llm
+        self._ragas_multiturn = TopicAdherence(mode=mode, llm=self.adapter.llm)
 
     @property
-    def ragas_multiturn_metric(self) -> TopicAdherenceScore:
+    def ragas_multiturn_metric(self) -> TopicAdherence:
         """Native RAGAS metric object for ``ragas.evaluate`` / ``aevaluate``."""
-        return self._ragas
+        return self._ragas_multiturn
 
     def _build_metadata(self, score_float: float, error: Optional[str] = None) -> Dict[str, Any]:
         metadata: Dict[str, Any] = {
@@ -711,7 +692,8 @@ class RAGASMultiTurnTopicAdherence(BaseMetric):
     def evaluate(self, sample: ConversationalSample, **kwargs: Any) -> MetricResult:
         try:
             mts = conversational_sample_to_ragas_multiturn(sample)
-            if not mts.reference_topics:
+            reference_topics = mts.reference_topics
+            if not reference_topics:
                 return MetricResult(
                     score=None,
                     metadata={
@@ -719,7 +701,9 @@ class RAGASMultiTurnTopicAdherence(BaseMetric):
                         "provider": "ragas",
                     },
                 )
-            score = run_coroutine_sync(lambda: self._ragas.multi_turn_ascore(mts))
+            score = run_coroutine_sync(
+                lambda: self._ragas_multiturn.ascore(mts.user_input, reference_topics)
+            )
             score_float = float(score)
             return MetricResult(
                 score=score_float,
@@ -735,7 +719,8 @@ class RAGASMultiTurnTopicAdherence(BaseMetric):
     async def aevaluate(self, sample: ConversationalSample, **kwargs: Any) -> MetricResult:
         try:
             mts = conversational_sample_to_ragas_multiturn(sample)
-            if not mts.reference_topics:
+            reference_topics = mts.reference_topics
+            if not reference_topics:
                 return MetricResult(
                     score=None,
                     metadata={
@@ -743,7 +728,7 @@ class RAGASMultiTurnTopicAdherence(BaseMetric):
                         "provider": "ragas",
                     },
                 )
-            score = await self._ragas.multi_turn_ascore(mts)
+            score = await self._ragas_multiturn.ascore(mts.user_input, reference_topics)
             score_float = float(score)
             return MetricResult(
                 score=score_float,

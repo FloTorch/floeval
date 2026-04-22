@@ -22,6 +22,7 @@ from floeval.config.schemas.deepeval import (
     PatternMatchTestCase,
     ToxicityTestCase,
 )
+from floeval.config.schemas.io.agent_dataset import AgentSample
 from floeval.config.schemas.io.llm import LLMProviderConfig, _normalize_openai_base_url
 
 
@@ -287,3 +288,35 @@ class DeepEvalAdapter:
 
         validated = spec.schema.model_validate(raw)
         return spec.build(validated)
+
+    def transform_agent_sample(self, sample: AgentSample) -> LLMTestCase:
+        """Transform an AgentSample to a DeepEval LLMTestCase for agent metrics.
+
+        Mapping:
+          user_input              → input
+          trace.final_response    → actual_output
+          reference_outcome       → expected_output (optional)
+          tool results in trace   → context and retrieval_context
+
+        Used by TaskCompletionGEvalMetric and ToolCorrectnessDeepEvalMetric.
+        """
+        from floeval.config.schemas.io.agent_dataset import ToolMessage, _to_display_str
+
+        user_input = _to_display_str(sample.user_input)
+        final_response = sample.trace.final_response if sample.trace else ""
+        reference = _to_display_str(sample.reference_outcome) if sample.reference_outcome else None
+
+        # Use tool result messages as context (analogous to RAG contexts)
+        tool_contexts: list[str] = []
+        if sample.trace:
+            for msg in sample.trace.messages:
+                if isinstance(msg, ToolMessage) and msg.content:
+                    tool_contexts.append(msg.content[:300])
+
+        return LLMTestCase(
+            input=user_input,
+            actual_output=final_response,
+            expected_output=reference,
+            context=tool_contexts if tool_contexts else None,
+            retrieval_context=tool_contexts if tool_contexts else [],
+        )

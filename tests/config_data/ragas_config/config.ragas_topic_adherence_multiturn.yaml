@@ -7,7 +7,7 @@ llm_config:
 evaluation_config:
   metrics:
     - provider: "ragas"
-      id: "topic_adherence"
+      id: "multi_turn_topic_adherence"
       params:
         threshold: 0.2
         mode: "f1"

@@ -18,6 +18,7 @@ from floeval.metric_providers.ragas.adapter import RAGASAdapter
 from floeval.metric_providers.ragas.agent_metrics import (
     RAGASAgentGoalAccuracy,
     RAGASToolCallAccuracy,
+    RAGASTopicAdherence,
 )
 from floeval.metric_providers.ragas.metrics import (
     RAGASAnswerRelevancy,
@@ -44,7 +45,10 @@ _registry.register("ragas", "noise_sensitivity", RAGASNoiseSensitivity)
 _registry.register("ragas", "aspect_critic", RAGASAspectCritic)
 _registry.register("ragas", "agent_goal_accuracy", RAGASAgentGoalAccuracy)
 _registry.register("ragas", "tool_call_accuracy", RAGASToolCallAccuracy)
-_registry.register("ragas", "topic_adherence", RAGASMultiTurnTopicAdherence)
+_registry.register("ragas", "topic_adherence", RAGASTopicAdherence)
+# TODO(dev): merge multi_turn_topic_adherence into topic_adherence when AgentSample
+# schema stabilizes with reference_topics support.
+_registry.register("ragas", "multi_turn_topic_adherence", RAGASMultiTurnTopicAdherence)
 
 __all__ = [
     "RAGASAnswerRelevancy",
@@ -56,6 +60,7 @@ __all__ = [
     "RAGASAspectCritic",
     "RAGASAgentGoalAccuracy",
     "RAGASToolCallAccuracy",
+    "RAGASTopicAdherence",
     "RAGASMultiTurnTopicAdherence",
     "RAGASAdapter",
 ]

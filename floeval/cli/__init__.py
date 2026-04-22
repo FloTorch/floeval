@@ -9,10 +9,17 @@ class ConfigError(Exception):
     pass
 
 
+class MissingDependencyError(Exception):
+    """Raised when optional runtime dependencies are not installed."""
+
+    pass
+
+
 class CLIEvaluationConfig(BaseModel):
     llm_config: dict[str, Any]
     evaluation_config: dict[str, Any]
     dataset_generation_config: dict[str, Any] | None = None
+    agent_workflow_config: dict[str, Any] | None = None
 
 
 class DatasetGenConfig(BaseModel):

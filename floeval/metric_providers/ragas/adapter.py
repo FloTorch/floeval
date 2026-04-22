@@ -1,12 +1,4 @@
-"""
-RAGAS adapter for custom LLM integration.
-
-Key points:
-- Uses unified LLMProviderConfig for consistency across providers.
-- Provides RAGASAdapter class similar to DeepEvalAdapter for consistency.
-- Agent metrics (agent_goal_accuracy) use LangChain-based structured LLM by default,
-  which works with any OpenAI-compatible API (no response_format required).
-"""
+"""RAGAS adapter and conversion helpers."""
 
 import json
 import re
@@ -34,13 +26,7 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class LangChainStructuredLLM(InstructorBaseRagasLLM):
-    """LangChain-based LLM implementing InstructorBaseRagasLLM interface.
-
-    Uses ChatOpenAI with plain completion (no response_format). RAGAS prompts
-    already ask for JSON output; we parse the response and validate into the
-    Pydantic model. Works with any OpenAI-compatible API that does not support
-    response_format.
-    """
+    """ChatOpenAI wrapper that validates JSON output into Pydantic models."""
 
     def __init__(
         self,
@@ -60,7 +46,7 @@ class LangChainStructuredLLM(InstructorBaseRagasLLM):
         self._llm = ChatOpenAI(**llm_args)
 
     def generate(self, prompt: str, response_model: Type[T]) -> T:
-        """Sync generate - runs async in loop."""
+        """Synchronous adapter over `agenerate`."""
         return run_coroutine_sync(lambda: self.agenerate(prompt, response_model))
 
     async def agenerate(self, prompt: str, response_model: Type[T]) -> T:
@@ -120,15 +106,8 @@ def create_ragas_llm(
 def create_ragas_embeddings(
     config: LLMProviderConfig | None = None,
     extra_headers: Dict[str, str] | None = None,
-) -> LangchainEmbeddingsWrapper:
-    """Create RAGAS embeddings wrapper configured with custom llm configuration.
-
-    Args:
-        config: LLMProviderConfig configuration (optional, uses env defaults if None)
-
-    Returns:
-        LangchainEmbeddingsWrapper instance configured with custom llm configuration
-    """
+):
+    """Build the default RAGAS embeddings wrapper from provider config."""
     embedding_args: Dict[str, Any] = {
         "check_embedding_ctx_length": False,
     }
@@ -179,11 +158,7 @@ def transform_agent_sample_to_ragas_messages(
 
 
 class RAGASAdapter:
-    """Adapter for RAGAS client integration.
-
-    Adapts input and output formats as needed by RAGAS library.
-    Similar to DeepEvalAdapter for consistency across providers.
-    """
+    """Adapter between FloEval sample types and RAGAS objects."""
 
     def __init__(
         self,
@@ -199,19 +174,19 @@ class RAGASAdapter:
         """
         self.config = config
         self._extra_headers: Dict[str, str] = dict(extra_headers or {})
-        self._llm: LangchainLLMWrapper | None = None
-        self._embeddings: LangchainEmbeddingsWrapper | None = None
+        self._llm = None
+        self._embeddings = None
         self._agent_llm = None
 
     @property
-    def llm(self) -> LangchainLLMWrapper:
+    def llm(self):
         """Get or create RAGAS LLM wrapper (cached)."""
         if self._llm is None:
             self._llm = create_ragas_llm(self.config, extra_headers=self._extra_headers or None)
         return self._llm
 
     @property
-    def embeddings(self) -> LangchainEmbeddingsWrapper:
+    def embeddings(self):
         """Get or create RAGAS embeddings wrapper (cached)."""
         if self._embeddings is None:
             self._embeddings = create_ragas_embeddings(
@@ -221,9 +196,7 @@ class RAGASAdapter:
 
     @property
     def agent_llm(self):
-        """LLM for agent metrics (agent_goal_accuracy, tool_call_accuracy).
-        Uses LangChain + JSON parse; works with any OpenAI-compatible API.
-        """
+        """Structured LLM used by agent metrics."""
         if self._agent_llm is None:
             self._agent_llm = create_ragas_instructor_llm(
                 self.config, extra_headers=self._extra_headers or None
@@ -231,36 +204,17 @@ class RAGASAdapter:
         return self._agent_llm
 
     def transform_sample(self, sample: Sample | dict[str, str | Sequence[Any]]) -> SingleTurnSample:
-        """
-        Convert Floeval Sample to RAGAS SingleTurnSample format.
-
-        Supports both Pydantic Sample models and dict-like objects.
-
-        Args:
-            sample: Floeval Sample object with inputs and ground_truth
-
-        Returns:
-            SingleTurnSample for RAGAS evaluation
-
-        Raises:
-            ValueError: If sample doesn't have required fields
-        """
-        # Handle Pydantic models
-        if isinstance(sample, Sample):
-            sample_data = sample.model_dump()
-        # Handle dict-like objects
-        elif isinstance(sample, dict):
-            sample_data = sample
-        else:
+        """Convert a FloEval sample into `SingleTurnSample`."""
+        if isinstance(sample, dict):
+            # Validate incoming dicts via Pydantic so downstream conversion uses a typed model.
+            sample = Sample.model_validate(sample)
+        elif not isinstance(sample, Sample):
             raise ValueError(f"Unsupported sample type: {type(sample)}. Expected Sample or dict.")
 
-        # Extract fields with defaults
-        user_input = sample_data.get("user_input", "")
-        contexts = sample_data.get("contexts") or []
-        llm_response = sample_data.get("llm_response", "")
-        ground_truth = sample_data.get("ground_truth", "")
-
-        # TODO: Use model attributes instead of hardcoded keys?
+        user_input = sample.user_input
+        contexts = sample.contexts or []
+        llm_response = sample.llm_response
+        ground_truth = sample.ground_truth or ""
 
         return SingleTurnSample(
             user_input=user_input,
