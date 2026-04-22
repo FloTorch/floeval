@@ -8,16 +8,16 @@ import copy
 import logging
 from typing import Any, ClassVar, Dict, Literal, Optional
 
-from ragas.metrics._aspect_critic import AspectCritic
-from ragas.metrics.collections import (
+from ragas.metrics import (
     NoiseSensitivity,
-    TopicAdherence,
     answer_relevancy,
     context_entity_recall,
     context_precision,
     context_recall,
     faithfulness,
 )
+from ragas.metrics._aspect_critic import AspectCritic
+from ragas.metrics.collections import TopicAdherence
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.config.schemas.io.conversational_dataset import ConversationalSample
