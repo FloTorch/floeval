@@ -6,15 +6,16 @@ from collections.abc import Callable, Sequence
 from typing import Any, Protocol, cast
 
 from deepeval.evaluate import AsyncConfig, DisplayConfig, ErrorConfig, evaluate as deepeval_evaluate
-from deepeval.test_case import ToolCall as DeepEvalToolCall
 from pydantic import BaseModel
 
 from floeval.api.metrics.base import BaseMetric
-from floeval.config.schemas.io.agent_dataset import AgentSample, ToolCall as AgentToolCall
-from floeval.config.schemas.io.conversation import ToolCallPayload
+from floeval.config.schemas.io.agent_dataset import AgentSample
 from floeval.config.schemas.io.conversational_dataset import ConversationalSample
 from floeval.config.schemas.io.dataset import Dataset
 from floeval.config.schemas.io.llm import LLMProviderConfig
+from floeval.metric_providers.deepeval.conversational_requirements import (
+    validate_conversational_metric_requirements,
+)
 from floeval.metric_providers.deepeval.custom_adapter import DeepEvalCustomMetricAdapter
 from floeval.metric_providers.deepeval.multiturn_adapter import (
     agent_sample_to_conversational_test_case,
@@ -31,94 +32,6 @@ class _SupportsConversationalDeepevalBatch(Protocol):
     """DeepEval metrics that build a batched conversational metric instance."""
 
     def create_deepeval_metric_instance(self) -> Any: ...
-
-
-def _collect_relevant_topics(rows: Sequence[ConversationalSample | AgentSample]) -> list[str]:
-    seen: set[str] = set()
-    topics: list[str] = []
-    for row in rows:
-        row_topics = getattr(row, "reference_topics", None)
-        if not row_topics:
-            continue
-        for topic in row_topics:
-            if topic in seen:
-                continue
-            seen.add(topic)
-            topics.append(topic)
-    return topics
-
-
-def _to_deepeval_available_tool(
-    tool: ToolCallPayload | AgentToolCall | dict[str, Any],
-) -> DeepEvalToolCall:
-    if isinstance(tool, AgentToolCall):
-        return DeepEvalToolCall(name=tool.name, input_parameters=tool.args)
-    payload = tool if isinstance(tool, ToolCallPayload) else ToolCallPayload.model_validate(tool)
-    return DeepEvalToolCall(
-        name=payload.name,
-        input_parameters=payload.args,
-        output=payload.output,
-    )
-
-
-def _collect_available_tools(
-    rows: Sequence[ConversationalSample | AgentSample],
-) -> list[DeepEvalToolCall]:
-    dedup: set[tuple[str, str]] = set()
-    available_tools: list[DeepEvalToolCall] = []
-    for row in rows:
-        calls = getattr(row, "reference_tool_calls", None)
-        if not calls:
-            continue
-        for raw in calls:
-            tool = _to_deepeval_available_tool(raw)
-            tool_key = (tool.name, str(tool.input_parameters))
-            if tool_key in dedup:
-                continue
-            dedup.add(tool_key)
-            available_tools.append(tool)
-    return available_tools
-
-
-def _hydrate_conversational_metric_params(
-    floeval_metrics: list[BaseMetric],
-    rows: Sequence[ConversationalSample | AgentSample],
-) -> None:
-    """Fill metric constructor kwargs from the dataset before batched DeepEval ``evaluate()``.
-
-    In the conversational batch path, Floeval builds **one** DeepEval metric instance per
-    Floeval metric and runs it across **all** rows. Some DeepEval conversational metrics
-    expect certain lists on the **metric object** (constructor kwargs), while Floeval's
-    dataset schema stores the corresponding ground truth on **each row**:
-
-    - ``topic_adherence`` — DeepEval wants ``relevant_topics``; rows may carry
-      ``reference_topics`` (see ``ConversationalSample`` / ``AgentSample``).
-    - ``tool_use`` — DeepEval wants ``available_tools``; rows may carry
-      ``reference_tool_calls``.
-
-    This function **mutates** each metric's ``_metric_params`` in place when that key is
-    missing or empty, by aggregating values from ``rows`` (deduped union). If the user
-    already set ``relevant_topics`` / ``available_tools`` in YAML or metric params, those
-    values are left unchanged.
-
-    It does **not** replace row-level fields that map onto ``ConversationalTestCase`` (e.g.
-    ``scenario``, ``reference_outcome``, transcript turns); those are handled when building
-    test cases, not here.
-
-    Args:
-        floeval_metrics: Floeval metrics about to be passed to
-            ``create_deepeval_metric_instance()`` for a single batched run.
-        rows: All conversational or agent-trace rows in that batch.
-
-    """
-    for metric in floeval_metrics:
-        params = getattr(metric, "_metric_params", None)
-        if not isinstance(params, dict):
-            continue
-        if metric.name == "topic_adherence" and not params.get("relevant_topics"):
-            params["relevant_topics"] = _collect_relevant_topics(rows)
-        if metric.name == "tool_use" and not params.get("available_tools"):
-            params["available_tools"] = _collect_available_tools(rows)
 
 
 def _default_progress(msg: str, *args: Any, extra: dict[str, Any]) -> None:
@@ -368,7 +281,7 @@ def run_deepeval_conversational_batch(
     """Run conversational DeepEval metrics on ``ConversationalTestCase`` rows."""
     progress = emit_progress or _default_progress
     adapter = DeepEvalCustomMetricAdapter(llm_config)
-    _hydrate_conversational_metric_params(floeval_metrics, conversational_rows)
+    validate_conversational_metric_requirements(floeval_metrics, conversational_rows)
 
     deepeval_metric_instances, floeval_metrics_ordered = _metrics_instances_for_batch(
         adapter, floeval_metrics
@@ -398,7 +311,10 @@ def run_deepeval_conversational_batch_for_agent_samples(
     """Conversational DeepEval batch where rows are ``AgentSample`` (trace-backed)."""
     progress = emit_progress or _default_progress
     adapter = DeepEvalCustomMetricAdapter(llm_config)
-    _hydrate_conversational_metric_params(floeval_metrics, agent_rows)
+    
+    # NOTE: AgentSample does not expose reference_topics yet. Keep strict conversational
+    # validation only on ConversationalSample rows until schema parity lands.
+    # validate_conversational_metric_requirements(floeval_metrics, agent_rows)
 
     deepeval_metric_instances, floeval_metrics_ordered = _metrics_instances_for_batch(
         adapter, floeval_metrics

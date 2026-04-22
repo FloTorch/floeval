@@ -59,7 +59,7 @@ class _ConversationalDeepEvalMetric(DeepEvalMetric):
     def evaluate(
         self, sample: ConversationalSample | AgentSample, **kwargs: Any
     ) -> MetricResult:
-        """Score a single conversational sample using DeepEval evaluate()."""
+        """Score a single conversational sample using DeepEval evaluate."""
         inst = self.create_deepeval_metric_instance()
         tc = conversational_row_to_deepeval(sample)
         # ``list`` is invariant: concrete metric types need an explicit cast for ``evaluate``.
@@ -117,18 +117,14 @@ class ToolUseDeepEvalMetric(_ConversationalDeepEvalMetric):
     metric_name = "tool_use"
 
     def create_deepeval_metric_instance(self) -> ToolUseMetric:
-        metric_kwargs = self._llm_metric_kwargs()
-        metric_kwargs.setdefault("available_tools", [])
-        return ToolUseMetric(**metric_kwargs)
+        return ToolUseMetric(**self._llm_metric_kwargs())
 
 
 class TopicAdherenceDeepEvalMetric(_ConversationalDeepEvalMetric):
     metric_name = "topic_adherence"
 
     def create_deepeval_metric_instance(self) -> TopicAdherenceMetric:
-        metric_kwargs = self._llm_metric_kwargs()
-        metric_kwargs.setdefault("relevant_topics", [])
-        return TopicAdherenceMetric(**metric_kwargs)
+        return TopicAdherenceMetric(**self._llm_metric_kwargs())
 
 
 class TurnFaithfulnessDeepEvalMetric(_ConversationalDeepEvalMetric):
