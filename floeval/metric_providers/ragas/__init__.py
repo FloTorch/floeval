@@ -3,6 +3,7 @@
 This module registers RAGAS metrics:
     - answer_relevancy
     - faithfulness
+    - aspect_critic
     - context_precision
     - context_recall
     - context_entity_recall
@@ -21,11 +22,11 @@ from floeval.metric_providers.ragas.agent_metrics import (
 )
 from floeval.metric_providers.ragas.metrics import (
     RAGASAnswerRelevancy,
+    RAGASAspectCritic,
     RAGASContextEntityRecall,
     RAGASContextPrecision,
     RAGASContextRecall,
     RAGASFaithfulness,
-    RAGASMultiTurnTopicAdherence,
     RAGASNoiseSensitivity,
 )
 
@@ -40,12 +41,10 @@ _registry.register("ragas", "context_precision", RAGASContextPrecision)
 _registry.register("ragas", "context_recall", RAGASContextRecall)
 _registry.register("ragas", "context_entity_recall", RAGASContextEntityRecall)
 _registry.register("ragas", "noise_sensitivity", RAGASNoiseSensitivity)
+_registry.register("ragas", "aspect_critic", RAGASAspectCritic)
 _registry.register("ragas", "agent_goal_accuracy", RAGASAgentGoalAccuracy)
 _registry.register("ragas", "tool_call_accuracy", RAGASToolCallAccuracy)
 _registry.register("ragas", "topic_adherence", RAGASTopicAdherence)
-# TODO(dev): merge multi_turn_topic_adherence into topic_adherence when AgentSample
-# schema stabilizes with reference_topics support.
-_registry.register("ragas", "multi_turn_topic_adherence", RAGASMultiTurnTopicAdherence)
 
 __all__ = [
     "RAGASAnswerRelevancy",
@@ -54,9 +53,9 @@ __all__ = [
     "RAGASContextRecall",
     "RAGASContextEntityRecall",
     "RAGASNoiseSensitivity",
+    "RAGASAspectCritic",
     "RAGASAgentGoalAccuracy",
     "RAGASToolCallAccuracy",
     "RAGASTopicAdherence",
-    "RAGASMultiTurnTopicAdherence",
     "RAGASAdapter",
 ]

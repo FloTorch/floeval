@@ -675,7 +675,6 @@ source = { editable = "." }
 dependencies = [
     { name = "deepeval" },
     { name = "langchain-openai" },
-    { name = "mypy" },
     { name = "pydantic" },
     { name = "ragas" },
     { name = "sentence-transformers" },
@@ -708,7 +707,6 @@ requires-dist = [
     { name = "google-adk", marker = "extra == 'flotorch'", specifier = ">=1.5.0" },
     { name = "httpx", marker = "extra == 'flotorch'", specifier = ">=0.24" },
     { name = "langchain-openai", specifier = ">=1.0.0" },
-    { name = "mypy", specifier = ">=1.19.1" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "ragas", specifier = ">=0.4.3" },
     { name = "sentence-transformers" },
