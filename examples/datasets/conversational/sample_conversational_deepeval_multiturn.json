@@ -1,0 +1,16 @@
+{
+  "samples": [
+    {
+      "messages": [
+        { "role": "human", "content": "What is your refund policy?" },
+        {
+          "role": "ai",
+          "content": "Refunds are available within 30 days for unused items."
+        }
+      ],
+      "scenario": "E-commerce support chat",
+      "reference_outcome": "Assistant gives the 30-day refund rule.",
+      "conversation_context": ["Knowledge base: refunds within 30 days."]
+    }
+  ]
+}

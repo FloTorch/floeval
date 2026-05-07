@@ -1,0 +1,17 @@
+{
+  "samples": [
+    {
+      "messages": [
+        {
+          "role": "human",
+          "content": "Can you explain black holes in simple terms?"
+        },
+        {
+          "role": "ai",
+          "content": "A black hole is a region where gravity is so strong that light cannot escape."
+        }
+      ],
+      "reference_topics": ["Astronomy", "Physics"]
+    }
+  ]
+}

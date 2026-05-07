@@ -218,3 +218,6 @@ __marimo__/
 .deepeval/
 tests/output/
 .env.*
+.cursor/*
+.github/instructions/*
+.vscode/*

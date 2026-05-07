@@ -1,0 +1,12 @@
+{
+  "samples": [
+    {
+      "messages": [
+        { "role": "human", "content": "What topics should the assistant stay within?" },
+        { "role": "ai", "content": "I can discuss product policies and shipping only." }
+      ],
+      "reference_topics": ["product support", "shipping"],
+      "reference_outcome": "Assistant stays on policy topics."
+    }
+  ]
+}

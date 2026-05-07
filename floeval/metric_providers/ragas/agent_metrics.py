@@ -16,10 +16,7 @@ from ragas.metrics.collections import TopicAdherence
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.config.schemas.io.agent_dataset import AgentSample, _to_display_str
 from floeval.config.schemas.io.llm import LLMProviderConfig
-from floeval.metric_providers.ragas.adapter import (
-    RAGASAdapter,
-    transform_agent_sample_to_ragas_messages,
-)
+from floeval.metric_providers.ragas.adapter import RAGASAdapter, transform_agent_sample_to_ragas_messages
 from floeval.utils.asyncio_compat import run_coroutine_sync
 
 logger = logging.getLogger(__name__)
@@ -259,3 +256,5 @@ class RAGASTopicAdherence(BaseMetric):
                 score=None,
                 metadata={"error": str(e), "provider": "ragas"},
             )
+
+

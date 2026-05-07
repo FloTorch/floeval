@@ -6,7 +6,6 @@ import pytest
 
 from floeval.api import DatasetLoader, Evaluation
 from floeval.config.schemas.io.llm import OpenAIProviderConfig
-
 from tests._support.assertions import assert_samples_have_metric
 
 pytestmark = [pytest.mark.ragas, pytest.mark.integration]

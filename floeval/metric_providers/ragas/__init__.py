@@ -3,6 +3,7 @@
 This module registers RAGAS metrics:
     - answer_relevancy
     - faithfulness
+    - aspect_critic
     - context_precision
     - context_recall
     - context_entity_recall
@@ -16,11 +17,12 @@ from floeval.api.metrics.registry import MetricRegistry
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
 from floeval.metric_providers.ragas.agent_metrics import (
     RAGASAgentGoalAccuracy,
-    RAGASTopicAdherence,
     RAGASToolCallAccuracy,
+    RAGASTopicAdherence,
 )
 from floeval.metric_providers.ragas.metrics import (
     RAGASAnswerRelevancy,
+    RAGASAspectCritic,
     RAGASContextEntityRecall,
     RAGASContextPrecision,
     RAGASContextRecall,
@@ -39,6 +41,7 @@ _registry.register("ragas", "context_precision", RAGASContextPrecision)
 _registry.register("ragas", "context_recall", RAGASContextRecall)
 _registry.register("ragas", "context_entity_recall", RAGASContextEntityRecall)
 _registry.register("ragas", "noise_sensitivity", RAGASNoiseSensitivity)
+_registry.register("ragas", "aspect_critic", RAGASAspectCritic)
 _registry.register("ragas", "agent_goal_accuracy", RAGASAgentGoalAccuracy)
 _registry.register("ragas", "tool_call_accuracy", RAGASToolCallAccuracy)
 _registry.register("ragas", "topic_adherence", RAGASTopicAdherence)
@@ -50,6 +53,7 @@ __all__ = [
     "RAGASContextRecall",
     "RAGASContextEntityRecall",
     "RAGASNoiseSensitivity",
+    "RAGASAspectCritic",
     "RAGASAgentGoalAccuracy",
     "RAGASToolCallAccuracy",
     "RAGASTopicAdherence",

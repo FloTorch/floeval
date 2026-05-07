@@ -33,7 +33,7 @@ class PartialSample(BaseModel):
 
 
 class Sample(BaseModel):
-    """Single evaluation sample."""
+    """Single evaluation sample (single-turn RAG/LLM)."""
 
     user_input: str = Field(..., description="The input/question/prompt for the LLM")
     contexts: list[str] | None = Field(

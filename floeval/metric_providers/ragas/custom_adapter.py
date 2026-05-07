@@ -3,13 +3,16 @@
 import logging
 from typing import Type
 
-from ragas import EvaluationDataset, SingleTurnSample
+from ragas import EvaluationDataset, MultiTurnSample, SingleTurnSample
 from ragas.metrics.base import MetricType, MetricWithLLM, SingleTurnMetric
 
-from floeval.api.dataset import Dataset, Sample
+from floeval.api.dataset import ConversationalDataset, Dataset, Sample
 from floeval.api.metrics.base import BaseMetric, MetricResult
 from floeval.config.schemas.io.llm import LLMProviderConfig
 from floeval.metric_providers.ragas.adapter import RAGASAdapter
+from floeval.metric_providers.ragas.multiturn_adapter import (
+    conversational_sample_to_ragas_multiturn,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -181,4 +184,13 @@ class RAGASCustomMetricAdapter:
             ragas_sample = self.transform_sample(sample)
             ragas_samples.append(ragas_sample)
 
+        return EvaluationDataset(samples=ragas_samples)
+
+    def transform_conversational_dataset(
+        self, dataset: ConversationalDataset
+    ) -> EvaluationDataset:
+        """Transform ``ConversationalDataset`` to RAGAS rows (``MultiTurnSample``)."""
+        ragas_samples: list[MultiTurnSample] = []
+        for sample in dataset.samples:
+            ragas_samples.append(conversational_sample_to_ragas_multiturn(sample))
         return EvaluationDataset(samples=ragas_samples)

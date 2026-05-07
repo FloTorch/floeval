@@ -1,12 +1,14 @@
-"""DeepEval client wrapper/adapter"""
+"""DeepEval client wrapper and adapter."""
 
-from collections.abc import Mapping
-from typing import Any
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from typing import Any, cast
 
 from deepeval.models.base_model import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 from langchain_core.language_models import LanguageModelInput
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
 from floeval.config.schemas.deepeval import (
     AnswerRelevancyTestCase,
@@ -23,22 +25,146 @@ from floeval.config.schemas.deepeval import (
 from floeval.config.schemas.io.agent_dataset import AgentSample
 from floeval.config.schemas.io.llm import LLMProviderConfig, _normalize_openai_base_url
 
-__VALID_TEST_CASE_SCHEMAS__ = {
-    "faithfulness": FaithfulnessTestCase,
-    "answer_relevancy": AnswerRelevancyTestCase,
-    "contextual_precision": ContextualPrecisionTestCase,
-    "contextual_recall": ContextualRecallTestCase,
-    "contextual_relevancy": ContextualRelevancyTestCase,
-    "hallucination": HallucinationTestCase,
-    "toxicity": ToxicityTestCase,
-    "exact_match": ExactMatchTestCase,
-    "pattern_match": PatternMatchTestCase,
-    "json_correctness": JsonCorrectnessTestCase,
+
+@dataclass(frozen=True)
+class _LLMTestCaseSpec:
+    """How to validate a dict and build a DeepEval ``LLMTestCase`` for one metric."""
+
+    schema: type[BaseModel]
+    normalize_none_contexts: bool
+    build: Callable[[BaseModel], LLMTestCase]
+
+
+def _validate_subtype(tc: BaseModel, expected: type[Any], metric_name: str) -> None:
+    if not isinstance(tc, expected):
+        msg = f"Expected {expected.__name__} after validation for {metric_name}, got {type(tc)}"
+        raise TypeError(msg)
+
+
+def _faithfulness(tc: BaseModel) -> LLMTestCase:
+    _validate_subtype(tc, FaithfulnessTestCase, "faithfulness")
+    c = cast(FaithfulnessTestCase, tc)
+    return LLMTestCase(
+        input=c.user_input,
+        expected_output=c.ground_truth,
+        retrieval_context=c.contexts,
+        actual_output=c.llm_response,
+    )
+
+
+def _answer_relevancy(tc: BaseModel) -> LLMTestCase:
+    _validate_subtype(tc, AnswerRelevancyTestCase, "answer_relevancy")
+    c = cast(AnswerRelevancyTestCase, tc)
+    return LLMTestCase(
+        input=c.user_input,
+        actual_output=c.llm_response,
+    )
+
+
+def _contextual_precision(tc: BaseModel) -> LLMTestCase:
+    _validate_subtype(tc, ContextualPrecisionTestCase, "contextual_precision")
+    c = cast(ContextualPrecisionTestCase, tc)
+    return LLMTestCase(
+        input=c.user_input,
+        actual_output=c.llm_response,
+        expected_output=c.ground_truth,
+        retrieval_context=c.contexts,
+    )
+
+
+def _contextual_recall(tc: BaseModel) -> LLMTestCase:
+    _validate_subtype(tc, ContextualRecallTestCase, "contextual_recall")
+    c = cast(ContextualRecallTestCase, tc)
+    return LLMTestCase(
+        input=c.user_input,
+        actual_output=c.llm_response,
+        expected_output=c.ground_truth,
+        retrieval_context=c.contexts,
+    )
+
+
+def _contextual_relevancy(tc: BaseModel) -> LLMTestCase:
+    _validate_subtype(tc, ContextualRelevancyTestCase, "contextual_relevancy")
+    c = cast(ContextualRelevancyTestCase, tc)
+    return LLMTestCase(
+        input=c.user_input,
+        actual_output=c.llm_response,
+        retrieval_context=c.contexts,
+    )
+
+
+def _hallucination(tc: BaseModel) -> LLMTestCase:
+    _validate_subtype(tc, HallucinationTestCase, "hallucination")
+    c = cast(HallucinationTestCase, tc)
+    return LLMTestCase(
+        input=c.user_input,
+        actual_output=c.llm_response,
+        context=c.contexts,
+    )
+
+
+def _toxicity(tc: BaseModel) -> LLMTestCase:
+    _validate_subtype(tc, ToxicityTestCase, "toxicity")
+    c = cast(ToxicityTestCase, tc)
+    return LLMTestCase(
+        input=c.user_input,
+        actual_output=c.llm_response,
+    )
+
+
+def _exact_match(tc: BaseModel) -> LLMTestCase:
+    _validate_subtype(tc, ExactMatchTestCase, "exact_match")
+    c = cast(ExactMatchTestCase, tc)
+    return LLMTestCase(
+        input=c.user_input,
+        actual_output=c.llm_response,
+        expected_output=c.ground_truth,
+    )
+
+
+def _pattern_match(tc: BaseModel) -> LLMTestCase:
+    _validate_subtype(tc, PatternMatchTestCase, "pattern_match")
+    c = cast(PatternMatchTestCase, tc)
+    return LLMTestCase(
+        input=c.user_input,
+        actual_output=c.llm_response,
+    )
+
+
+def _json_correctness(tc: BaseModel) -> LLMTestCase:
+    _validate_subtype(tc, JsonCorrectnessTestCase, "json_correctness")
+    c = cast(JsonCorrectnessTestCase, tc)
+    return LLMTestCase(
+        input=c.user_input,
+        actual_output=c.llm_response,
+    )
+
+
+_LLM_TEST_CASE_SPECS: dict[str, _LLMTestCaseSpec] = {
+    "faithfulness": _LLMTestCaseSpec(FaithfulnessTestCase, True, _faithfulness),
+    "answer_relevancy": _LLMTestCaseSpec(AnswerRelevancyTestCase, False, _answer_relevancy),
+    "contextual_precision": _LLMTestCaseSpec(
+        ContextualPrecisionTestCase, True, _contextual_precision
+    ),
+    "contextual_recall": _LLMTestCaseSpec(ContextualRecallTestCase, True, _contextual_recall),
+    "contextual_relevancy": _LLMTestCaseSpec(
+        ContextualRelevancyTestCase, True, _contextual_relevancy
+    ),
+    "hallucination": _LLMTestCaseSpec(HallucinationTestCase, True, _hallucination),
+    "toxicity": _LLMTestCaseSpec(ToxicityTestCase, False, _toxicity),
+    "exact_match": _LLMTestCaseSpec(ExactMatchTestCase, False, _exact_match),
+    "pattern_match": _LLMTestCaseSpec(PatternMatchTestCase, False, _pattern_match),
+    "json_correctness": _LLMTestCaseSpec(JsonCorrectnessTestCase, False, _json_correctness),
 }
+
+# Backwards-compatible name for imports that referenced the old dict.
+__VALID_TEST_CASE_SCHEMAS__ = {name: spec.schema for name, spec in _LLM_TEST_CASE_SPECS.items()}
 
 
 # custom llm implementation for DeepEval
 class DeepEvalLLMAdapter(DeepEvalBaseLLM):
+    """OpenAI-compatible chat model exposed as DeepEval's base LLM."""
+
     def __init__(
         self,
         model_name: str,
@@ -87,21 +213,25 @@ class DeepEvalLLMAdapter(DeepEvalBaseLLM):
         return self._llm_instance
 
     def load_model(self, *args, **kwargs):
+        """Rebuild the chat model instance and return it."""
         self._llm_instance = self.init_model()
         return self._llm_instance
 
     def generate(self, prompt: LanguageModelInput) -> str:
+        """Run a synchronous completion and return text content."""
         chat_model = self.init_model()
         response = chat_model.invoke(prompt)
         # TODO: handle different response types (chat/completion, dict, Sequence[str])
         return response.content
 
     async def a_generate(self, prompt: LanguageModelInput) -> str:
+        """Run an async completion and return text content."""
         chat_model = self.init_model()
         response = await chat_model.ainvoke(prompt)
         return response.content
 
     def get_model_name(self) -> str:
+        """Return the configured model label for DeepEval."""
         return self._model_name
 
 
@@ -146,141 +276,18 @@ class DeepEvalAdapter:
         Returns:
             LLMTestCase: Adapted test case instance
         """
-        metric_test_case_schema = __VALID_TEST_CASE_SCHEMAS__[metric_name]
+        spec = _LLM_TEST_CASE_SPECS.get(metric_name)
+        if spec is None:
+            raise ValueError(f"Unsupported metric for test case transformation: {metric_name}")
 
-        if metric_name == "faithfulness":
-            test_case = metric_test_case_schema.model_validate(
-                self._with_safe_contexts(test_case_dict)
-            )
-            if not isinstance(test_case, FaithfulnessTestCase):
-                raise TypeError(
-                    f"Expected FaithfulnessTestCase after validation, got {type(test_case)}"
-                )
-            return LLMTestCase(
-                input=test_case.user_input,
-                expected_output=test_case.ground_truth,
-                retrieval_context=test_case.contexts,
-                actual_output=test_case.llm_response,
-            )
-        elif metric_name == "answer_relevancy":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
-            if not isinstance(test_case, AnswerRelevancyTestCase):
-                raise TypeError(
-                    f"Expected AnswerRelevancyTestCase after validation, got {type(test_case)}"
-                )
-
-            return LLMTestCase(
-                input=test_case.user_input,
-                actual_output=test_case.llm_response,
-            )
-        elif metric_name == "contextual_precision":
-            test_case = metric_test_case_schema.model_validate(
-                self._with_safe_contexts(test_case_dict)
-            )
-            if not isinstance(test_case, ContextualPrecisionTestCase):
-                raise TypeError(
-                    f"Expected ContextualPrecisionTestCase after validation, got {type(test_case)}"
-                )
-
-            return LLMTestCase(
-                input=test_case.user_input,
-                actual_output=test_case.llm_response,
-                expected_output=test_case.ground_truth,
-                retrieval_context=test_case.contexts,
-            )
-        elif metric_name == "contextual_recall":
-            test_case = metric_test_case_schema.model_validate(
-                self._with_safe_contexts(test_case_dict)
-            )
-            if not isinstance(test_case, ContextualRecallTestCase):
-                raise TypeError(
-                    f"Expected ContextualRecallTestCase after validation, got {type(test_case)}"
-                )
-
-            return LLMTestCase(
-                input=test_case.user_input,
-                actual_output=test_case.llm_response,
-                expected_output=test_case.ground_truth,
-                retrieval_context=test_case.contexts,
-            )
-        elif metric_name == "contextual_relevancy":
-            test_case = metric_test_case_schema.model_validate(
-                self._with_safe_contexts(test_case_dict)
-            )
-            if not isinstance(test_case, ContextualRelevancyTestCase):
-                raise TypeError(
-                    f"Expected ContextualRelevancyTestCase after validation, got {type(test_case)}"
-                )
-
-            return LLMTestCase(
-                input=test_case.user_input,
-                actual_output=test_case.llm_response,
-                retrieval_context=test_case.contexts,
-            )
-        elif metric_name == "hallucination":
-            test_case = metric_test_case_schema.model_validate(
-                self._with_safe_contexts(test_case_dict)
-            )
-            if not isinstance(test_case, HallucinationTestCase):
-                raise TypeError(
-                    f"Expected HallucinationTestCase after validation, got {type(test_case)}"
-                )
-
-            return LLMTestCase(
-                input=test_case.user_input,
-                actual_output=test_case.llm_response,
-                context=test_case.contexts,
-            )
-        elif metric_name == "toxicity":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
-            if not isinstance(test_case, ToxicityTestCase):
-                raise TypeError(
-                    f"Expected ToxicityTestCase after validation, got {type(test_case)}"
-                )
-
-            return LLMTestCase(
-                input=test_case.user_input,
-                actual_output=test_case.llm_response,
-            )
-        elif metric_name == "exact_match":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
-            if not isinstance(test_case, ExactMatchTestCase):
-                raise TypeError(
-                    f"Expected ExactMatchTestCase after validation, got {type(test_case)}"
-                )
-
-            return LLMTestCase(
-                input=test_case.user_input,
-                actual_output=test_case.llm_response,
-                expected_output=test_case.ground_truth,
-            )
-        elif metric_name == "pattern_match":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
-            if not isinstance(test_case, PatternMatchTestCase):
-                raise TypeError(
-                    f"Expected PatternMatchTestCase after validation, got {type(test_case)}"
-                )
-
-            return LLMTestCase(
-                input=test_case.user_input,
-                actual_output=test_case.llm_response,
-            )
-        elif metric_name == "json_correctness":
-            test_case = metric_test_case_schema.model_validate(test_case_dict)
-            if not isinstance(test_case, JsonCorrectnessTestCase):
-                raise TypeError(
-                    f"Expected JsonCorrectnessTestCase after validation, got {type(test_case)}"
-                )
-
-            return LLMTestCase(
-                input=test_case.user_input,
-                actual_output=test_case.llm_response,
-            )
-
+        raw: dict[str, str | list[str] | None]
+        if spec.normalize_none_contexts:
+            raw = self._with_safe_contexts(test_case_dict)
         else:
-            raise ValueError(
-                f"Unsupported metric for test case transformation: {metric_name}"
-            )
+            raw = dict(test_case_dict)
+
+        validated = spec.schema.model_validate(raw)
+        return spec.build(validated)
 
     def transform_agent_sample(self, sample: AgentSample) -> LLMTestCase:
         """Transform an AgentSample to a DeepEval LLMTestCase for agent metrics.
@@ -297,11 +304,7 @@ class DeepEvalAdapter:
 
         user_input = _to_display_str(sample.user_input)
         final_response = sample.trace.final_response if sample.trace else ""
-        reference = (
-            _to_display_str(sample.reference_outcome)
-            if sample.reference_outcome
-            else None
-        )
+        reference = _to_display_str(sample.reference_outcome) if sample.reference_outcome else None
 
         # Use tool result messages as context (analogous to RAG contexts)
         tool_contexts: list[str] = []

@@ -1,7 +1,5 @@
 """Agent evaluation domain models (pure domain layer - no infrastructure)."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any, Literal
@@ -99,7 +97,7 @@ class AgentTrace(BaseModel):
     @classmethod
     def from_simple_response(
         cls, user_input: str, response: str, **metadata: Any
-    ) -> AgentTrace:
+    ) -> "AgentTrace":
         """Factory: Create trace from simple input/output."""
         return cls(
             messages=[
@@ -111,7 +109,9 @@ class AgentTrace(BaseModel):
         )
 
     @classmethod
-    def from_messages(cls, messages: list[dict[str, Any]], **metadata: Any) -> AgentTrace:
+    def from_messages(
+        cls, messages: list[dict[str, Any]], **metadata: Any
+    ) -> "AgentTrace":
         """Create trace from message list (e.g. from process_session_events).
 
         Expects messages with keys: role ("user"|"assistant"|"tool"), content,
@@ -206,6 +206,11 @@ class PartialAgentSample(BaseModel):
     user_input: AgentInputOutput
     reference_outcome: AgentInputOutput | None = None
     reference_tool_calls: list[ToolCall] | None = None
+    scenario: str | None = None
+    expected_outcome: str | None = None
+    user_description: str | None = None
+    chatbot_role: str | None = None
+    conversation_context: list[str] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -217,18 +222,28 @@ class AgentSample(BaseModel):
     reference_outcome: AgentInputOutput | None = None
     reference_tool_calls: list[ToolCall] | None = None
     agent_traces: list[AgentTrace] | None = None  # One per agent, in execution order (workflow)
+    scenario: str | None = None
+    expected_outcome: str | None = None
+    user_description: str | None = None
+    chatbot_role: str | None = None
+    conversation_context: list[str] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @classmethod
     def from_partial(
         cls, partial: PartialAgentSample, trace: AgentTrace
-    ) -> AgentSample:
+    ) -> "AgentSample":
         """Factory: Convert partial + trace to full sample."""
         return cls(
             user_input=partial.user_input,
             trace=trace,
             reference_outcome=partial.reference_outcome,
             reference_tool_calls=partial.reference_tool_calls,
+            scenario=partial.scenario,
+            expected_outcome=partial.expected_outcome,
+            user_description=partial.user_description,
+            chatbot_role=partial.chatbot_role,
+            conversation_context=partial.conversation_context,
             metadata={**partial.metadata, **trace.metadata},
         )
 
@@ -258,7 +273,7 @@ class AgentDataset(BaseModel):
         return len(self.samples)
 
     @classmethod
-    def from_file(cls, path: str | Path) -> AgentDataset:
+    def from_file(cls, path: str | Path) -> "AgentDataset":
         """Load dataset from JSON or JSONL file. Delegates to AgentDatasetLoader."""
         from floeval.api.dataset_loaders.agent_file_loader import (
             AgentDatasetLoader,

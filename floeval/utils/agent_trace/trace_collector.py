@@ -15,13 +15,13 @@ from floeval.utils.agent_trace.patchers.langchain_callback import (
     get_langchain_callback,
     is_langchain_available,
 )
-from floeval.utils.asyncio_compat import run_coroutine_sync
 from floeval.utils.agent_trace.patchers.openai_patcher import patch_openai, unpatch_openai
 from floeval.utils.agent_trace.trace_context import (
     TraceContext,
     clear_current_trace,
     set_current_trace,
 )
+from floeval.utils.asyncio_compat import run_coroutine_sync
 
 logger = logging.getLogger(__name__)
 

@@ -5,6 +5,7 @@ import json
 import pytest
 
 from floeval.api import DatasetLoader
+from floeval.config.schemas.io.conversational_dataset import ConversationalDataset
 from floeval.config.schemas.io.dataset import Dataset, PartialDataset
 
 pytestmark = pytest.mark.unit
@@ -61,3 +62,26 @@ def test_from_samples_partial_dataset_allows_missing_response() -> None:
     )
     assert isinstance(ds, PartialDataset)
     assert ds.samples[0].llm_response is None
+
+
+def test_conversational_from_file_accepts_samples_wrapper(tmp_path) -> None:
+    path = tmp_path / "conv.json"
+    path.write_text(
+        json.dumps(
+            {
+                "samples": [
+                    {
+                        "messages": [
+                            {"role": "human", "content": "Q?"},
+                            {"role": "ai", "content": "A."},
+                        ]
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    ds = DatasetLoader.conversational_from_file(path, partial_dataset=False)
+    assert isinstance(ds, ConversationalDataset)
+    assert len(ds.samples) == 1
+    assert ds.samples[0].turns[0].role == "user"

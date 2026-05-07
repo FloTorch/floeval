@@ -82,7 +82,14 @@ def create_ragas_llm(
     config: LLMProviderConfig | None = None,
     extra_headers: Dict[str, str] | None = None,
 ) -> LangchainLLMWrapper:
-    """Build the default RAGAS LLM wrapper from provider config."""
+    """Create RAGAS LLM wrapper configured with custom llm configuration.
+
+    Args:
+        config: LLMProviderConfig configuration (optional, uses env defaults if None)
+
+    Returns:
+        LangchainLLMWrapper instance configured with custom llm configuration
+    """
     llm_args: Dict[str, Any] = {}
     if config and config.base_url:
         llm_args["openai_api_base"] = _normalize_openai_base_url(config.base_url)
@@ -99,7 +106,7 @@ def create_ragas_llm(
 def create_ragas_embeddings(
     config: LLMProviderConfig | None = None,
     extra_headers: Dict[str, str] | None = None,
-) -> LangchainEmbeddingsWrapper:
+):
     """Build the default RAGAS embeddings wrapper from provider config."""
     embedding_args: Dict[str, Any] = {
         "check_embedding_ctx_length": False,
@@ -120,7 +127,12 @@ def create_ragas_instructor_llm(
     config: LLMProviderConfig | None = None,
     extra_headers: Dict[str, str] | None = None,
 ):
-    """Build the structured LLM used by agent-focused RAGAS metrics."""
+    """Create LLM for RAGAS agent metrics (agent_goal_accuracy).
+
+    Uses LangChain ChatOpenAI + JSON parsing (no response_format), so it works
+    with any OpenAI-compatible API. Pass the same llm_config
+    as the rest of evaluation - no separate RAGAS config needed.
+    """
     return LangChainStructuredLLM(config, extra_headers=extra_headers)
 
 
@@ -153,22 +165,28 @@ class RAGASAdapter:
         config: LLMProviderConfig | None = None,
         extra_headers: Dict[str, str] | None = None,
     ):
-        """Initialize adapter with optional provider config and request headers."""
+        """Initialize RAGAS adapter with llm configuration.
+
+        Args:
+            config: Optional LLMProviderConfig configuration. If None, uses environment defaults.
+            extra_headers: Optional headers forwarded on every LLM/embedding API request
+                (e.g. gateway run-context headers for log correlation).
+        """
         self.config = config
         self._extra_headers: Dict[str, str] = dict(extra_headers or {})
-        self._llm: LangchainLLMWrapper | None = None
-        self._embeddings: LangchainEmbeddingsWrapper | None = None
+        self._llm = None
+        self._embeddings = None
         self._agent_llm = None
 
     @property
-    def llm(self) -> LangchainLLMWrapper:
+    def llm(self):
         """Get or create RAGAS LLM wrapper (cached)."""
         if self._llm is None:
             self._llm = create_ragas_llm(self.config, extra_headers=self._extra_headers or None)
         return self._llm
 
     @property
-    def embeddings(self) -> LangchainEmbeddingsWrapper:
+    def embeddings(self):
         """Get or create RAGAS embeddings wrapper (cached)."""
         if self._embeddings is None:
             self._embeddings = create_ragas_embeddings(
@@ -187,17 +205,16 @@ class RAGASAdapter:
 
     def transform_sample(self, sample: Sample | dict[str, str | Sequence[Any]]) -> SingleTurnSample:
         """Convert a FloEval sample into `SingleTurnSample`."""
-        if isinstance(sample, Sample):
-            sample_data = sample.model_dump()
-        elif isinstance(sample, dict):
-            sample_data = sample
-        else:
+        if isinstance(sample, dict):
+            # Validate incoming dicts via Pydantic so downstream conversion uses a typed model.
+            sample = Sample.model_validate(sample)
+        elif not isinstance(sample, Sample):
             raise ValueError(f"Unsupported sample type: {type(sample)}. Expected Sample or dict.")
 
-        user_input = sample_data.get("user_input", "")
-        contexts = sample_data.get("contexts") or []
-        llm_response = sample_data.get("llm_response", "")
-        ground_truth = sample_data.get("ground_truth", "")
+        user_input = sample.user_input
+        contexts = sample.contexts or []
+        llm_response = sample.llm_response
+        ground_truth = sample.ground_truth or ""
 
         return SingleTurnSample(
             user_input=user_input,
