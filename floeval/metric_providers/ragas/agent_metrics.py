@@ -10,20 +10,40 @@ Follows the same pattern as RAGASAnswerRelevancy/RAGASFaithfulness:
 import logging
 from typing import Any
 
-from ragas.messages import AIMessage as RAGASAIMessage
+from ragas.messages import AIMessage as RAGASAIMessage, ToolCall as RAGASToolCall
 from ragas.metrics.collections import TopicAdherence
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
-from floeval.config.schemas.io.agent_dataset import AgentSample, _to_display_str
+from floeval.config.schemas.io.agent_dataset import (
+    AgentSample,
+    ToolCall as AgentToolCall,
+    _to_display_str,
+)
+from floeval.config.schemas.io.conversation import ToolCallPayload
+from floeval.config.schemas.io.conversational_dataset import ConversationalSample
 from floeval.config.schemas.io.llm import LLMProviderConfig
-from floeval.metric_providers.ragas.adapter import RAGASAdapter, transform_agent_sample_to_ragas_messages
+from floeval.metric_providers.ragas.adapter import (
+    RAGASAdapter,
+    transform_sample_to_ragas_messages,
+)
 from floeval.utils.asyncio_compat import run_coroutine_sync
 
 logger = logging.getLogger(__name__)
 
 
+def _to_ragas_tool_call(
+    tool: AgentToolCall | ToolCallPayload | dict[str, Any],
+) -> RAGASToolCall:
+    """Normalize a tool-call payload from either sample type to RAGAS ToolCall."""
+    if isinstance(tool, dict):
+        tool = ToolCallPayload.model_validate(tool)
+    return RAGASToolCall(name=tool.name, args=tool.args)
+
+
 class RAGASAgentGoalAccuracy(BaseMetric):
     """RAGAS AgentGoalAccuracyWithReference - same pattern as RAGASAnswerRelevancy."""
+
+    ragas_sample_kind = "multi_turn"
 
     def __init__(
         self,
@@ -44,22 +64,30 @@ class RAGASAgentGoalAccuracy(BaseMetric):
         # AgentGoalAccuracyWithReference across ragas versions.
         self._metric = AgentGoalAccuracyWithReference(llm=self.adapter.agent_llm)
 
-    def evaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
+    @property
+    def ragas_multiturn_metric(self):
+        """Native RAGAS metric instance for batch evaluation routing."""
+        return self._metric
+
+    def evaluate(
+        self, sample: AgentSample | ConversationalSample, **kwargs: Any
+    ) -> MetricResult:
         try:
-            messages = transform_agent_sample_to_ragas_messages(sample)
+            messages = transform_sample_to_ragas_messages(sample)
             if not messages:
                 return MetricResult(
                     score=None,
                     metadata={"error": "No messages in trace", "provider": "ragas"},
                 )
             # Ensure final response content is explicitly present in the conversation.
-            final = sample.trace.final_response
-            if final is not None and str(final).strip():
-                messages = list(messages) + [
-                    RAGASAIMessage(
-                        content=f"[Agent's final response to user: {final}]"
-                    )
-                ]
+            if isinstance(sample, AgentSample):
+                final = sample.trace.final_response
+                if final is not None and str(final).strip():
+                    messages = list(messages) + [
+                        RAGASAIMessage(
+                            content=f"[Agent's final response to user: {final}]"
+                        )
+                    ]
             reference = _to_display_str(sample.reference_outcome)
             result = run_coroutine_sync(
                 lambda: self._metric.ascore(
@@ -78,20 +106,23 @@ class RAGASAgentGoalAccuracy(BaseMetric):
                 metadata={"error": str(e), "provider": "ragas"},
             )
 
-    async def aevaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
+    async def aevaluate(
+        self, sample: AgentSample | ConversationalSample, **kwargs: Any
+    ) -> MetricResult:
         """Evaluate agent goal accuracy asynchronously."""
         try:
-            messages = transform_agent_sample_to_ragas_messages(sample)
+            messages = transform_sample_to_ragas_messages(sample)
             if not messages:
                 return MetricResult(
                     score=None,
                     metadata={"error": "No messages in trace", "provider": "ragas"},
                 )
-            final = sample.trace.final_response
-            if final is not None and str(final).strip():
-                messages = list(messages) + [
-                    RAGASAIMessage(content=f"[Agent's final response to user: {final}]")
-                ]
+            if isinstance(sample, AgentSample):
+                final = sample.trace.final_response
+                if final is not None and str(final).strip():
+                    messages = list(messages) + [
+                        RAGASAIMessage(content=f"[Agent's final response to user: {final}]")
+                    ]
             reference = _to_display_str(sample.reference_outcome)
             result = await self._metric.ascore(user_input=messages, reference=reference)
             return MetricResult(
@@ -108,6 +139,8 @@ class RAGASAgentGoalAccuracy(BaseMetric):
 
 class RAGASToolCallAccuracy(BaseMetric):
     """RAGAS ToolCallAccuracy - same pattern as RAGASAnswerRelevancy."""
+
+    ragas_sample_kind = "multi_turn"
 
     def __init__(
         self,
@@ -126,24 +159,27 @@ class RAGASToolCallAccuracy(BaseMetric):
 
         self._metric = ToolCallAccuracy()
 
-    def evaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
+    @property
+    def ragas_multiturn_metric(self):
+        """Native RAGAS metric instance for batch evaluation routing."""
+        return self._metric
+
+    def evaluate(
+        self, sample: AgentSample | ConversationalSample, **kwargs: Any
+    ) -> MetricResult:
         if sample.reference_tool_calls is None:
             return MetricResult(
                 score=None,
                 metadata={"error": "reference_tool_calls required", "provider": "ragas"},
             )
         try:
-            messages = transform_agent_sample_to_ragas_messages(sample)
+            messages = transform_sample_to_ragas_messages(sample)
             if not messages:
                 return MetricResult(
                     score=None,
                     metadata={"error": "No messages in trace", "provider": "ragas"},
                 )
-            from ragas.messages import ToolCall as RAGASToolCall
-
-            ref_calls = [
-                RAGASToolCall(name=tc.name, args=tc.args) for tc in sample.reference_tool_calls
-            ]
+            ref_calls = [_to_ragas_tool_call(tc) for tc in sample.reference_tool_calls]
             result = run_coroutine_sync(
                 lambda: self._metric.ascore(
                     user_input=messages,
@@ -161,7 +197,9 @@ class RAGASToolCallAccuracy(BaseMetric):
                 metadata={"error": str(e), "provider": "ragas"},
             )
 
-    async def aevaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
+    async def aevaluate(
+        self, sample: AgentSample | ConversationalSample, **kwargs: Any
+    ) -> MetricResult:
         """Evaluate tool call accuracy asynchronously."""
         if sample.reference_tool_calls is None:
             return MetricResult(
@@ -169,17 +207,13 @@ class RAGASToolCallAccuracy(BaseMetric):
                 metadata={"error": "reference_tool_calls required", "provider": "ragas"},
             )
         try:
-            messages = transform_agent_sample_to_ragas_messages(sample)
+            messages = transform_sample_to_ragas_messages(sample)
             if not messages:
                 return MetricResult(
                     score=None,
                     metadata={"error": "No messages in trace", "provider": "ragas"},
                 )
-            from ragas.messages import ToolCall as RAGASToolCall
-
-            ref_calls = [
-                RAGASToolCall(name=tc.name, args=tc.args) for tc in sample.reference_tool_calls
-            ]
+            ref_calls = [_to_ragas_tool_call(tc) for tc in sample.reference_tool_calls]
             result = await self._metric.ascore(user_input=messages, reference_tool_calls=ref_calls)
             return MetricResult(
                 score=float(result.value),
@@ -202,6 +236,8 @@ class RAGASTopicAdherence(BaseMetric):
     Requires: trace with multiple turns.
     """
 
+    ragas_sample_kind = "multi_turn"
+
     def __init__(
         self,
         llm_config: LLMProviderConfig | None = None,
@@ -217,9 +253,16 @@ class RAGASTopicAdherence(BaseMetric):
         )
         self._metric = TopicAdherence(llm=self.adapter.agent_llm)
 
-    def evaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
+    @property
+    def ragas_multiturn_metric(self):
+        """Native RAGAS metric instance for batch evaluation routing."""
+        return self._metric
+
+    def evaluate(
+        self, sample: AgentSample | ConversationalSample, **kwargs: Any
+    ) -> MetricResult:
         try:
-            messages = transform_agent_sample_to_ragas_messages(sample)
+            messages = transform_sample_to_ragas_messages(sample)
             if not messages:
                 return MetricResult(
                     score=None,
@@ -237,9 +280,11 @@ class RAGASTopicAdherence(BaseMetric):
                 metadata={"error": str(e), "provider": "ragas"},
             )
 
-    async def aevaluate(self, sample: AgentSample, **kwargs: Any) -> MetricResult:
+    async def aevaluate(
+        self, sample: AgentSample | ConversationalSample, **kwargs: Any
+    ) -> MetricResult:
         try:
-            messages = transform_agent_sample_to_ragas_messages(sample)
+            messages = transform_sample_to_ragas_messages(sample)
             if not messages:
                 return MetricResult(
                     score=None,
