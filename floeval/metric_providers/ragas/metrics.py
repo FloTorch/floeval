@@ -607,6 +607,10 @@ class RAGASAspectCritic(RAGASMetric):
             name=name,
             **kwargs,
         )
+        # aspect_critic uses PydanticPrompt which requires InstructorBaseRagasLLM
+        # for structured output. Override the plain LangchainLLMWrapper set by
+        # the base class with the structured instructor LLM.
+        self.ragas_metric.llm = self.adapter.agent_llm
 
     def evaluate(self, sample: Any, **kwargs: Any) -> MetricResult:
         try:

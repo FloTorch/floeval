@@ -1,5 +1,7 @@
 """RAGAS adapter and conversion helpers."""
 
+import logging
+import re
 from typing import Any, Dict, Sequence, Type, TypeVar
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -24,6 +26,8 @@ from floeval.metric_providers.ragas.multiturn_adapter import (
 )
 from floeval.utils.asyncio_compat import run_coroutine_sync
 
+logger = logging.getLogger(__name__)
+
 T = TypeVar("T", bound=BaseModel)
 
 
@@ -46,15 +50,72 @@ class LangChainStructuredLLM(InstructorBaseRagasLLM):
         if extra_headers:
             llm_args["default_headers"] = extra_headers
         self._llm = ChatOpenAI(**llm_args)
+        self.is_async = True
 
     def generate(self, prompt: str, response_model: Type[T]) -> T:
         """Synchronous adapter over `agenerate`."""
         return run_coroutine_sync(lambda: self.agenerate(prompt, response_model))
 
     async def agenerate(self, prompt: str, response_model: Type[T]) -> T:
-        """Generate structured output via ChatOpenAI with schema enforcement."""
-        structured_llm = self._llm.with_structured_output(response_model)
-        return await structured_llm.ainvoke(prompt)  # type: ignore[return-value]
+        """Generate structured output via ChatOpenAI with schema enforcement.
+
+        Tries ``with_structured_output`` first (fast, schema-enforced).
+        On failure falls back to plain-text generation + JSON extraction
+        + heuristic text parsing so that RAGAS metrics keep working even
+        when the gateway does not expose structured-output / function-calling.
+        """
+        try:
+            structured_llm = self._llm.with_structured_output(response_model)
+            return await structured_llm.ainvoke(prompt)  # type: ignore[return-value]
+        except Exception:
+            logger.debug(
+                "with_structured_output failed for %s, falling back to plain text",
+                response_model.__name__,
+                exc_info=True,
+            )
+
+        raw = await self._llm.ainvoke(prompt)
+        raw_text = _extract_message_text(raw)
+        logger.debug(
+            "Fallback plain-text for %s: %.300s",
+            response_model.__name__,
+            raw_text,
+        )
+        result = _parse_response_model(raw_text, response_model)
+        logger.debug("Parsed fallback result: %s", result)
+        return result
+
+
+def _extract_message_text(raw: Any) -> str:
+    """Pull plain text out of a LangChain message / string / dict."""
+    if isinstance(raw, str):
+        return raw
+    if hasattr(raw, "content"):
+        return str(raw.content)
+    return str(raw)
+
+
+def _parse_response_model(raw_text: str, response_model: Type[T]) -> T:
+    """Best-effort JSON extraction → Pydantic model.
+
+    Handles cases where the model returns bare JSON, JSON wrapped in
+    markdown fences, or free-form text containing a JSON object.
+    """
+    cleaned = raw_text.strip()
+    fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", cleaned, re.DOTALL)
+    if fence_match:
+        cleaned = fence_match.group(1).strip()
+
+    json_match = re.search(r"\{[^{}]*\}", cleaned, re.DOTALL)
+    if json_match:
+        try:
+            return response_model.model_validate_json(json_match.group())
+        except Exception:
+            pass
+
+    return response_model.model_validate(
+        {"reason": cleaned, "verdict": 0}
+    )
 
 
 def create_ragas_llm(
