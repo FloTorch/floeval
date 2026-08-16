@@ -18,8 +18,12 @@ from floeval.config.schemas.io.agent_dataset import (
     HumanMessage as FloevalHumanMessage,
     ToolMessage as FloevalToolMessage,
 )
+from floeval.config.schemas.io.conversational_dataset import ConversationalSample
 from floeval.config.schemas.io.dataset import Sample
 from floeval.config.schemas.io.llm import LLMProviderConfig, _normalize_openai_base_url
+from floeval.metric_providers.ragas.multiturn_adapter import (
+    conversational_sample_to_ragas_multiturn,
+)
 from floeval.utils.asyncio_compat import run_coroutine_sync
 
 T = TypeVar("T", bound=BaseModel)
@@ -155,6 +159,16 @@ def transform_agent_sample_to_ragas_messages(
                 )
             )
     return result
+
+
+def transform_sample_to_ragas_messages(
+    sample: AgentSample | ConversationalSample,
+) -> list[HumanMessage | AIMessage | ToolMessage]:
+    """Convert either ``AgentSample`` or ``ConversationalSample`` to RAGAS messages."""
+    if isinstance(sample, AgentSample):
+        return transform_agent_sample_to_ragas_messages(sample)
+    multiturn = conversational_sample_to_ragas_multiturn(sample)
+    return multiturn.user_input
 
 
 class RAGASAdapter:
