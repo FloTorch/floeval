@@ -1,7 +1,5 @@
 """RAGAS adapter and conversion helpers."""
 
-import json
-import re
 from typing import Any, Dict, Sequence, Type, TypeVar
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -54,32 +52,9 @@ class LangChainStructuredLLM(InstructorBaseRagasLLM):
         return run_coroutine_sync(lambda: self.agenerate(prompt, response_model))
 
     async def agenerate(self, prompt: str, response_model: Type[T]) -> T:
-        """Generate structured output via ChatOpenAI + JSON parse."""
-        msg = await self._llm.ainvoke(prompt)
-        text = msg.content if hasattr(msg, "content") else str(msg)
-        parsed = _extract_json(text)
-        return response_model.model_validate(parsed)
-
-
-def _extract_json(text: str) -> dict:
-    """Extract JSON from LLM response (handles markdown code blocks)."""
-    if not text or not text.strip():
-        raise ValueError("Empty LLM response")
-    text = text.strip()
-    # Try ```json ... ``` first
-    match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
-    if match:
-        return json.loads(match.group(1).strip())
-    # Try raw JSON
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
-    # Try to find {...} in text
-    match = re.search(r"\{[\s\S]*\}", text)
-    if match:
-        return json.loads(match.group(0))
-    raise ValueError(f"Could not extract JSON from response: {text[:200]}...")
+        """Generate structured output via ChatOpenAI with schema enforcement."""
+        structured_llm = self._llm.with_structured_output(response_model)
+        return await structured_llm.ainvoke(prompt)  # type: ignore[return-value]
 
 
 def create_ragas_llm(

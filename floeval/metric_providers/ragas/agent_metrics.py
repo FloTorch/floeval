@@ -268,7 +268,14 @@ class RAGASTopicAdherence(BaseMetric):
                     score=None,
                     metadata={"error": "No messages in trace", "provider": "ragas"},
                 )
-            result = run_coroutine_sync(lambda: self._metric.ascore(user_input=messages))
+            reference_topics: list[str] = []
+            if isinstance(sample, ConversationalSample):
+                reference_topics = sample.reference_topics or []
+            result = run_coroutine_sync(
+                lambda: self._metric.ascore(
+                    user_input=messages, reference_topics=reference_topics
+                )
+            )
             return MetricResult(
                 score=float(result.value),
                 metadata={"provider": "ragas", "metric_name": "topic_adherence"},
@@ -290,7 +297,12 @@ class RAGASTopicAdherence(BaseMetric):
                     score=None,
                     metadata={"error": "No messages in trace", "provider": "ragas"},
                 )
-            result = await self._metric.ascore(user_input=messages)
+            reference_topics: list[str] = []
+            if isinstance(sample, ConversationalSample):
+                reference_topics = sample.reference_topics or []
+            result = await self._metric.ascore(
+                user_input=messages, reference_topics=reference_topics
+            )
             return MetricResult(
                 score=float(result.value),
                 metadata={"provider": "ragas", "metric_name": "topic_adherence"},
