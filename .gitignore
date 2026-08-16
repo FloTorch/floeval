@@ -221,3 +221,9 @@ tests/output/
 .cursor/*
 .github/instructions/*
 .vscode/*
+opencode.json
+.codevector.json
+AGENTS.md
+
+# Scratch folder (untracked files)
+_scratch/
