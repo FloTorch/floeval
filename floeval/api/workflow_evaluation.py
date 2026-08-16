@@ -14,8 +14,6 @@ Note on metric key format: WorkflowEvaluation uses "provider:metric_name" keys
 This is intentional to stay consistent with the newer convention.
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 from typing import Any, Mapping
@@ -105,10 +103,14 @@ class WorkflowEvaluation:
         self._all_metrics = self._resolve_metrics(metrics)
         # Internal routing — not exposed to users
         self._per_sample_metrics = [
-            m for m in self._all_metrics if getattr(m, "execution_scope", "per_sample") != "per_workflow"
+            m
+            for m in self._all_metrics
+            if getattr(m, "execution_scope", "per_sample") != "per_workflow"
         ]
         self._per_workflow_metrics = [
-            m for m in self._all_metrics if getattr(m, "execution_scope", "per_sample") == "per_workflow"
+            m
+            for m in self._all_metrics
+            if getattr(m, "execution_scope", "per_sample") == "per_workflow"
         ]
 
     # ── Metric resolution (identical pattern to AgentEvaluation._resolve_metrics) ──
@@ -149,7 +151,9 @@ class WorkflowEvaluation:
         if self.run_headers and hasattr(metric, "extra_headers"):
             metric.extra_headers = self.run_headers
 
-    def _merge_params(self, provider: str, metric_id: str, params: dict[str, Any]) -> dict[str, Any]:
+    def _merge_params(
+        self, provider: str, metric_id: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         merged: dict[str, Any] = {}
         merged.update(self.metric_params.get(metric_id, {}))
         merged.update(self.metric_params.get(f"{provider}:{metric_id}", {}))
@@ -230,9 +234,7 @@ class WorkflowEvaluation:
             try:
                 result: MetricResult = await metric.aevaluate(sample)
             except Exception as e:
-                logger.error(
-                    "Metric %s failed for agent %s: %s", key, agent_name, e, exc_info=True
-                )
+                logger.error("Metric %s failed for agent %s: %s", key, agent_name, e, exc_info=True)
                 result = MetricResult(
                     score=None,
                     metadata={"error": str(e), "metric_name": metric.name},
@@ -299,8 +301,8 @@ class WorkflowEvaluation:
         workflow_results: dict[str, Any],
     ) -> dict[str, float]:
         """Aggregate per-agent scores. Strategy driven by each metric's workflow_aggregate attribute:
-          "mean" → average (quality/rate metrics)
-          "sum"  → total  (count/volume metrics)
+        "mean" → average (quality/rate metrics)
+        "sum"  → total  (count/volume metrics)
         """
         scores: dict[str, list[float]] = {}
         for row in per_agent_results:
@@ -310,8 +312,7 @@ class WorkflowEvaluation:
 
         # Build key → metric lookup so we can read workflow_aggregate per metric
         metric_by_key = {
-            f"{getattr(m, 'provider', 'unknown')}:{m.name}": m
-            for m in self._per_sample_metrics
+            f"{getattr(m, 'provider', 'unknown')}:{m.name}": m for m in self._per_sample_metrics
         }
 
         aggregated: dict[str, float] = {}
@@ -319,7 +320,9 @@ class WorkflowEvaluation:
             if not values:
                 continue
             strategy = getattr(metric_by_key.get(key), "workflow_aggregate", "mean")
-            aggregated[key] = round(sum(values) if strategy == "sum" else sum(values) / len(values), 4)
+            aggregated[key] = round(
+                sum(values) if strategy == "sum" else sum(values) / len(values), 4
+            )
 
         for key, data in workflow_results.items():
             if data.get("score") is not None:

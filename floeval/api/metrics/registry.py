@@ -1,7 +1,5 @@
 """Two-level metric registry: provider -> metric_name -> metric_class."""
 
-from __future__ import annotations
-
 import threading
 from collections import defaultdict
 from typing import Any, Callable
@@ -19,11 +17,11 @@ class MetricRegistry:
     (e.g. for custom metrics). Thread-safe.
     """
 
-    _instance: MetricRegistry | None = None
+    _instance: "MetricRegistry | None" = None
     _registry: defaultdict[str, dict[str, MetricFactory]] = defaultdict(dict)
     _lock: threading.RLock = threading.RLock()
 
-    def __new__(cls) -> MetricRegistry:
+    def __new__(cls) -> "MetricRegistry":
         """Singleton pattern - return the same instance (thread-safe)."""
         if cls._instance is None:
             with cls._lock:

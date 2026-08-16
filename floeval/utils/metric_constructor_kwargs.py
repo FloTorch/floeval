@@ -5,8 +5,6 @@ add them to the merged dict, then drop any key the metric's ``__init__`` does
 not accept (unless the signature includes ``**kwargs``).
 """
 
-from __future__ import annotations
-
 import inspect
 from typing import Any
 
@@ -19,9 +17,7 @@ def filter_kwargs_for_metric_factory(merged: dict[str, Any], metric_factory: Any
         else:
             sig = inspect.signature(metric_factory.__init__)
         accepted = set(sig.parameters) - {"self"}
-        has_var_kw = any(
-            p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
-        )
+        has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
         if has_var_kw:
             return dict(merged)
         return {k: v for k, v in merged.items() if k in accepted}

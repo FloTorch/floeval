@@ -2,7 +2,6 @@
 ExecutionTrace model for tracking execution
 """
 
-from typing import Any, Dict, Optional
 from datetime import datetime
 
 
@@ -12,5 +11,5 @@ class ExecutionTrace:
     """
 
     def __init__(self):
-        self.timestamp: Optional[datetime] = None
-        self.metadata: Dict[str, Any] = {}
+        self.timestamp: datetime | None = None
+        self.metadata: dict[str, object] = {}

@@ -4,8 +4,6 @@ floeval-worker can attach a file handler when WORKER_STATUS_LOG_PATH is set.
 If nothing is attached, log_job_status / log_job_status_error do nothing.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

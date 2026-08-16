@@ -11,8 +11,6 @@ to evaluate(), not an AgentSample. Do NOT use these metrics inside AgentEvaluati
 they will return score=None with a warning if called with an AgentSample.
 """
 
-from __future__ import annotations
-
 import asyncio
 import json
 import logging
@@ -157,15 +155,15 @@ Respond ONLY with JSON:
                 if data:
                     score = float(max(0.0, min(1.0, data.get("score", 0))))
                     scores.append(score)
-                    handoff_details.append({
-                        "handoff_index": i,
-                        "score": score,
-                        "issues": data.get("issues", ""),
-                    })
+                    handoff_details.append(
+                        {
+                            "handoff_index": i,
+                            "score": score,
+                            "issues": data.get("issues", ""),
+                        }
+                    )
             except json.JSONDecodeError:
-                logger.exception(
-                    "Failed to parse LLM response for handoff metric at index %d.", i
-                )
+                logger.exception("Failed to parse LLM response for handoff metric at index %d.", i)
             except Exception:
                 logger.exception("Handoff %d evaluation failed.", i)
 
@@ -247,9 +245,7 @@ Respond ONLY with JSON:
                 },
             )
 
-        names = execution.agent_names or [
-            f"agent_{i}" for i in range(len(execution.agent_traces))
-        ]
+        names = execution.agent_names or [f"agent_{i}" for i in range(len(execution.agent_traces))]
         agent_outputs_text = "\n\n".join(
             f"Agent {i + 1} ({name}):\n{trace.final_response[:400]}"
             for i, (name, trace) in enumerate(zip(names, execution.agent_traces))

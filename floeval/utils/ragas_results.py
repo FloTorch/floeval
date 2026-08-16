@@ -1,7 +1,5 @@
 """Extract scores from RAGAS evaluation result DataFrames."""
 
-from __future__ import annotations
-
 from typing import Any
 
 

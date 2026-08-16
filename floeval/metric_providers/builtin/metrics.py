@@ -8,8 +8,6 @@ without a provider prefix, MetricRegistry.resolve_best() will raise an ambiguity
 error. Always use the full form: builtin:exact_match or deepeval:exact_match.
 """
 
-from __future__ import annotations
-
 import logging
 
 from sentence_transformers import SentenceTransformer, util

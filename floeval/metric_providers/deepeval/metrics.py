@@ -3,7 +3,7 @@ DeepEval metric implementations
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from deepeval.evaluate import evaluate
 from deepeval.metrics import (
@@ -41,7 +41,7 @@ class DeepEvalMetric(BaseMetric):
         super().__init__(*args, **kwargs)
         self.provider = "deepeval"
         self.llm_config = llm_config
-        self._extra_headers: Dict[str, Any] = dict(kwargs.get("extra_headers") or {})
+        self._extra_headers: dict[str, Any] = dict(kwargs.get("extra_headers") or {})
 
         params = kwargs.get("params", {})
         if not isinstance(params, dict):
@@ -55,8 +55,8 @@ class DeepEvalMetric(BaseMetric):
         self._llm_adapter = self._create_llm_adapter(llm_config) if llm_config else None
 
     def _extract_metric_params(
-        self, params: Dict[str, Any], kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         """Extract parameters that should be passed to DeepEval metric constructor.
 
         Excludes llm_config and other Floeval-specific params.

@@ -6,7 +6,7 @@ that can be configured with custom LLM providers.
 
 import copy
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ragas.metrics import (
     NoiseSensitivity,
@@ -44,7 +44,7 @@ class RAGASMetric(BaseMetric):
         super().__init__(name=name)
         self.provider = "ragas"
         self.llm_config = llm_config
-        self._extra_headers: Dict[str, str] = dict(kwargs.get("extra_headers") or {})
+        self._extra_headers: dict[str, str] = dict(kwargs.get("extra_headers") or {})
 
         if threshold is not None:
             self.threshold = threshold
@@ -73,10 +73,10 @@ class RAGASMetric(BaseMetric):
                 self.llm_config.base_url if self.llm_config else None,
             )
         except Exception as e:
-            logger.error(f"Failed to initialize RAGAS LLM/embeddings: {e}")
+            logger.error("Failed to initialize RAGAS LLM/embeddings: %s", e)
             raise
 
-    def _build_metadata(self, score_float: float, error: Optional[str] = None) -> Dict[str, Any]:
+    def _build_metadata(self, score_float: float, error: str | None = None) -> dict[str, Any]:
         """Build metadata dict with consistent structure."""
         metadata = {
             "provider": self.provider,
@@ -229,7 +229,7 @@ class RAGASFaithfulness(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:
-            logger.error(f"Error computing faithfulness: {e}", exc_info=True)
+            logger.error("Error computing faithfulness: %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -245,7 +245,7 @@ class RAGASFaithfulness(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:
-            logger.error(f"Error computing faithfulness (async): {e}", exc_info=True)
+            logger.error("Error computing faithfulness (async): %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -306,7 +306,7 @@ class RAGASContextPrecision(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:
-            logger.error(f"Error computing context precision: {e}", exc_info=True)
+            logger.error("Error computing context precision: %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -322,7 +322,7 @@ class RAGASContextPrecision(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:
-            logger.error(f"Error computing context precision (async): {e}", exc_info=True)
+            logger.error("Error computing context precision (async): %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -383,7 +383,7 @@ class RAGASContextRecall(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:
-            logger.error(f"Error computing context recall: {e}", exc_info=True)
+            logger.error("Error computing context recall: %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -399,7 +399,7 @@ class RAGASContextRecall(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:
-            logger.error(f"Error computing context recall (async): {e}", exc_info=True)
+            logger.error("Error computing context recall (async): %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -460,7 +460,7 @@ class RAGASContextEntityRecall(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:
-            logger.error(f"Error computing context entity recall: {e}", exc_info=True)
+            logger.error("Error computing context entity recall: %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -476,7 +476,7 @@ class RAGASContextEntityRecall(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:
-            logger.error(f"Error computing context entity recall (async): {e}", exc_info=True)
+            logger.error("Error computing context entity recall (async): %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -537,7 +537,7 @@ class RAGASNoiseSensitivity(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:
-            logger.error(f"Error computing noise sensitivity: {e}", exc_info=True)
+            logger.error("Error computing noise sensitivity: %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -553,7 +553,7 @@ class RAGASNoiseSensitivity(RAGASMetric):
                 metadata=self._build_metadata(score_float),
             )
         except Exception as e:
-            logger.error(f"Error computing noise sensitivity (async): {e}", exc_info=True)
+            logger.error("Error computing noise sensitivity (async): %s", e, exc_info=True)
             return MetricResult(
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
@@ -644,5 +644,3 @@ class RAGASAspectCritic(RAGASMetric):
                 score=None,
                 metadata=self._build_metadata(0.0, error=str(e)),
             )
-
-

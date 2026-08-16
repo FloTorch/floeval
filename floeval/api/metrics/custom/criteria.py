@@ -1,7 +1,5 @@
 """Criteria-based custom metrics using LLM-as-judge."""
 
-from __future__ import annotations
-
 import json
 import logging
 import re

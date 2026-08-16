@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any, Dict, Sequence, Type, TypeVar
+from typing import Any, Sequence
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from pydantic import BaseModel
@@ -28,8 +28,6 @@ from floeval.utils.asyncio_compat import run_coroutine_sync
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=BaseModel)
-
 
 class LangChainStructuredLLM(InstructorBaseRagasLLM):
     """ChatOpenAI wrapper that validates JSON output into Pydantic models."""
@@ -37,9 +35,9 @@ class LangChainStructuredLLM(InstructorBaseRagasLLM):
     def __init__(
         self,
         config: LLMProviderConfig | None = None,
-        extra_headers: Dict[str, str] | None = None,
+        extra_headers: dict[str, str] | None = None,
     ):
-        llm_args: Dict[str, Any] = {"temperature": 0.01, "model": "gpt-4o-mini"}
+        llm_args: dict[str, Any] = {"temperature": 0.01, "model": "gpt-4o-mini"}
         if config:
             if config.base_url:
                 llm_args["openai_api_base"] = _normalize_openai_base_url(config.base_url)
@@ -52,11 +50,11 @@ class LangChainStructuredLLM(InstructorBaseRagasLLM):
         self._llm = ChatOpenAI(**llm_args)
         self.is_async = True
 
-    def generate(self, prompt: str, response_model: Type[T]) -> T:
+    def generate(self, prompt: str, response_model: type[BaseModel]) -> BaseModel:
         """Synchronous adapter over `agenerate`."""
         return run_coroutine_sync(lambda: self.agenerate(prompt, response_model))
 
-    async def agenerate(self, prompt: str, response_model: Type[T]) -> T:
+    async def agenerate(self, prompt: str, response_model: type[BaseModel]) -> BaseModel:
         """Generate structured output via ChatOpenAI with schema enforcement.
 
         Tries ``with_structured_output`` first (fast, schema-enforced).
@@ -95,7 +93,7 @@ def _extract_message_text(raw: Any) -> str:
     return str(raw)
 
 
-def _parse_response_model(raw_text: str, response_model: Type[T]) -> T:
+def _parse_response_model(raw_text: str, response_model: type[BaseModel]) -> BaseModel:
     """Best-effort JSON extraction → Pydantic model.
 
     Handles cases where the model returns bare JSON, JSON wrapped in
@@ -113,14 +111,12 @@ def _parse_response_model(raw_text: str, response_model: Type[T]) -> T:
         except Exception:
             pass
 
-    return response_model.model_validate(
-        {"reason": cleaned, "verdict": 0}
-    )
+    return response_model.model_validate({"reason": cleaned, "verdict": 0})
 
 
 def create_ragas_llm(
     config: LLMProviderConfig | None = None,
-    extra_headers: Dict[str, str] | None = None,
+    extra_headers: dict[str, str] | None = None,
 ) -> LangchainLLMWrapper:
     """Create RAGAS LLM wrapper configured with custom llm configuration.
 
@@ -130,7 +126,7 @@ def create_ragas_llm(
     Returns:
         LangchainLLMWrapper instance configured with custom llm configuration
     """
-    llm_args: Dict[str, Any] = {}
+    llm_args: dict[str, Any] = {}
     if config and config.base_url:
         llm_args["openai_api_base"] = _normalize_openai_base_url(config.base_url)
     if config and config.api_key:
@@ -145,10 +141,10 @@ def create_ragas_llm(
 
 def create_ragas_embeddings(
     config: LLMProviderConfig | None = None,
-    extra_headers: Dict[str, str] | None = None,
+    extra_headers: dict[str, str] | None = None,
 ):
     """Build the default RAGAS embeddings wrapper from provider config."""
-    embedding_args: Dict[str, Any] = {
+    embedding_args: dict[str, Any] = {
         "check_embedding_ctx_length": False,
     }
     if config and config.base_url:
@@ -165,7 +161,7 @@ def create_ragas_embeddings(
 
 def create_ragas_instructor_llm(
     config: LLMProviderConfig | None = None,
-    extra_headers: Dict[str, str] | None = None,
+    extra_headers: dict[str, str] | None = None,
 ):
     """Create LLM for RAGAS agent metrics (agent_goal_accuracy).
 
@@ -213,7 +209,7 @@ class RAGASAdapter:
     def __init__(
         self,
         config: LLMProviderConfig | None = None,
-        extra_headers: Dict[str, str] | None = None,
+        extra_headers: dict[str, str] | None = None,
     ):
         """Initialize RAGAS adapter with llm configuration.
 
@@ -223,7 +219,7 @@ class RAGASAdapter:
                 (e.g. gateway run-context headers for log correlation).
         """
         self.config = config
-        self._extra_headers: Dict[str, str] = dict(extra_headers or {})
+        self._extra_headers: dict[str, str] = dict(extra_headers or {})
         self._llm = None
         self._embeddings = None
         self._agent_llm = None

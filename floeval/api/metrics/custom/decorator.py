@@ -1,7 +1,5 @@
 """Custom metric decorator for function-based metrics."""
 
-from __future__ import annotations
-
 import asyncio
 import inspect
 import logging

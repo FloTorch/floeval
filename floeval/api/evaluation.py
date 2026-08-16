@@ -378,7 +378,7 @@ class Evaluation:
                         "metadata": result.metadata,
                     }
                 except Exception as e:
-                    logger.error(f"Metric {key} failed for sample: {e}", exc_info=True)
+                    logger.error("Metric %s failed for sample: %s", key, e, exc_info=True)
                     metric_results[key] = {
                         "score": None,
                         "passed": False,
@@ -453,7 +453,7 @@ class Evaluation:
                 embeddings=adapter.embeddings,
             )
         except Exception as e:
-            logger.error(f"RAGAS evaluation failed: {e}", exc_info=True)
+            logger.error("RAGAS evaluation failed: %s", e, exc_info=True)
             return []
 
         if hasattr(ragas_eval_result, "to_pandas"):
@@ -475,7 +475,7 @@ class Evaluation:
             return []
 
         available_columns = list(ragas_results.columns)
-        logger.debug(f"RAGAS results columns: {available_columns}")
+        logger.debug("RAGAS results columns: %s", available_columns)
 
         sample_results: list[dict[str, Any]] = []
 
@@ -506,7 +506,7 @@ class Evaluation:
                         "metadata": {"threshold": threshold, "execution_provider": "ragas"},
                     }
                 except Exception as e:
-                    logger.error(f"Failed to extract RAGAS result for {key}: {e}", exc_info=True)
+                    logger.error("Failed to extract RAGAS result for %s: %s", key, e, exc_info=True)
                     metric_results[key] = {
                         "score": None,
                         "passed": False,
@@ -907,7 +907,7 @@ class Evaluation:
                     key = f"{provider}:{metric_name}"
 
                     if isinstance(res, Exception):
-                        logger.error(f"Metric {key} failed: {res}", exc_info=True)
+                        logger.error("Metric %s failed: %s", key, res, exc_info=True)
                         metric_results[key] = {
                             "score": None,
                             "passed": False,

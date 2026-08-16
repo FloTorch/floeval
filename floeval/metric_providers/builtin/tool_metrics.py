@@ -8,8 +8,6 @@ Metrics registered:
 All return score=None gracefully when required inputs are missing.
 """
 
-from __future__ import annotations
-
 import logging
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
@@ -23,11 +21,18 @@ _ERROR_PREFIXES = ("error:", "exception:", "failed:", "traceback", "http error")
 
 # Short-content keywords — only treated as errors when content is brief (likely
 # a bare error message, not a scraped page that happens to mention the phrase)
-_SHORT_ERROR_KEYWORDS = frozenset([
-    "not found", "unauthorized", "forbidden", "timeout",
-    "connection refused", "internal server error", "bad gateway",
-    "service unavailable",
-])
+_SHORT_ERROR_KEYWORDS = frozenset(
+    [
+        "not found",
+        "unauthorized",
+        "forbidden",
+        "timeout",
+        "connection refused",
+        "internal server error",
+        "bad gateway",
+        "service unavailable",
+    ]
+)
 
 # HTTP status codes that unambiguously indicate failure
 _HTTP_ERROR_CODES = frozenset(["400", "401", "403", "404", "429", "500", "502", "503", "504"])

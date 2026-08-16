@@ -10,8 +10,6 @@ Score is the raw value (not normalised to 0-1). Useful for dashboards and
 SLO tracking. Efficiency metrics are exempt from the [0, 1] score constraint.
 """
 
-from __future__ import annotations
-
 import logging
 
 from floeval.api.metrics.base import BaseMetric, MetricResult
@@ -110,7 +108,9 @@ class LatencyMetric(BaseMetric):
                     "provider": "builtin",
                 },
             )
-        passed = (latency <= self.max_latency_seconds) if self.max_latency_seconds is not None else None
+        passed = (
+            (latency <= self.max_latency_seconds) if self.max_latency_seconds is not None else None
+        )
         return MetricResult(
             score=latency,
             metadata={

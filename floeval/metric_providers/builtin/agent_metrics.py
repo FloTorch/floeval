@@ -16,8 +16,6 @@ Why task_completion instead of ragas:agent_goal_accuracy as default:
     without an inference intermediary. This works correctly across all LLM sizes.
 """
 
-from __future__ import annotations
-
 import asyncio
 import json
 import logging
@@ -52,9 +50,7 @@ def _format_trace_for_prompt(sample: AgentSample) -> str:
         role = msg.role.upper()
         content = (msg.content or "")[:400]
         if hasattr(msg, "tool_calls") and msg.tool_calls:
-            calls_str = ", ".join(
-                f"{tc.name}({json.dumps(tc.args)[:80]})" for tc in msg.tool_calls
-            )
+            calls_str = ", ".join(f"{tc.name}({json.dumps(tc.args)[:80]})" for tc in msg.tool_calls)
             lines.append(f"[Step {i + 1}] {role}: {content} | TOOL_CALLS: {calls_str}")
         elif hasattr(msg, "tool_name") and msg.tool_name:
             lines.append(f"[Step {i + 1}] TOOL_RESULT ({msg.tool_name}): {content}")
@@ -66,6 +62,7 @@ def _format_trace_for_prompt(sample: AgentSample) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # TaskCompletionMetric — preferred for agent task evaluation
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TaskCompletionMetric(BaseMetric):
     """LLM-as-judge: did the agent's final response complete the user's task?
@@ -177,6 +174,7 @@ Respond ONLY with valid JSON:
 # TrajectoryFaithfulnessMetric
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TrajectoryFaithfulnessMetric(BaseMetric):
     """LLM-as-judge: is the agent's execution trace logically coherent?
 
@@ -279,6 +277,7 @@ Respond ONLY with valid JSON:
 # GoalAchievementMetric — DEPRECATED
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class GoalAchievementMetric(BaseMetric):
     """DEPRECATED: Use builtin:task_completion for better reliability.
 
@@ -362,6 +361,7 @@ Respond ONLY with JSON:
 # ResponseCoherenceMetric — DEPRECATED
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class ResponseCoherenceMetric(BaseMetric):
     """DEPRECATED: Use builtin:trajectory_faithfulness.
 
@@ -408,9 +408,7 @@ Respond ONLY with JSON:
         for msg in sample.trace.messages:
             role = getattr(msg, "role", "unknown")
             content = getattr(msg, "content", "") or ""
-            trace_parts.append(
-                f"[{role}] {content[:500]}{'...' if len(content) > 500 else ''}"
-            )
+            trace_parts.append(f"[{role}] {content[:500]}{'...' if len(content) > 500 else ''}")
         trace_summary = "\n".join(trace_parts) if trace_parts else "(empty trace)"
 
         prompt = self._PROMPT.format(
